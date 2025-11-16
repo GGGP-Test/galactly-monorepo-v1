@@ -234,41 +234,36 @@
         // ===== STEP 0: TABLET-ONLY OVERRIDES =====
         step0: {
           // pill box sizing (tablet)
-          PILL_W_MAX: 400,    // max width in px
+          PILL_W_MAX: 400, // max width in px
           PILL_W_RATIO: 0.48, // fraction of canvas width
-          PILL_H: 60,         // height in px
-          PILL_RADIUS: 16,    // corner radius
-        
+          PILL_H: 60, // height in px
+          PILL_RADIUS: 16, // corner radius
+
           // extra pill translation (tablet-only, on top of desktop NUDGE_X/Y)
-          PILL_NUDGE_X: 0,   // + = right, - = left
-          PILL_NUDGE_Y: 0,   // + = down,  - = up
-        
+          PILL_NUDGE_X: 0, // + = right, - = left
+          PILL_NUDGE_Y: 0, // + = down,  - = up
+
           // label inside pill (tablet)
-          LABEL_PT: 16,       // font-size
-          LABEL_NUDGE_X: 18,  // + = move right, - = left
-          LABEL_NUDGE_Y: 6,   // + = move down, - = up
-        
+          LABEL_PT: 16, // font-size
+          LABEL_NUDGE_X: 18, // + = move right, - = left
+          LABEL_NUDGE_Y: 6, // + = move down, - = up
+
           // title+copy block (h3 + paragraph) position (tablet)
-          COPY_NUDGE_X: -30,  // + = right, - = left
-          COPY_NUDGE_Y: 0,    // + = down,  - = up
-        
+          COPY_NUDGE_X: -30, // + = right, - = left
+          COPY_NUDGE_Y: 0, // + = down,  - = up
+
           // >>> TABLET-ONLY TYPOGRAPHY FOR STEP 0 COPY <<<
-          COPY_TITLE_PT: 22,     // h3 font-size on tablet (px)
+          COPY_TITLE_PT: 22, // h3 font-size on tablet (px)
           COPY_TITLE_WEIGHT: 600,
-          COPY_BODY_PT: 12,      // paragraph font-size on tablet (px)
-          COPY_BODY_LINE: 1.6    // paragraph line-height on tablet
+          COPY_BODY_PT: 12, // paragraph font-size on tablet (px)
+          COPY_BODY_LINE: 1.6 // paragraph line-height on tablet
         },
 
-        // ===== STEP 1: TABLET-ONLY (reuse desktop layout, just tweak copy) =====
+        // ===== STEP 1: TABLET-ONLY DOM LAYOUT (two-column) =====
         step1: {
-          // Width of the copy column on tablet
-          COPY_MAX_PX: 360,   // was 390; tweak if you want wider
-    
-          // Tablet-only typography for Step 1
-          COPY_H_PT: 22,        // "Who buys your stuff?" size
-          COPY_BODY_PT: 14,     // body copy size
-          COPY_BODY_LINE: 1.6,  // body line-height
-          TITLE_PT: 13          // "Intent Score" size above the boxes
+          LEFT_COL_PCT: 0.52, // left column width fraction
+          RIGHT_COL_PCT: 0.48, // right column width fraction
+          COL_GAP: 32 // gap between columns (px)
         },
 
         // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
@@ -293,6 +288,7 @@
       : 12;
   const TABLET_RAIL_SCALE =
     TCFG_INIT.RAIL_DOCK_SCALE !== undefined ? TCFG_INIT.RAIL_DOCK_SCALE : 0.84;
+  const TABLET_MIN = (MOBILE_BP || 640) + 1;
 
   const style = document.createElement("style");
   style.textContent = `
@@ -348,10 +344,81 @@
   .copy p{ margin:.35rem 0 0; font:400 15px/1.6 Inter, system-ui; color:#a7bacb }
   .glow{ filter: drop-shadow(0 0 6px rgba(242,220,160,.35)) drop-shadow(0 0 14px rgba(99,211,255,.30)) drop-shadow(0 0 24px rgba(99,211,255,.18)); }
 
-  /* ===== TABLET TUNING (shared,  >mobile.BP and <=tablet.BP_MAX ) ===== */
+  /* ===== TABLET TUNING (shared, >mobile.BP and <=tablet.BP_MAX ) ===== */
   @media (max-width:${TABLET_BP_MAX}px){
     :root{ --copyMax:${TABLET_COPY_MAX}px }
     .railWrap.is-docked{ left:${TABLET_RAIL_LEFT}px; transform:translate(0,-50%) scale(${TABLET_RAIL_SCALE}); }
+  }
+
+  /* ===== STEP 1: TABLET-ONLY DOM LAYOUT (two columns) ===== */
+  @media (min-width:${TABLET_MIN}px) and (max-width:${TABLET_BP_MAX}px){
+    #section-process .step1-tab-wrap{
+      display:flex;
+      gap:32px;
+      align-items:flex-start;
+    }
+    #section-process .step1-tab-col-left{
+      flex:0 0 52%;
+      max-width:52%;
+      padding-right:24px;
+    }
+    #section-process .step1-tab-col-right{
+      flex:0 0 48%;
+      max-width:48%;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    #section-process .step1-tab-left-title{
+      margin:0 0 10px;
+      color:#eaf0f6;
+      font:600 22px "Newsreader", Georgia, serif;
+    }
+    #section-process .step1-tab-left-copy{
+      margin:0;
+      color:#a7bacb;
+      font:400 14px/1.6 Inter, system-ui;
+    }
+    #section-process .step1-tab-right-kicker{
+      margin-bottom:12px;
+      color:#f2dca0;
+      font:700 13px/1 Inter, system-ui;
+      letter-spacing:.2px;
+    }
+    #section-process .step1-tab-stack{
+      width:100%;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    #section-process .step1-tab-box,
+    #section-process .step1-tab-diamond{
+      width:100%;
+      min-height:52px;
+      border-radius:18px;
+      border:2px solid rgba(99,211,255,.95);
+      background:rgba(255,255,255,.02);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:12px 18px;
+      color:#ddeaef;
+      font:525 9pt Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      letter-spacing:.3px;
+      line-height:1.25;
+    }
+    #section-process .step1-tab-box.oval{
+      border-radius:9999px;
+    }
+    #section-process .step1-tab-diamond{
+      min-height:60px;
+      transform:rotate(45deg);
+    }
+    #section-process .step1-tab-diamond > span{
+      transform:rotate(-45deg);
+      display:block;
+    }
   }
 
   /* ===== MOBILE-ONLY BASE (desktop + tablet untouched) ===== */
@@ -601,8 +668,8 @@
   function clearCanvas() {
     while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
   }
-  
-    // Tablet-only: nudge the main process title (Our AI Packaging Sales Intelligence: 6 Pillars)
+
+  // Tablet-only: nudge the main process title (Our AI Packaging Sales Intelligence: 6 Pillars)
   function applyTabletMainTitleNudge() {
     if (!mainTitle) return;
 
@@ -626,7 +693,7 @@
       bOverride || (isMobile() ? boundsMobile(18, 600) : boundsDesktop());
 
     const onTablet = isTablet();
-    const T0 = (onTablet && TCFG().step0) ? TCFG().step0 : {};
+    const T0 = onTablet && TCFG().step0 ? TCFG().step0 : {};
 
     const nodeW = b.width;
     const nodeH = Math.min(560, b.sH - 40);
@@ -641,10 +708,12 @@
     canvas.appendChild(svg);
 
     // ---- pill sizing: desktop defaults + tablet overrides ----
-    const pillWMax   = onTablet && T0.PILL_W_MAX   != null ? T0.PILL_W_MAX   : 440;
-    const pillWRatio = onTablet && T0.PILL_W_RATIO != null ? T0.PILL_W_RATIO : 0.48;
-    const pillH      = onTablet && T0.PILL_H       != null ? T0.PILL_H       : 80;
-    const r          = onTablet && T0.PILL_RADIUS  != null ? T0.PILL_RADIUS  : 16;
+    const pillWMax =
+      onTablet && T0.PILL_W_MAX != null ? T0.PILL_W_MAX : 440;
+    const pillWRatio =
+      onTablet && T0.PILL_W_RATIO != null ? T0.PILL_W_RATIO : 0.48;
+    const pillH = onTablet && T0.PILL_H != null ? T0.PILL_H : 80;
+    const r = onTablet && T0.PILL_RADIUS != null ? T0.PILL_RADIUS : 16;
 
     // extra tablet-only translation for the pill
     const pillNX = onTablet && T0.PILL_NUDGE_X != null ? T0.PILL_NUDGE_X : 0;
@@ -694,9 +763,12 @@
     requestAnimationFrame(() => (outline.style.strokeDashoffset = "0"));
 
     // ---- label: size + nudges (tablet-only knobs) ----
-    const labelPx = onTablet && T0.LABEL_PT       != null ? T0.LABEL_PT       : 18;
-    const labelNx = onTablet && T0.LABEL_NUDGE_X  != null ? T0.LABEL_NUDGE_X  : 18;
-    const labelNy = onTablet && T0.LABEL_NUDGE_Y  != null ? T0.LABEL_NUDGE_Y  : 6;
+    const labelPx =
+      onTablet && T0.LABEL_PT != null ? T0.LABEL_PT : 18;
+    const labelNx =
+      onTablet && T0.LABEL_NUDGE_X != null ? T0.LABEL_NUDGE_X : 18;
+    const labelNy =
+      onTablet && T0.LABEL_NUDGE_Y != null ? T0.LABEL_NUDGE_Y : 6;
 
     const label = document.createElementNS(ns, "text");
     label.setAttribute("x", pillX + labelNx);
@@ -724,22 +796,26 @@
     svg.appendChild(trail);
 
     // ---- copy block (h3 + paragraph) with tablet nudges ----
-    const copyNX = onTablet && T0.COPY_NUDGE_X != null ? T0.COPY_NUDGE_X : 0;
-    const copyNY = onTablet && T0.COPY_NUDGE_Y != null ? T0.COPY_NUDGE_Y : 0;
-  
+    const copyNX =
+      onTablet && T0.COPY_NUDGE_X != null ? T0.COPY_NUDGE_X : 0;
+    const copyNY =
+      onTablet && T0.COPY_NUDGE_Y != null ? T0.COPY_NUDGE_Y : 0;
+
     const basePillY = Math.max(12, nodeH * 0.2);
     const minInside = b.left + 12;
     const fromRail = Math.max(minInside, b.left + 24);
     const copyTop = b.top + basePillY - 2 + copyNY;
-  
+
     // Tablet-only font knobs (fall back to desktop defaults when not tablet)
-    const titlePt = onTablet && T0.COPY_TITLE_PT != null ? T0.COPY_TITLE_PT : 26;
+    const titlePt =
+      onTablet && T0.COPY_TITLE_PT != null ? T0.COPY_TITLE_PT : 26;
     const titleWeight =
       onTablet && T0.COPY_TITLE_WEIGHT != null ? T0.COPY_TITLE_WEIGHT : 600;
-    const bodyPt = onTablet && T0.COPY_BODY_PT != null ? T0.COPY_BODY_PT : 15;
+    const bodyPt =
+      onTablet && T0.COPY_BODY_PT != null ? T0.COPY_BODY_PT : 15;
     const bodyLine =
       onTablet && T0.COPY_BODY_LINE != null ? T0.COPY_BODY_LINE : 1.6;
-  
+
     const copyHTML = `
       <h3 style="
         margin:0 0 .45rem;
@@ -765,19 +841,6 @@
       html: copyHTML
     });
 
-    requestAnimationFrame(() => {
-      const boxLeftAbs = b.left + pillX;
-      const copyBox = copy.getBoundingClientRect();
-      let idealLeft =
-        boxLeftAbs - window.PROCESS_CONFIG.step0.COPY_GAP - copyBox.width;
-      idealLeft = Math.min(copyBox.left, idealLeft);
-      idealLeft = Math.max(idealLeft, minInside);
-      idealLeft += copyNX; // tablet extra shove
-      copy.style.left = idealLeft + "px";
-    });
-
-    return nodeH;
-    
     requestAnimationFrame(() => {
       const boxLeftAbs = b.left + pillX;
       const copyBox = copy.getBoundingClientRect();
@@ -1170,9 +1233,99 @@
     wrap.appendChild(stack);
     canvas.appendChild(wrap);
   }
-  
-  
-  
+
+  /* ----------------- TABLET: Step 1 DOM (NEW, two-column) ----------------- */
+  function renderStep1Tablet() {
+    const b = boundsDesktop();
+    const T1 = (TCFG().step1 || {});
+
+    const wrap = document.createElement("div");
+    wrap.className = "step1-tab-wrap";
+    wrap.style.position = "absolute";
+    wrap.style.left = `${b.left}px`;
+    // small offset from top of lamp area
+    wrap.style.top = `${b.top + 40}px`;
+    wrap.style.width = `${b.width}px`;
+    canvas.appendChild(wrap);
+
+    // Left column: title + copy
+    const leftCol = document.createElement("div");
+    leftCol.className = "step1-tab-col-left";
+
+    const leftTitle = document.createElement("h3");
+    leftTitle.className = "step1-tab-left-title";
+    leftTitle.textContent = "Who buys your stuff?";
+
+    const leftCopy = document.createElement("p");
+    leftCopy.className = "step1-tab-left-copy";
+    leftCopy.innerHTML =
+      'Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle. ' +
+      "We weight recent signals like RFQ/RFP language, pricing &amp; sample page hits, ad creative volume and more, " +
+      "then surface the prospects your team should contact.";
+
+    leftCol.appendChild(leftTitle);
+    leftCol.appendChild(leftCopy);
+
+    // Right column: small title + stacked boxes + diamond
+    const rightCol = document.createElement("div");
+    rightCol.className = "step1-tab-col-right";
+
+    const rightTitle = document.createElement("div");
+    rightTitle.className = "step1-tab-right-kicker";
+    rightTitle.textContent = "Intent Score";
+    rightCol.appendChild(rightTitle);
+
+    const stack = document.createElement("div");
+    stack.className = "step1-tab-stack";
+
+    const sCfg = window.PROCESS_CONFIG.step1 || {};
+    const labels = {
+      rect1:
+        sCfg.LABEL_RECT_1 || "Metrics Match Score (daily)",
+      rect2:
+        sCfg.LABEL_RECT_2 || "RFQ/RFP Keywords Detected",
+      round3:
+        sCfg.LABEL_ROUND_3 || "Pricing & Sample Page Hits",
+      oval4:
+        sCfg.LABEL_OVAL_4 ||
+        "Rising # of Ad Creatives (last 14d)",
+      diamond5:
+        sCfg.LABEL_DIAMOND_5 || "Imp/Exp Cycle"
+    };
+
+    function makeBox(extraClass, text) {
+      const box = document.createElement("div");
+      box.className = "step1-tab-box" + (extraClass ? " " + extraClass : "");
+      box.textContent = text;
+      return box;
+    }
+
+    stack.appendChild(makeBox("", labels.rect1));
+    stack.appendChild(makeBox("", labels.rect2));
+    stack.appendChild(makeBox("", labels.round3));
+    stack.appendChild(makeBox("oval", labels.oval4));
+
+    const diamond = document.createElement("div");
+    diamond.className = "step1-tab-diamond";
+    const dSpan = document.createElement("span");
+    dSpan.textContent = labels.diamond5;
+    diamond.appendChild(dSpan);
+    stack.appendChild(diamond);
+
+    rightCol.appendChild(stack);
+
+    // Apply column widths from knobs
+    const leftPct = (T1.LEFT_COL_PCT ?? 0.52) * 100;
+    const rightPct = (T1.RIGHT_COL_PCT ?? 0.48) * 100;
+    leftCol.style.flex = `0 0 ${leftPct}%`;
+    leftCol.style.maxWidth = `${leftPct}%`;
+    rightCol.style.flex = `0 0 ${rightPct}%`;
+    rightCol.style.maxWidth = `${rightPct}%`;
+    wrap.style.gap = `${T1.COL_GAP ?? 32}px`;
+
+    wrap.appendChild(leftCol);
+    wrap.appendChild(rightCol);
+  }
 
   /* ----------------- ROUTERS ----------------- */
   // Desktop route (used for desktop + tablet)
@@ -1182,6 +1335,12 @@
     // Step 0 pill scene (already tablet-aware via TCFG().step0)
     if (step === 0 && phase === 1) {
       scenePill();
+      return;
+    }
+
+    // NEW: tablet-only Step 1 DOM layout (ignore SVG scene)
+    if (step === 1 && isTablet()) {
+      renderStep1Tablet();
       return;
     }
 
