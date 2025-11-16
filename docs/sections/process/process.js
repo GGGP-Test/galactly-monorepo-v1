@@ -259,118 +259,16 @@
           COPY_BODY_LINE: 1.6    // paragraph line-height on tablet
         },
 
-        // ===== STEP 1: TABLET-ONLY LAYOUT (boxes + diamond) =====
+        // ===== STEP 1: TABLET-ONLY (reuse desktop layout, just tweak copy) =====
         step1: {
-          
-         // NEW: specific copy width just for step 1 on tablet
-          COPY_MAX_PX: 390,   // or 300, 340, whatever looks right
-          
-          useTheme: true,
-
-          // whole-step placement on tablet
-          top: 50,          // space above this step
-          bottom: 90,       // space below this step
-          maxW: 480,        // column width on tablet
-          sidePad: 24,      // padding inside the column
-          nudgeX: 0,        // translate the whole block
-          nudgeY: 0,
-                    // === SVG layout overrides that process.step1.js actually reads ===
-          // Boxes stack (right side)
-          BOX_W_RATIO: 0.16,      // width of each box = W * 0.16
-          STACK_X_RATIO: 1,    // horizontal anchor of the box stack (0 = far left, 1 = far right)
-          STACK_TOP_RATIO: 0.18,  // vertical anchor of the first box (0 = very top, 1 = bottom)
-          NUDGE_X: 180,          // extra px shove horizontally (negative = left)
-          NUDGE_Y: -10,           // extra px shove vertically (negative = up)
-
-          // Copy column (left side)
-          COPY_LEFT_RATIO: 0,  // horizontal position of copy column (fraction of W)
-          COPY_TOP_RATIO: 0.30,   // vertical anchor of copy (0 = top, 1 = bottom)
-          COPY_NUDGE_X: -40,      // extra px shove horizontally
-          COPY_NUDGE_Y: 0,        // extra px shove vertically
-
-          // small title: "Intent Score"
-          titleShow: true,
-          titlePt: 13,
-          titleWeight: 700,
-          titleLetter: 0.3,
-          titleAlign: "left",
-          titleMarginTop: 10,
-          titleMarginBottom: 16,
-          titleNudgeX: 0,
-          titleNudgeY: 0,
-
-          // h3 + body copy
-          copyHpt: 22,
-          copyBodyPt: 14,
-          copyLine: 1.6,
-          copyColor: "#a7bacb",
-          copyHColor: "#eaf0f6",
-          copyHGap: 10,
-          copyGapBottom: 18, // gap from paragraph → first box
-
-          // gap between the boxes themselves
-          stackGap: 14,
-
-          // base box knobs (all 4 boxes)
-          box: {
-            widthPct: 480,
-            minH: 46,
-            padX: 480,
-            padY: 12,
-            border: 2,
-            radius: 18,
-            fontPt: 9,
-            fontWeight: 525,
-            letter: 0.3,
-            lineEm: 1.25,
-            align: "center",
-            nudgeX: 0,  // + = push boxes to the right
-            nudgeY: 0   // + = push boxes down
-          },
-
-          // diamond at the bottom
-          diamond: {
-            widthPct: 50,  // width as % of column
-            size: null,    // if set, wins over widthPct (px)
-            border: 2,
-            pad: 480,
-            labelPt: 9,
-            nudgeY: 18     // positive = further from last box
-          },
-
-          // three dots under the diamond
-          dots: {
-            show: false,
-            count: 3,
-            size: 6,
-            gap: 10,
-            padTop: 8
-          },
-
-          // per-shape overrides (tablet-only tuning)
-          overrides: {
-            rect1: {
-              // Back-to-Back Search
-              // nudgeX: 0, nudgeY: 0
-            },
-            rect2: {
-              // RFQ/RFP Keywords
-            },
-            round3: {
-              // Pricing & Sample Page Hits
-            },
-            oval4: {
-              // Rising # of Ad Creatives → pill
-              radius: 9999
-            },
-            diamond5: {
-              // Import/Export End of Cycle (diamond)
-              // you can add nudgeX / nudgeY here too
-            }
-          },
-
-          // draw order top → bottom, then diamond
-          order: ["rect1", "rect2", "round3", "oval4", "diamond5"]
+          // Width of the copy column on tablet
+          COPY_MAX_PX: 360,   // was 390; tweak if you want wider
+    
+          // Tablet-only typography for Step 1
+          COPY_H_PT: 22,        // "Who buys your stuff?" size
+          COPY_BODY_PT: 14,     // body copy size
+          COPY_BODY_LINE: 1.6,  // body line-height
+          TITLE_PT: 13          // "Intent Score" size above the boxes
         },
 
         // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
