@@ -160,7 +160,28 @@
       T_SIDE_PAD: 24,
       T_SECTION_TOP: -110,
       T_SECTION_BOTTOM: 10,
+      
+      
+      
+            // ===== TABLET-ONLY ROW LAYOUT (Step 5) =====
+      T_MAX_W: 820,          // overall rail width inside the lamp for Step 5
+      T_SIDE_PAD: 24,        // left/right padding inside that rail
 
+      // gap between lamp edge and Step 5 block on tablet
+      T_SECTION_TOP: 40,     // distance from lamp edge down to row 1
+      T_SECTION_BOTTOM: 72,  // space under row 2
+
+      // per-row max widths (THIS is what you asked for)
+      T_ROW1_MAX_W: 740,     // row 1: copy + "Our Realtime AI Orchestrator"
+      T_ROW2_MAX_W: 720,     // row 2: SVG + headings + dots
+
+      // tablet-only typography knobs
+      T_TITLE_PT: 13,
+      T_COPY_H_PT: 20,
+      T_COPY_BODY_PT: 13,
+      T_TITLE_OFFSET_X: 0,
+      T_TITLE_OFFSET_Y: 0,
+      
       // copy + section title typography (tablet only)
       T_TITLE_PT: 14,
       T_COPY_H_PT: 22,
@@ -410,85 +431,114 @@
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
+    // ---------- OUTER WRAP (kept inside lamp width) ----------
     const wrap = document.createElement("div");
-        if (mode === "tablet") {
+    if (mode === "tablet") {
       // tablet: inline styles using T_* knobs
       wrap.className = "p5t-wrap";
       wrap.style.position = "relative";
 
-      // top / bottom gap between lamp edge and Step 5 content
-      wrap.style.margin = `${cfg.T_SECTION_TOP}px auto ${cfg.T_SECTION_BOTTOM}px`;
+      // distance from lamp edge → top of Step 5 block
+      const topGap    = cfg.T_SECTION_TOP  != null ? cfg.T_SECTION_TOP  : 40;
+      const bottomGap = cfg.T_SECTION_BOTTOM != null ? cfg.T_SECTION_BOTTOM : 40;
+      wrap.style.margin = `${topGap}px auto ${bottomGap}px`;
 
-      // KEY: keep Step 5 strictly inside the lamp's right rail width
-      // (dims.W is the W we computed in main draw using WIDTH_RATIO)
+      // clamp to lamp rail width (dims.W is computed from WIDTH_RATIO)
       wrap.style.maxWidth = `${dims.W}px`;
-      wrap.style.padding = `0 ${cfg.T_SIDE_PAD}px 12px`;
+      wrap.style.padding = `0 ${cfg.T_SIDE_PAD ?? 24}px 12px`;
       wrap.style.zIndex = 0;
     } else {
-      // phone uses CSS
+      // phone: use existing CSS
       wrap.className = "p5m-wrap";
     }
 
-    // row 1: copy + section title
-    wrap.innerHTML =
-      `<div class="p5m-copy">${seoCopyHTML()}</div>` +
-      (cfg.TITLE_SHOW ? `<div class="p5m-title">${cfg.TITLE_TEXT}</div>` : "");
-
-    const copyEl = wrap.querySelector(".p5m-copy");
-    const titleEl = wrap.querySelector(".p5m-title");
+    // ---------- ROW 1: copy + section title ----------
+    const row1 = document.createElement("div");
+    row1.className = mode === "tablet" ? "p5t-row1" : "p5m-row1";
 
     if (mode === "tablet") {
-      // retag classes so phone CSS doesn't touch them
-      copyEl.className = "p5t-copy";
-      if (titleEl) titleEl.className = "p5t-title";
-
-      // copy block styles (tablet knobs)
-      copyEl.style.margin = "0 auto 10px";
-      copyEl.style.color = cfg.COPY_COLOR_BODY;
-
-      const h3 = copyEl.querySelector("h3");
-      if (h3) {
-        h3.style.margin = "0 0 8px";
-        h3.style.color = cfg.COPY_COLOR_HEAD;
-        h3.style.font =
-          `${cfg.COPY_H_WEIGHT} ${cfg.T_COPY_H_PT}px Newsreader, Georgia, serif`;
-      }
-      copyEl.querySelectorAll("p").forEach((p) => {
-        p.style.margin = "0 0 6px";
-        p.style.font =
-          `${cfg.COPY_BODY_WEIGHT} ${cfg.T_COPY_BODY_PT}px/1.6 Inter, system-ui`;
-      });
-
-      // section title (tablet knobs)
-      if (titleEl) {
-        titleEl.style.textAlign = "left";
-        titleEl.style.color = cfg.TITLE_COLOR;
-        titleEl.style.font =
-          `${cfg.TITLE_WEIGHT} ${cfg.T_TITLE_PT}pt ${cfg.TITLE_FAMILY}`;
-        titleEl.style.letterSpacing = `${cfg.TITLE_LETTER_SPACING}px`;
-        const offX = cfg.T_TITLE_OFFSET_X ?? 0;
-        const offY = cfg.T_TITLE_OFFSET_Y ?? 0;
-        titleEl.style.transform = `translate(${offX}px,${offY}px)`;
-        titleEl.style.margin = "14px 0 10px";
-      }
-    } else {
-      // phone: just tweak transform via M_ knobs, rest handled by CSS
-      if (titleEl) {
-        const offX = pick("phone", "TITLE_OFFSET_X") || 0;
-        const offY = pick("phone", "TITLE_OFFSET_Y") ?? 0;
-        titleEl.style.transform = `translate(${offX}px,${offY}px)`;
-      }
+      // THIS is the max width for the COPY ROW, inside the lamp
+      const row1Max = cfg.T_ROW1_MAX_W || cfg.T_MAX_W || dims.W;
+      row1.style.maxWidth = `${row1Max}px`;
+      row1.style.margin = "0 auto";
     }
 
-    // row 2: SVG
+    // copy block
+    const copy = document.createElement("div");
+    copy.className = mode === "tablet" ? "p5t-copy" : "p5m-copy";
+    copy.innerHTML = seoCopyHTML();
+    row1.appendChild(copy);
+
+    if (mode === "tablet") {
+      // tablet copy styling via T_* knobs
+      copy.style.margin = "0 auto 10px";
+      copy.style.color = cfg.COPY_COLOR_BODY || "#a7bacb";
+
+      const h3 = copy.querySelector("h3");
+      if (h3) {
+        h3.style.margin = "0 0 8px";
+        h3.style.color = cfg.COPY_COLOR_HEAD || "#eaf0f6";
+        h3.style.font =
+          `${cfg.COPY_H_WEIGHT} ${(cfg.T_COPY_H_PT ?? cfg.M_COPY_H_PT ?? 22)}px Newsreader, Georgia, serif`;
+      }
+      copy.querySelectorAll("p").forEach((p) => {
+        p.style.margin = "0 0 6px";
+        p.style.font =
+          `${cfg.COPY_BODY_WEIGHT} ${(cfg.T_COPY_BODY_PT ?? cfg.M_COPY_BODY_PT ?? 14)}px/1.6 Inter, system-ui`;
+      });
+    }
+
+    // section title in row 1
+    if (cfg.TITLE_SHOW) {
+      const title = document.createElement("div");
+      title.className = mode === "tablet" ? "p5t-title" : "p5m-title";
+      title.textContent = cfg.TITLE_TEXT;
+      title.style.textAlign = "center";
+
+      if (mode === "tablet") {
+        title.style.color = cfg.TITLE_COLOR;
+        title.style.fontFamily = cfg.TITLE_FAMILY;
+        title.style.fontWeight = cfg.TITLE_WEIGHT;
+        title.style.fontSize = `${(cfg.T_TITLE_PT ?? cfg.M_TITLE_PT ?? cfg.TITLE_PT)}pt`;
+        title.style.letterSpacing = `${cfg.TITLE_LETTER_SPACING}px`;
+        const offX = cfg.T_TITLE_OFFSET_X ?? 0;
+        const offY = cfg.T_TITLE_OFFSET_Y ?? 0;
+        title.style.transform = `translate(${offX}px,${offY}px)`;
+        title.style.margin = "14px 0 10px";
+      } else {
+        // phone: only transform, rest is in CSS
+        const offX = pick("phone", "TITLE_OFFSET_X") || 0;
+        const offY = pick("phone", "TITLE_OFFSET_Y") ?? 0;
+        title.style.transform = `translate(${offX}px,${offY}px)`;
+      }
+
+      row1.appendChild(title);
+    }
+
+    // ---------- ROW 2: SVG (columns + lines) ----------
+    const row2 = document.createElement("div");
+    row2.className = mode === "tablet" ? "p5t-row2" : "p5m-row2";
+
+    if (mode === "tablet") {
+      // THIS is the max width for the SVG ROW, inside the lamp
+      const row2Max = cfg.T_ROW2_MAX_W || cfg.T_MAX_W || dims.W;
+      row2.style.maxWidth = `${row2Max}px`;
+      row2.style.margin = "24px auto 0";
+    }
+
     const svg = document.createElementNS(NS, "svg");
     svg.classList.add(mode === "tablet" ? "p5t-svg" : "p5m-svg");
     svg.setAttribute("viewBox", `0 0 ${dims.W} ${dims.H}`);
     svg.setAttribute("width", "100%");
     svg.setAttribute("height", "100%");
 
-    wrap.appendChild(svg);
+    row2.appendChild(svg);
+
+    // attach both rows
+    wrap.appendChild(row1);
+    wrap.appendChild(row2);
     ctx.canvas.appendChild(wrap);
+
     return svg;
   }
 
