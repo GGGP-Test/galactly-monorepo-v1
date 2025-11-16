@@ -167,7 +167,7 @@
       T_COPY_BODY_PT: 14,
 
       // global scale for SVG on tablet
-      T_SCALE: 1.3,
+      T_SCALE: 0.9,
 
       // SVG geometry (tablet only)
       T_COL_GAP_RATIO: 0.08,
@@ -203,7 +203,7 @@
 
       // section title offsets for tablet row layout
       T_TITLE_OFFSET_X: null,
-      T_TITLE_OFFSET_Y: 40,
+      T_TITLE_OFFSET_Y: -140,
 
       // dots spacing under last item (tablet)
       T_DOTS_TOP_PAD: 30,
