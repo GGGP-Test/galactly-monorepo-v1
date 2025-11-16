@@ -164,7 +164,7 @@
 
       // ===== TABLET knobs (for fonts / spacing; layout stays like desktop) =====
       T_BREAKPOINT: 900,      // <= this is "tablet" for step1
-      T_MAX_W: 700,
+      T_MAX_W: 70,
       T_SIDE_PAD: 24,
       T_STACK_GAP: 18,
       T_BOX_MIN_H: 60,
