@@ -158,7 +158,7 @@
       // row-layout container (width / padding / vertical spacing)
       T_MAX_W: 820,
       T_SIDE_PAD: 24,
-      T_SECTION_TOP: 10,
+      T_SECTION_TOP: -110,
       T_SECTION_BOTTOM: 10,
 
       // copy + section title typography (tablet only)
