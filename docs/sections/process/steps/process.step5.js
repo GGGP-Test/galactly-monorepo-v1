@@ -345,6 +345,10 @@
 
     const wrap = document.createElement("div");
     wrap.className = "p5m-wrap";
+    
+      // keep Step 5 inside the “lamp” width on tablets
+    wrap.style.maxWidth = `${dims.W}px`;
+    wrap.style.margin = "0 auto";
 
     wrap.innerHTML =
       `<div class="p5m-copy">${seoCopyHTML()}</div>` +
@@ -390,10 +394,12 @@
 
     const fullW = bounds.width;
     const H = Math.min(cfg.HEIGHT_MAX_PX, bounds.sH - 40);
-    const W = useStackedRows ? fullW : Math.max(300, fullW * cfg.WIDTH_RATIO);
-
-    // For desktop we respect right-rail placement; for phone/tablet we center at 0
-    const x0 = useStackedRows ? 0 : fullW * cfg.STACK_X_RATIO + cfg.NUDGE_X;
+    
+    // phones = full width, tablets/desktop = same WIDTH_RATIO as before
+    const W = isPhone ? fullW : Math.max(300, fullW * cfg.WIDTH_RATIO);
+    
+    // phones are centered; tablets/desktop use original right-rail placement
+    const x0 = isPhone ? 0 : fullW * cfg.STACK_X_RATIO + cfg.NUDGE_X;
     const y0 = H * cfg.STACK_TOP_RATIO + cfg.NUDGE_Y;
 
     // Global scale knob for small screens (phones/tablets)
