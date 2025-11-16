@@ -185,7 +185,7 @@
 
       T_COL_W_MULTS: null,
       T_COL_Y_OFFSETS: { step0: 70, step1: 0, step2: 0, step3: 0, step4: 0 },
-      T_COL_X_OFFSETS: null,
+      T_COL_X_OFFSETS: 100,
       T_ITEM_Y_OFFSETS: null,
       T_ITEM_H_MULTS: null,
       T_SHAPE_COLOR_BY_STEP: null,
@@ -202,8 +202,8 @@
       T_HEAD_BASELINE_BIAS: null,
 
       // section title offsets for tablet row layout
-      T_TITLE_OFFSET_X: null,
-      T_TITLE_OFFSET_Y: 140,
+      T_TITLE_OFFSET_X: 100,
+      T_TITLE_OFFSET_Y: 80,
 
       // dots spacing under last item (tablet)
       T_DOTS_TOP_PAD: 30,
