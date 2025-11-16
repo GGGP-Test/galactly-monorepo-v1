@@ -201,12 +201,12 @@
       COPY_LEFT_RATIO: 0.055,
       COPY_TOP_RATIO: base.COPY_TOP_RATIO,   // keep same vertical anchor as desktop
       // pixel nudges on top of the ratios
-      COPY_NUDGE_X: base.COPY_NUDGE_X,       // + = right,  - = left
+      COPY_NUDGE_X: -30,       // + = right,  - = left
       COPY_NUDGE_Y: base.COPY_NUDGE_Y,       // + = down,   - = up
 
       // ----- BOX STACK (RIGHT SIDE) -----
       // overall geometry for the stack of shapes
-      BOX_W_RATIO:  base.BOX_W_RATIO,        // wider / narrower boxes
+      BOX_W_RATIO:  60,        // wider / narrower boxes
       BOX_H_RATIO:  base.BOX_H_RATIO,        // taller / shorter boxes
       GAP_RATIO:    base.GAP_RATIO,          // vertical gap between shapes
       STACK_X_RATIO: base.STACK_X_RATIO,     // base X anchor
