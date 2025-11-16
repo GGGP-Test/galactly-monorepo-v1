@@ -158,7 +158,7 @@
       // row-layout container (width / padding / vertical spacing)
       T_MAX_W: 820,
       T_SIDE_PAD: 24,
-      T_SECTION_TOP: 120,
+      T_SECTION_TOP: 320,
       T_SECTION_BOTTOM: 72,
 
       // copy + section title typography (tablet only)
@@ -167,7 +167,7 @@
       T_COPY_BODY_PT: 14,
 
       // global scale for SVG on tablet
-      T_SCALE: 0.3,
+      T_SCALE: 1.3,
 
       // SVG geometry (tablet only)
       T_COL_GAP_RATIO: 0.08,
