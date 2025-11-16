@@ -206,7 +206,7 @@
 
       // ----- BOX STACK (RIGHT SIDE) -----
       // overall geometry for the stack of shapes
-      BOX_W_RATIO:  60,        // wider / narrower boxes
+      BOX_W_RATIO:  0.2,        // wider / narrower boxes
       BOX_H_RATIO:  base.BOX_H_RATIO,        // taller / shorter boxes
       GAP_RATIO:    base.GAP_RATIO,          // vertical gap between shapes
       STACK_X_RATIO: base.STACK_X_RATIO,     // base X anchor
