@@ -261,9 +261,34 @@
 
         // ===== STEP 1: TABLET-ONLY DOM LAYOUT (two-column) =====
         step1: {
-          LEFT_COL_PCT: 0.52, // left column width fraction
-          RIGHT_COL_PCT: 0.48, // right column width fraction
-          COL_GAP: 32 // gap between columns (px)
+          // Column widths
+          LEFT_COL_PCT: 0.52,   // left column width fraction (0–1)
+          RIGHT_COL_PCT: 0.48,  // right column width fraction (0–1)
+          COL_GAP: 32,          // gap between columns in px
+        
+          // Column nudges (tablet only)
+          LEFT_NUDGE_X: 0,      // + = move left col right, - = left
+          LEFT_NUDGE_Y: 0,      // + = move left col down, - = up
+          RIGHT_NUDGE_X: 0,     // + = move right col right, - = left
+          RIGHT_NUDGE_Y: 0,     // + = move right col down, - = up
+        
+          // Box geometry
+          BOX_WIDTH_PCT: 100,   // % of right column width for each box
+          BOX_MIN_H: 52,        // min height in px
+          BOX_PAD_X: 18,        // horizontal padding (px)
+          BOX_PAD_Y: 12,        // vertical padding (px)
+          BOX_BORDER: 2,        // border width (px)
+          BOX_RADIUS: 18,       // corner radius (px)
+          BOX_FONT_PT: 9,       // font size in pt
+          BOX_FONT_WEIGHT: 525, // font weight
+          BOX_LETTER: 0.3,      // letter-spacing in px
+          BOX_LINE: 1.25,       // line-height in em
+        
+          // Diamond geometry (always a true diamond: equal width/height)
+          DIAMOND_SIZE_PX: 72,      // width AND height (one knob = perfect square)
+          DIAMOND_BORDER: 2,        // border width (px)
+          DIAMOND_PAD: 12,          // inner padding (px)
+          DIAMOND_LABEL_PT: 9       // label font size in pt
         },
 
         // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
@@ -1237,92 +1262,140 @@
   /* ----------------- TABLET: Step 1 DOM (NEW, two-column) ----------------- */
   function renderStep1Tablet() {
     const b = boundsDesktop();
-    const T1 = (TCFG().step1 || {});
-
+    const T1 = TCFG().step1 || {};
+  
     const wrap = document.createElement("div");
     wrap.className = "step1-tab-wrap";
     wrap.style.position = "absolute";
     wrap.style.left = `${b.left}px`;
-    // small offset from top of lamp area
-    wrap.style.top = `${b.top + 40}px`;
+    wrap.style.top = `${b.top + 40}px`; // small offset from top of lamp area
     wrap.style.width = `${b.width}px`;
+    wrap.style.gap = `${T1.COL_GAP ?? 32}px`;
     canvas.appendChild(wrap);
-
-    // Left column: title + copy
+  
+    // ----- Column setup (width + nudges) -----
     const leftCol = document.createElement("div");
     leftCol.className = "step1-tab-col-left";
-
+    const rightCol = document.createElement("div");
+    rightCol.className = "step1-tab-col-right";
+  
+    const leftPct = (T1.LEFT_COL_PCT ?? 0.52) * 100;
+    const rightPct = (T1.RIGHT_COL_PCT ?? 0.48) * 100;
+  
+    leftCol.style.flex = `0 0 ${leftPct}%`;
+    leftCol.style.maxWidth = `${leftPct}%`;
+    rightCol.style.flex = `0 0 ${rightPct}%`;
+    rightCol.style.maxWidth = `${rightPct}%`;
+  
+    const lNx = T1.LEFT_NUDGE_X ?? 0;
+    const lNy = T1.LEFT_NUDGE_Y ?? 0;
+    if (lNx || lNy) {
+      leftCol.style.transform = `translate(${lNx}px, ${lNy}px)`;
+    }
+  
+    const rNx = T1.RIGHT_NUDGE_X ?? 0;
+    const rNy = T1.RIGHT_NUDGE_Y ?? 0;
+    if (rNx || rNy) {
+      rightCol.style.transform = `translate(${rNx}px, ${rNy}px)`;
+    }
+  
+    // ----- Left column: title + copy -----
     const leftTitle = document.createElement("h3");
     leftTitle.className = "step1-tab-left-title";
     leftTitle.textContent = "Who buys your stuff?";
-
+  
     const leftCopy = document.createElement("p");
     leftCopy.className = "step1-tab-left-copy";
     leftCopy.innerHTML =
       'Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle. ' +
       "We weight recent signals like RFQ/RFP language, pricing &amp; sample page hits, ad creative volume and more, " +
       "then surface the prospects your team should contact.";
-
+  
     leftCol.appendChild(leftTitle);
     leftCol.appendChild(leftCopy);
-
-    // Right column: small title + stacked boxes + diamond
-    const rightCol = document.createElement("div");
-    rightCol.className = "step1-tab-col-right";
-
+  
+    // ----- Right column: kicker + stack -----
     const rightTitle = document.createElement("div");
     rightTitle.className = "step1-tab-right-kicker";
     rightTitle.textContent = "Intent Score";
-    rightCol.appendChild(rightTitle);
-
+  
     const stack = document.createElement("div");
     stack.className = "step1-tab-stack";
-
+  
     const sCfg = window.PROCESS_CONFIG.step1 || {};
     const labels = {
-      rect1:
-        sCfg.LABEL_RECT_1 || "Metrics Match Score (daily)",
-      rect2:
-        sCfg.LABEL_RECT_2 || "RFQ/RFP Keywords Detected",
-      round3:
-        sCfg.LABEL_ROUND_3 || "Pricing & Sample Page Hits",
-      oval4:
-        sCfg.LABEL_OVAL_4 ||
-        "Rising # of Ad Creatives (last 14d)",
-      diamond5:
-        sCfg.LABEL_DIAMOND_5 || "Imp/Exp Cycle"
+      rect1:    sCfg.LABEL_RECT_1    || "Metrics Match Score (daily)",
+      rect2:    sCfg.LABEL_RECT_2    || "RFQ/RFP Keywords Detected",
+      round3:   sCfg.LABEL_ROUND_3   || "Pricing & Sample Page Hits",
+      oval4:    sCfg.LABEL_OVAL_4    || "Rising # of Ad Creatives (last 14d)",
+      diamond5: sCfg.LABEL_DIAMOND_5 || "Imp/Exp Cycle"
     };
-
+  
+    // Helper: apply box geometry from tablet knobs
+    function styleBox(el) {
+      const wPct   = T1.BOX_WIDTH_PCT   ?? 100;
+      const minH   = T1.BOX_MIN_H       ?? 52;
+      const padX   = T1.BOX_PAD_X       ?? 18;
+      const padY   = T1.BOX_PAD_Y       ?? 12;
+      const border = T1.BOX_BORDER      ?? 2;
+      const radius = T1.BOX_RADIUS      ?? 18;
+      const fPt    = T1.BOX_FONT_PT     ?? 9;
+      const fW     = T1.BOX_FONT_WEIGHT ?? 525;
+      const letter = T1.BOX_LETTER      ?? 0.3;
+      const line   = T1.BOX_LINE        ?? 1.25;
+  
+      el.style.width = `${wPct}%`;
+      el.style.minHeight = `${minH}px`;
+      el.style.padding = `${padY}px ${padX}px`;
+      el.style.borderWidth = `${border}px`;
+      el.style.borderRadius = `${radius}px`;
+      el.style.font = `${fW} ${fPt}pt Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+      el.style.letterSpacing = `${letter}px`;
+      el.style.lineHeight = `${line}em`;
+    }
+  
+    // Helper: apply diamond geometry (square -> diamond)
+    function styleDiamond(el, innerSpan) {
+      const size   = T1.DIAMOND_SIZE_PX  ?? 72;
+      const border = T1.DIAMOND_BORDER   ?? (T1.BOX_BORDER ?? 2);
+      const pad    = T1.DIAMOND_PAD      ?? 12;
+      const labelPt = T1.DIAMOND_LABEL_PT ?? (T1.BOX_FONT_PT ?? 9);
+  
+      // one knob controls both — always a square before rotation
+      el.style.width = `${size}px`;
+      el.style.height = `${size}px`;
+      el.style.borderWidth = `${border}px`;
+  
+      innerSpan.style.padding = `${pad}px`;
+      innerSpan.style.fontSize = `${labelPt}pt`;
+    }
+  
     function makeBox(extraClass, text) {
       const box = document.createElement("div");
       box.className = "step1-tab-box" + (extraClass ? " " + extraClass : "");
       box.textContent = text;
+      styleBox(box);
       return box;
     }
-
+  
+    // 4 rectangular / pill boxes
     stack.appendChild(makeBox("", labels.rect1));
     stack.appendChild(makeBox("", labels.rect2));
     stack.appendChild(makeBox("", labels.round3));
     stack.appendChild(makeBox("oval", labels.oval4));
-
+  
+    // Diamond at the bottom
     const diamond = document.createElement("div");
     diamond.className = "step1-tab-diamond";
     const dSpan = document.createElement("span");
     dSpan.textContent = labels.diamond5;
     diamond.appendChild(dSpan);
+    styleDiamond(diamond, dSpan);
     stack.appendChild(diamond);
-
+  
+    rightCol.appendChild(rightTitle);
     rightCol.appendChild(stack);
-
-    // Apply column widths from knobs
-    const leftPct = (T1.LEFT_COL_PCT ?? 0.52) * 100;
-    const rightPct = (T1.RIGHT_COL_PCT ?? 0.48) * 100;
-    leftCol.style.flex = `0 0 ${leftPct}%`;
-    leftCol.style.maxWidth = `${leftPct}%`;
-    rightCol.style.flex = `0 0 ${rightPct}%`;
-    rightCol.style.maxWidth = `${rightPct}%`;
-    wrap.style.gap = `${T1.COL_GAP ?? 32}px`;
-
+  
     wrap.appendChild(leftCol);
     wrap.appendChild(rightCol);
   }
