@@ -110,6 +110,7 @@
 
       // ================= MOBILE OVERRIDES (phones/tablets) =================
       MOBILE_BREAKPOINT: (window.PROCESS_CONFIG?.mobile?.BP ?? 840),
+      TABLET_BREAKPOINT: 1024,  // <-- NEW: upper bound for tablet row-layout
       M_MAX_W: 820,
       M_SIDE_PAD: 16,
       M_SECTION_TOP: 40,
@@ -373,25 +374,37 @@
     const cfg = C();
     const bounds = ctx.bounds;
 
-    const isMobile =
+    const vw = window.innerWidth || bounds.sW || bounds.width;
+
+    // phones: same breakpoint logic as before
+    const isPhone =
       window.PROCESS_FORCE_MOBILE === true ||
-      window.innerWidth <= cfg.MOBILE_BREAKPOINT;
+      vw <= cfg.MOBILE_BREAKPOINT;
+
+    // tablets: NEW → between phone BP and tablet BP
+    const isTablet =
+      !isPhone && vw <= (cfg.TABLET_BREAKPOINT || 1024);
+
+    // use stacked row layout (title+copy row, SVG row) for phones + tablets
+    const useStackedRows = isPhone || isTablet;
 
     const fullW = bounds.width;
     const H = Math.min(cfg.HEIGHT_MAX_PX, bounds.sH - 40);
-    const W = isMobile ? fullW : Math.max(300, fullW * cfg.WIDTH_RATIO);
+    const W = useStackedRows ? fullW : Math.max(300, fullW * cfg.WIDTH_RATIO);
 
-    // For desktop we respect right-rail placement; for mobile we center at 0
-    const x0 = isMobile ? 0 : fullW * cfg.STACK_X_RATIO + cfg.NUDGE_X;
+    // For desktop we respect right-rail placement; for phone/tablet we center at 0
+    const x0 = useStackedRows ? 0 : fullW * cfg.STACK_X_RATIO + cfg.NUDGE_X;
     const y0 = H * cfg.STACK_TOP_RATIO + cfg.NUDGE_Y;
 
-    // Global scale knob for phones (1 = normal, <1 = shrink)
-    const scale = isMobile ? (cfg.M_SCALE != null ? cfg.M_SCALE : 1) : 1;
+    // Global scale knob for small screens (phones/tablets)
+    const scale = useStackedRows ? (cfg.M_SCALE != null ? cfg.M_SCALE : 1) : 1;
 
     let svg;
-    if (isMobile) {
+    if (useStackedRows) {
+      // stacked rows: row 1 = title+copy, row 2 = SVG (same markup for phone+tablet)
       svg = drawMobile(ctx, { W, H });
     } else {
+      // desktop: original right-rail SVG
       svg = document.createElementNS(NS, "svg");
       svg.style.position = "absolute";
       svg.style.left = bounds.left + "px";
@@ -412,8 +425,8 @@
     defs.appendChild(f);
     svg.appendChild(defs);
 
-    // Section title (desktop only)
-    if (!isMobile && cfg.TITLE_SHOW) {
+    // Section title (desktop only; phones/tablets already show title in row 1)
+    if (!useStackedRows && cfg.TITLE_SHOW) {
       const t = document.createElementNS(NS, "text");
       t.setAttribute("x", x0 + W / 2 + cfg.TITLE_OFFSET_X);
       t.setAttribute("y", y0 + cfg.TITLE_OFFSET_Y);
@@ -428,50 +441,50 @@
     }
 
     // Dimensions / knobs with mobile overrides + scale
-    const colGap = W * pick(isMobile, "COL_GAP_RATIO") * scale;
-    const colWBase = W * pick(isMobile, "COL_W_RATIO") * scale;
-    const baseH = H * pick(isMobile, "ITEM_H_RATIO") * scale;
-    const gap = H * pick(isMobile, "ITEM_GAP_RATIO") * scale;
+    const colGap   = W * pick(useStackedRows, "COL_GAP_RATIO") * scale;
+    const colWBase = W * pick(useStackedRows, "COL_W_RATIO") * scale;
+    const baseH    = H * pick(useStackedRows, "ITEM_H_RATIO") * scale;
+    const gap      = H * pick(useStackedRows, "ITEM_GAP_RATIO") * scale;
 
     const colWArray = cfg.COLS.map(
-      (c) => colWBase * (pickMap(isMobile, "COL_W_MULTS")[c.key] || 1)
+      (c) => colWBase * (pickMap(useStackedRows, "COL_W_MULTS")[c.key] || 1)
     );
     const innerW =
       colWArray.reduce((a, b) => a + b, 0) + (cfg.COLS.length - 1) * colGap;
     const left = x0 + (W - innerW) / 2;
-    const top = y0 + 8 * scale;
+    const top  = y0 + 8 * scale;
 
-    const SHAPE_W = pick(isMobile, "SHAPE_WIDTH") * scale;
-    const SHAPE_COLOR = pick(isMobile, "SHAPE_COLOR");
-    const LINE_W = pick(isMobile, "LINE_WIDTH") * scale;
-    const LINE_COLOR = pick(isMobile, "LINE_COLOR");
-    const CONNECT_GAP = pick(isMobile, "CONNECT_GAP") * scale;
-    const R_RECT = pick(isMobile, "RADIUS_RECT");
-    const R_PILL = pick(isMobile, "RADIUS_PILL");
-    const R_OVAL = pick(isMobile, "RADIUS_OVAL");
+    const SHAPE_W    = pick(useStackedRows, "SHAPE_WIDTH") * scale;
+    const SHAPE_COLOR= pick(useStackedRows, "SHAPE_COLOR");
+    const LINE_W     = pick(useStackedRows, "LINE_WIDTH") * scale;
+    const LINE_COLOR = pick(useStackedRows, "LINE_COLOR");
+    const CONNECT_GAP= pick(useStackedRows, "CONNECT_GAP") * scale;
+    const R_RECT     = pick(useStackedRows, "RADIUS_RECT");
+    const R_PILL     = pick(useStackedRows, "RADIUS_PILL");
+    const R_OVAL     = pick(useStackedRows, "RADIUS_OVAL");
 
     const anchorsByCol = [];
-    const headBoxes = [];
+    const headBoxes    = [];
 
     let xCursor = left;
 
     cfg.COLS.forEach((col, ci) => {
-      const key = col.key;
-      const colX = xCursor + (pickMap(isMobile, "COL_X_OFFSETS")[key] || 0);
+      const key  = col.key;
+      const colX = xCursor + (pickMap(useStackedRows, "COL_X_OFFSETS")[key] || 0);
       const colW = colWArray[ci];
-      const colY0 = top + (pickMap(isMobile, "COL_Y_OFFSETS")[key] || 0);
+      const colY0= top + (pickMap(useStackedRows, "COL_Y_OFFSETS")[key] || 0);
 
       // headings
-      const headW = colW * pick(isMobile, "HEAD_MAX_WIDTH_PCT");
-      const headHBase = pick(isMobile, "HEAD_BOX_H") || cfg.HEAD_BOX_H;
+      const headW = colW * pick(useStackedRows, "HEAD_MAX_WIDTH_PCT");
+      const headHBase = pick(useStackedRows, "HEAD_BOX_H") || cfg.HEAD_BOX_H;
       const headH = headHBase * scale;
       const headOffsetY =
-        (pick(isMobile, "HEAD_OFFSET_Y") != null
-          ? pick(isMobile, "HEAD_OFFSET_Y")
+        (pick(useStackedRows, "HEAD_OFFSET_Y") != null
+          ? pick(useStackedRows, "HEAD_OFFSET_Y")
           : cfg.HEAD_OFFSET_Y) * scale;
       const headSpacing =
-        (pick(isMobile, "HEAD_SPACING") != null
-          ? pick(isMobile, "HEAD_SPACING")
+        (pick(useStackedRows, "HEAD_SPACING") != null
+          ? pick(useStackedRows, "HEAD_SPACING")
           : cfg.HEAD_SPACING) * scale;
 
       const headX = colX + (colW - headW) / 2;
@@ -481,14 +494,14 @@
       // shapes
       let y = headY + headH + headSpacing;
 
-      const leftAnch = [];
+      const leftAnch  = [];
       const rightAnch = [];
-      const yOffsets = pickMap(isMobile, "ITEM_Y_OFFSETS")[key] || [];
-      const hMults = pickMap(isMobile, "ITEM_H_MULTS")[key] || [];
+      const yOffsets  = pickMap(useStackedRows, "ITEM_Y_OFFSETS")[key] || [];
+      const hMults    = pickMap(useStackedRows, "ITEM_H_MULTS")[key] || [];
       const perStepColor =
-        pickMap(isMobile, "SHAPE_COLOR_BY_STEP")[key] || SHAPE_COLOR;
+        pickMap(useStackedRows, "SHAPE_COLOR_BY_STEP")[key] || SHAPE_COLOR;
       const perStepWidth =
-        pickMap(isMobile, "SHAPE_WIDTH_BY_STEP")[key] || SHAPE_W;
+        pickMap(useStackedRows, "SHAPE_WIDTH_BY_STEP")[key] || SHAPE_W;
 
       col.items.forEach((type, i) => {
         const hm = hMults[i] != null ? hMults[i] : 1;
@@ -501,7 +514,7 @@
         let cx, cy, r, d;
 
         const isLast = i === col.items.length - 1;
-        let dimConfig = pick(isMobile, "LAST_DIM");
+        let dimConfig = pick(useStackedRows, "LAST_DIM");
         let dimSpec;
 
         if (typeof dimConfig === "number") {
@@ -534,26 +547,26 @@
           cx = colX + colW / 2;
           cy = yAdj + h / 2;
         } else if (type === "circle") {
-          r = Math.min(colW, h) / 2;
+          r  = Math.min(colW, h) / 2;
           cx = colX + colW / 2;
           cy = yAdj + h / 2;
           addCircle(svg, cx, cy, r, perStepColor, perStepWidth, opacity, filterId);
         } else if (type === "diamond") {
           cx = colX + colW / 2;
           cy = yAdj + h / 2;
-          d = diamondPath(cx, cy, colW * 0.9, h * 0.9);
+          d  = diamondPath(cx, cy, colW * 0.9, h * 0.9);
           addPath(svg, d, perStepColor, perStepWidth, opacity, filterId);
         }
 
         let leftX, rightX;
         if (type === "circle") {
-          leftX = cx - r;
+          leftX  = cx - r;
           rightX = cx + r;
         } else if (type === "diamond") {
-          leftX = cx - (colW * 0.9) / 2;
+          leftX  = cx - (colW * 0.9) / 2;
           rightX = cx + (colW * 0.9) / 2;
         } else {
-          leftX = colX;
+          leftX  = colX;
           rightX = colX + colW;
         }
         leftAnch.push({ x: leftX - CONNECT_GAP, y: cy });
@@ -573,16 +586,16 @@
           : 0;
 
         const padBase =
-          pick(isMobile, "DOTS_TOP_PAD") != null
-            ? pick(isMobile, "DOTS_TOP_PAD")
+          pick(useStackedRows, "DOTS_TOP_PAD") != null
+            ? pick(useStackedRows, "DOTS_TOP_PAD")
             : cfg.DOTS_TOP_PAD != null
             ? cfg.DOTS_TOP_PAD
             : 6;
 
-        const pad = padBase * scale;
-        const dotsY = lastY + pad;
+        const pad    = padBase * scale;
+        const dotsY  = lastY + pad;
         const dotGap = cfg.DOT_GAP * scale;
-        const dotSize = cfg.DOT_SIZE * scale;
+        const dotSize= cfg.DOT_SIZE * scale;
 
         for (let k = 0; k < col.dots; k++) {
           const dot = document.createElementNS(NS, "circle");
@@ -597,7 +610,7 @@
 
     // connections
     const pairStyles =
-      pick(isMobile, "LINE_STYLE_BY_PAIR") || cfg.LINE_STYLE_BY_PAIR || {};
+      pick(useStackedRows, "LINE_STYLE_BY_PAIR") || cfg.LINE_STYLE_BY_PAIR || {};
     for (let i = 0; i < anchorsByCol.length - 1; i++) {
       const A = anchorsByCol[i];
       const B = anchorsByCol[i + 1];
@@ -623,13 +636,13 @@
           w,
           h,
           idx,
-          isMobile
+          isMobile: useStackedRows
         });
       });
     }
 
     // left SEO copy (desktop only)
-    if (!isMobile && typeof ctx.mountCopy === "function") {
+    if (!useStackedRows && typeof ctx.mountCopy === "function") {
       const l =
         bounds.left +
         bounds.width * cfg.COPY_LEFT_RATIO +
