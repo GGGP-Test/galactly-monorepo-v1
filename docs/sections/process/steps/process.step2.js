@@ -185,42 +185,95 @@
   }
 
   // ---------------- CONFIG: TABLET KNOBS (Step 2) ----------------
-  // Same field names as desktop; defaults start equal to desktop,
-  // but you can override PROCESS_CONFIG.step2Tablet.* in process.js.
+  // All tablet-only knobs live here, inside this file.
   function T() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2Tablet = root.step2Tablet || {};
     const tcfg = root.step2Tablet;
-    const base = C(); // ensure desktop defaults exist
+    const base = C(); // desktop defaults
 
-    const keys = [
-      "BOX_W_RATIO","BOX_H_RATIO","GAP_RATIO","STACK_X_RATIO","STACK_TOP_RATIO",
-      "NUDGE_X","NUDGE_Y","RADIUS_RECT","RADIUS_PILL","RADIUS_OVAL",
-      "CIRCLE_DESKTOP_DIAM_RATIO","SHOW_LEFT_LINE","SHOW_RIGHT_LINE",
-      "LEFT_STOP_RATIO","RIGHT_MARGIN_PX","H_LINE_Y_BIAS","CONNECT_X_PAD","LINE_STROKE_PX",
-      "FONT_PT_OVAL","FONT_PT_PILL","FONT_PT_RECT","FONT_PT_CIRCLE",
-      "FONT_WEIGHT_BOX","FONT_FAMILY_BOX","FONT_LETTER_SPACING","LINE_HEIGHT_EM",
-      "PADDING_X","PADDING_Y","UPPERCASE",
-      "TITLE_SHOW","TITLE_TEXT","TITLE_PT","TITLE_WEIGHT","TITLE_FAMILY",
-      "TITLE_OFFSET_X","TITLE_OFFSET_Y","TITLE_LETTER_SPACING",
-      "COPY_LEFT_RATIO","COPY_TOP_RATIO","COPY_NUDGE_X","COPY_NUDGE_Y",
-      "COPY_MAX_W_PX","COPY_H_PT","COPY_H_WEIGHT","COPY_BODY_PT",
-      "COPY_BODY_WEIGHT","COPY_FAMILY","COPY_LINE_HEIGHT",
-      "DOTS_COUNT","DOTS_SIZE_PX","DOTS_GAP_PX","DOTS_Y_OFFSET"
-    ];
+    // 🔧 Tablet-only defaults for Step 2
+    const dfltTablet = {
+      // ----- COPY BLOCK (LEFT COLUMN) -----
+      // max width of the text block on tablet
+      COPY_MAX_W_PX: 300,
+      // where the copy column starts (fraction of Step canvas width)
+      COPY_LEFT_RATIO: 0.055,
+      COPY_TOP_RATIO: base.COPY_TOP_RATIO,   // keep same vertical anchor as desktop
+      // pixel nudges on top of the ratios
+      COPY_NUDGE_X: base.COPY_NUDGE_X,       // + = right,  - = left
+      COPY_NUDGE_Y: base.COPY_NUDGE_Y,       // + = down,   - = up
 
-    keys.forEach((k) => {
-      if (!(k in tcfg)) tcfg[k] = base[k];
-    });
+      // ----- BOX STACK (RIGHT SIDE) -----
+      // overall geometry for the stack of shapes
+      BOX_W_RATIO:  base.BOX_W_RATIO,        // wider / narrower boxes
+      BOX_H_RATIO:  base.BOX_H_RATIO,        // taller / shorter boxes
+      GAP_RATIO:    base.GAP_RATIO,          // vertical gap between shapes
+      STACK_X_RATIO: base.STACK_X_RATIO,     // base X anchor
+      STACK_TOP_RATIO: 0.20,                 // slightly higher / lower than desktop
 
-    // Small tablet-specific tweaks (still very close to desktop)
-    tcfg.NUDGE_X        = -200;
-    tcfg.STACK_TOP_RATIO = 0.20;
-    tcfg.COPY_LEFT_RATIO = 0.055;
-    tcfg.COPY_MAX_W_PX   = 300;
-    tcfg.TITLE_PT        = base.TITLE_PT - 1;   // slightly smaller title
-    tcfg.COPY_H_PT       = base.COPY_H_PT - 2;  // slightly smaller h3
-    tcfg.COPY_BODY_PT    = base.COPY_BODY_PT - 1;
+      // nudge the ENTIRE stack (all shapes + dots + title)
+      NUDGE_X: -200,                         // + = move stack right,  - = left
+      NUDGE_Y: base.NUDGE_Y,                 // + = move stack down,   - = up
+
+      // ----- STROKES & CONNECTORS -----
+      STROKE_PX:      base.STROKE_PX,        // outline thickness (boxes/circle)
+      LINE_STROKE_PX: base.LINE_STROKE_PX,   // connector lines
+
+      RADIUS_RECT:    base.RADIUS_RECT,
+      RADIUS_PILL:    base.RADIUS_PILL,
+      RADIUS_OVAL:    base.RADIUS_OVAL,
+      CIRCLE_DESKTOP_DIAM_RATIO: base.CIRCLE_DESKTOP_DIAM_RATIO,
+
+      SHOW_LEFT_LINE:  base.SHOW_LEFT_LINE,
+      SHOW_RIGHT_LINE: base.SHOW_RIGHT_LINE,
+      LEFT_STOP_RATIO: base.LEFT_STOP_RATIO,
+      RIGHT_MARGIN_PX: base.RIGHT_MARGIN_PX,
+      H_LINE_Y_BIAS:   base.H_LINE_Y_BIAS,
+      CONNECT_X_PAD:   base.CONNECT_X_PAD,
+
+      // ----- TYPOGRAPHY FOR SHAPES -----
+      FONT_PT_OVAL:   base.FONT_PT_OVAL,
+      FONT_PT_PILL:   base.FONT_PT_PILL,
+      FONT_PT_RECT:   base.FONT_PT_RECT,
+      FONT_PT_CIRCLE: base.FONT_PT_CIRCLE,
+      FONT_WEIGHT_BOX:      base.FONT_WEIGHT_BOX,
+      FONT_FAMILY_BOX:      base.FONT_FAMILY_BOX,
+      FONT_LETTER_SPACING:  base.FONT_LETTER_SPACING,
+      LINE_HEIGHT_EM:       base.LINE_HEIGHT_EM,
+      PADDING_X:            base.PADDING_X,
+      PADDING_Y:            base.PADDING_Y,
+      UPPERCASE:            base.UPPERCASE,
+
+      // ----- TITLE ABOVE STACK -----
+      TITLE_SHOW:          base.TITLE_SHOW,
+      TITLE_TEXT:          base.TITLE_TEXT,
+      TITLE_PT:            base.TITLE_PT - 1, // slightly smaller on tablet
+      TITLE_WEIGHT:        base.TITLE_WEIGHT,
+      TITLE_FAMILY:        base.TITLE_FAMILY,
+      TITLE_OFFSET_X:      base.TITLE_OFFSET_X,
+      TITLE_OFFSET_Y:      base.TITLE_OFFSET_Y,
+      TITLE_LETTER_SPACING: base.TITLE_LETTER_SPACING,
+
+      // ----- COPY TYPOGRAPHY -----
+      COPY_H_PT:        base.COPY_H_PT - 2,  // slightly smaller h3
+      COPY_H_WEIGHT:    base.COPY_H_WEIGHT,
+      COPY_BODY_PT:     base.COPY_BODY_PT - 1,
+      COPY_BODY_WEIGHT: base.COPY_BODY_WEIGHT,
+      COPY_FAMILY:      base.COPY_FAMILY,
+      COPY_LINE_HEIGHT: base.COPY_LINE_HEIGHT,
+
+      // ----- DOTS UNDER STACK -----
+      DOTS_COUNT:   base.DOTS_COUNT,
+      DOTS_SIZE_PX: base.DOTS_SIZE_PX,
+      DOTS_GAP_PX:  base.DOTS_GAP_PX,
+      DOTS_Y_OFFSET: base.DOTS_Y_OFFSET
+    };
+
+    // Apply defaults only if not overridden already
+    for (const k in dfltTablet) {
+      if (!(k in tcfg)) tcfg[k] = dfltTablet[k];
+    }
 
     return tcfg;
   }
