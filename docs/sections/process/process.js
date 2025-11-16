@@ -846,23 +846,27 @@
         With that map in hand, we move forward to find real buyers who match your situation.
       </p>
     `;
-  
-    const TCFG = () => window.PROCESS_CONFIG?.tablet || {};
-    
-    ...
-    
-    const onTablet = !isMobile && isTabletLike; // whatever logic you already have
-    const T1 = TCFG().step1 || {};
-    const step1CopyMax =
-      onTablet && T1.COPY_MAX_PX != null ? T1.COPY_MAX_PX : null;
-    
+
+    // Step 0 uses the global --copyMax (no per-step override here)
     const copy = mountCopy({
       top: copyTop,
-      left: copyLeft,
-      html: copyHTML,
-      maxWidth: step1CopyMax    // <- this is the new bit
+      left: fromRail,
+      html: copyHTML
     });
 
+    requestAnimationFrame(() => {
+      const boxLeftAbs = b.left + pillX;
+      const copyBox = copy.getBoundingClientRect();
+      let idealLeft =
+        boxLeftAbs - window.PROCESS_CONFIG.step0.COPY_GAP - copyBox.width;
+      idealLeft = Math.min(copyBox.left, idealLeft);
+      idealLeft = Math.max(idealLeft, minInside);
+      idealLeft += copyNX; // tablet extra shove
+      copy.style.left = idealLeft + "px";
+    });
+
+    return nodeH;
+    
     requestAnimationFrame(() => {
       const boxLeftAbs = b.left + pillX;
       const copyBox = copy.getBoundingClientRect();
