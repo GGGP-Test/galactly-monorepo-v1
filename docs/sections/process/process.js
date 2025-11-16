@@ -274,6 +274,19 @@
           sidePad: 24,      // padding inside the column
           nudgeX: 0,        // translate the whole block
           nudgeY: 0,
+                    // === SVG layout overrides that process.step1.js actually reads ===
+          // Boxes stack (right side)
+          BOX_W_RATIO: 0.16,      // width of each box = W * 0.16
+          STACK_X_RATIO: 0.68,    // horizontal anchor of the box stack (0 = far left, 1 = far right)
+          STACK_TOP_RATIO: 0.18,  // vertical anchor of the first box (0 = very top, 1 = bottom)
+          NUDGE_X: 180,          // extra px shove horizontally (negative = left)
+          NUDGE_Y: -10,           // extra px shove vertically (negative = up)
+
+          // Copy column (left side)
+          COPY_LEFT_RATIO: 0.06,  // horizontal position of copy column (fraction of W)
+          COPY_TOP_RATIO: 0.30,   // vertical anchor of copy (0 = top, 1 = bottom)
+          COPY_NUDGE_X: -40,      // extra px shove horizontally
+          COPY_NUDGE_Y: 0,        // extra px shove vertically
 
           // small title: "Intent Score"
           titleShow: true,
