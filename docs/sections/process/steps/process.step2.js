@@ -213,7 +213,7 @@
       STACK_TOP_RATIO: 0.20,                 // slightly higher / lower than desktop
 
       // nudge the ENTIRE stack (all shapes + dots + title)
-      NUDGE_X: -50,                         // + = move stack right,  - = left
+      NUDGE_X: -70,                         // + = move stack right,  - = left
       NUDGE_Y: base.NUDGE_Y,                 // + = move stack down,   - = up
 
       // ----- STROKES & CONNECTORS -----
