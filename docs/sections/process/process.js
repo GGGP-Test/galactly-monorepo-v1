@@ -263,7 +263,7 @@
         step1: {
           
          // NEW: specific copy width just for step 1 on tablet
-          COPY_MAX_PX: 320,   // or 300, 340, whatever looks right
+          COPY_MAX_PX: 390,   // or 300, 340, whatever looks right
           
           useTheme: true,
 
