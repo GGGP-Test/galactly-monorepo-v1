@@ -263,7 +263,7 @@
         step1: {
           
          // NEW: specific copy width just for step 1 on tablet
-          COPY_MAX_PX: 790,   // or 300, 340, whatever looks right
+          COPY_MAX_PX: 390,   // or 300, 340, whatever looks right
           
           useTheme: true,
 
@@ -300,9 +300,9 @@
 
           // base box knobs (all 4 boxes)
           box: {
-            widthPct: 72,
+            widthPct: 480,
             minH: 46,
-            padX: 180,
+            padX: 480,
             padY: 12,
             border: 2,
             radius: 18,
@@ -317,10 +317,10 @@
 
           // diamond at the bottom
           diamond: {
-            widthPct: 34,  // width as % of column
+            widthPct: 50,  // width as % of column
             size: null,    // if set, wins over widthPct (px)
             border: 2,
-            pad: 14,
+            pad: 480,
             labelPt: 9,
             nudgeY: 18     // positive = further from last box
           },
