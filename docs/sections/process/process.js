@@ -1282,8 +1282,8 @@
   
         LEFT_NUDGE_X: 0,
         LEFT_NUDGE_Y: 0,
-        RIGHT_NUDGE_X: 0,
-        RIGHT_NUDGE_Y: 0,
+        RIGHT_NUDGE_X: -50,
+        RIGHT_NUDGE_Y: 10,
   
         BOX_WIDTH_PCT: 80,
         BOX_MIN_H: 20,
