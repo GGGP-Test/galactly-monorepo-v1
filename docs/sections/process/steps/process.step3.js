@@ -230,23 +230,23 @@
     const dfltTablet = {
       // ----- LEFT COPY COLUMN -----
       // max width of the left text block
-      COPY_MAX_W_PX: 300,
+      COPY_MAX_W_PX: 200,
       // where the copy column starts (fraction of Step canvas width)
       COPY_LEFT_RATIO: 0.055,
       COPY_TOP_RATIO: base.COPY_TOP_RATIO,   // keep vertical anchor from desktop
       // pixel nudges on top of the ratios
-      COPY_NUDGE_X: base.COPY_NUDGE_X,       // + = right,  - = left
+      COPY_NUDGE_X: -50,       // + = right,  - = left
       COPY_NUDGE_Y: base.COPY_NUDGE_Y,       // + = down,   - = up
 
       // ----- RIGHT STACK (ALL SHAPES) -----
-      BOX_W_RATIO:    base.BOX_W_RATIO,      // width of the stack tiles
+      BOX_W_RATIO:    0.3,      // width of the stack tiles
       BOX_H_RATIO:    base.BOX_H_RATIO,      // base height for tiles
       GAP_RATIO:      base.GAP_RATIO,        // vertical gap between shapes
       STACK_X_RATIO:  base.STACK_X_RATIO,    // anchor for the stack
       STACK_TOP_RATIO: 0.20,                 // slightly adjusted vertical anchor
 
       // Move the ENTIRE stack (circle + boxes + dots + title) on tablet
-      NUDGE_X: -200,                         // + = move stack right,  - = left
+      NUDGE_X: -70,                         // + = move stack right,  - = left
       NUDGE_Y: base.NUDGE_Y,                 // + = move stack down,   - = up
 
       // ----- STROKES & CONNECTORS -----
@@ -257,7 +257,7 @@
       RADIUS_PILL:    base.RADIUS_PILL,
       RADIUS_OVAL:    base.RADIUS_OVAL,
       DIAMOND_SCALE:  base.DIAMOND_SCALE,
-      CIRCLE_DESKTOP_DIAM_RATIO: base.CIRCLE_DESKTOP_DIAM_RATIO,
+      CIRCLE_DESKTOP_DIAM_RATIO: 0.2,
 
       SHOW_LEFT_LINE:  base.SHOW_LEFT_LINE,
       SHOW_RIGHT_LINE: base.SHOW_RIGHT_LINE,
@@ -297,7 +297,7 @@
       COPY_LINE_HEIGHT: base.COPY_LINE_HEIGHT,
 
       // ----- DOTS UNDER STACK -----
-      DOTS_COUNT:    base.DOTS_COUNT,
+      DOTS_COUNT:    0,
       DOTS_SIZE_PX:  base.DOTS_SIZE_PX,
       DOTS_GAP_PX:   base.DOTS_GAP_PX,
       DOTS_Y_OFFSET: base.DOTS_Y_OFFSET
