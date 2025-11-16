@@ -158,8 +158,8 @@
       // row-layout container (width / padding / vertical spacing)
       T_MAX_W: 820,
       T_SIDE_PAD: 24,
-      T_SECTION_TOP: 320,
-      T_SECTION_BOTTOM: 72,
+      T_SECTION_TOP: 720,
+      T_SECTION_BOTTOM: 720,
 
       // copy + section title typography (tablet only)
       T_TITLE_PT: 14,
@@ -203,7 +203,7 @@
 
       // section title offsets for tablet row layout
       T_TITLE_OFFSET_X: 100,
-      T_TITLE_OFFSET_Y: 80,
+      T_TITLE_OFFSET_Y: 10,
 
       // dots spacing under last item (tablet)
       T_DOTS_TOP_PAD: 30,
