@@ -273,7 +273,7 @@
           RIGHT_NUDGE_Y: 0,     // + = move right col down, - = up
         
           // Box geometry
-          BOX_WIDTH_PCT: 80,   // % of right column width for each box
+          BOX_WIDTH_PCT: 100,   // % of right column width for each box
           BOX_MIN_H: 15,        // min height in px
           BOX_PAD_X: 8,        // horizontal padding (px)
           BOX_PAD_Y: 92,        // vertical padding (px)
