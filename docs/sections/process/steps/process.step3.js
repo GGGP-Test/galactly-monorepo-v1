@@ -84,6 +84,9 @@
 
       // Shape sizes (desktop)
       CIRCLE_DESKTOP_DIAM_RATIO: 0.10,
+      
+      // Tablet breakpoint (Step 3)
+      TABLET_BP: 1024,
 
       // ===== Labels / copy =====
       TITLE_SEO: "Who becomes a long-term customer?",
@@ -213,6 +216,101 @@
 
     return mobile.step3;
   }
+  
+  
+    // -------------------- CONFIG: TABLET STEP 3 (tablet-only knobs) --------------------
+  // Same visuals as desktop, but with its own layout & typography knobs for tablets only.
+  function T() {
+    const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
+    root.step3Tablet = root.step3Tablet || {};
+    const tcfg = root.step3Tablet;
+    const base = C(); // desktop defaults
+
+    // 🔧 Tablet-only defaults for Step 3
+    const dfltTablet = {
+      // ----- LEFT COPY COLUMN -----
+      // max width of the left text block
+      COPY_MAX_W_PX: 300,
+      // where the copy column starts (fraction of Step canvas width)
+      COPY_LEFT_RATIO: 0.055,
+      COPY_TOP_RATIO: base.COPY_TOP_RATIO,   // keep vertical anchor from desktop
+      // pixel nudges on top of the ratios
+      COPY_NUDGE_X: base.COPY_NUDGE_X,       // + = right,  - = left
+      COPY_NUDGE_Y: base.COPY_NUDGE_Y,       // + = down,   - = up
+
+      // ----- RIGHT STACK (ALL SHAPES) -----
+      BOX_W_RATIO:    base.BOX_W_RATIO,      // width of the stack tiles
+      BOX_H_RATIO:    base.BOX_H_RATIO,      // base height for tiles
+      GAP_RATIO:      base.GAP_RATIO,        // vertical gap between shapes
+      STACK_X_RATIO:  base.STACK_X_RATIO,    // anchor for the stack
+      STACK_TOP_RATIO: 0.20,                 // slightly adjusted vertical anchor
+
+      // Move the ENTIRE stack (circle + boxes + dots + title) on tablet
+      NUDGE_X: -200,                         // + = move stack right,  - = left
+      NUDGE_Y: base.NUDGE_Y,                 // + = move stack down,   - = up
+
+      // ----- STROKES & CONNECTORS -----
+      STROKE_PX:      base.STROKE_PX,        // outline thickness of shapes
+      LINE_STROKE_PX: base.LINE_STROKE_PX,   // connector + rail thickness
+
+      RADIUS_RECT:    base.RADIUS_RECT,
+      RADIUS_PILL:    base.RADIUS_PILL,
+      RADIUS_OVAL:    base.RADIUS_OVAL,
+      DIAMOND_SCALE:  base.DIAMOND_SCALE,
+      CIRCLE_DESKTOP_DIAM_RATIO: base.CIRCLE_DESKTOP_DIAM_RATIO,
+
+      SHOW_LEFT_LINE:  base.SHOW_LEFT_LINE,
+      SHOW_RIGHT_LINE: base.SHOW_RIGHT_LINE,
+      LEFT_STOP_RATIO: base.LEFT_STOP_RATIO,
+      RIGHT_MARGIN_PX: base.RIGHT_MARGIN_PX,
+      H_LINE_Y_BIAS:   base.H_LINE_Y_BIAS,
+      CONNECT_X_PAD:   base.CONNECT_X_PAD,
+
+      // ----- TYPOGRAPHY FOR SHAPES -----
+      FONT_PT_CIRCLE:   base.FONT_PT_CIRCLE,
+      FONT_PT_BOX:      base.FONT_PT_BOX,
+      FONT_PT_DIAMOND:  base.FONT_PT_DIAMOND,
+      FONT_WEIGHT_BOX:  base.FONT_WEIGHT_BOX,
+      FONT_FAMILY_BOX:  base.FONT_FAMILY_BOX,
+      FONT_LETTER_SPACING: base.FONT_LETTER_SPACING,
+      LINE_HEIGHT_EM:      base.LINE_HEIGHT_EM,
+      PADDING_X:           base.PADDING_X,
+      PADDING_Y:           base.PADDING_Y,
+      UPPERCASE:           base.UPPERCASE,
+
+      // ----- TITLE ABOVE STACK -----
+      TITLE_SHOW:           base.TITLE_SHOW,
+      TITLE_TEXT:           base.TITLE_TEXT,
+      TITLE_PT:             base.TITLE_PT - 1, // slightly smaller on tablet
+      TITLE_WEIGHT:         base.TITLE_WEIGHT,
+      TITLE_FAMILY:         base.TITLE_FAMILY,
+      TITLE_OFFSET_X:       base.TITLE_OFFSET_X,
+      TITLE_OFFSET_Y:       base.TITLE_OFFSET_Y,
+      TITLE_LETTER_SPACING: base.TITLE_LETTER_SPACING,
+
+      // ----- COPY TYPOGRAPHY -----
+      COPY_H_PT:        base.COPY_H_PT - 2,   // slightly smaller h3
+      COPY_H_WEIGHT:    base.COPY_H_WEIGHT,
+      COPY_BODY_PT:     base.COPY_BODY_PT - 1,
+      COPY_BODY_WEIGHT: base.COPY_BODY_WEIGHT,
+      COPY_FAMILY:      base.COPY_FAMILY,
+      COPY_LINE_HEIGHT: base.COPY_LINE_HEIGHT,
+
+      // ----- DOTS UNDER STACK -----
+      DOTS_COUNT:    base.DOTS_COUNT,
+      DOTS_SIZE_PX:  base.DOTS_SIZE_PX,
+      DOTS_GAP_PX:   base.DOTS_GAP_PX,
+      DOTS_Y_OFFSET: base.DOTS_Y_OFFSET
+    };
+
+    // Apply defaults only if not overridden yet
+    for (const k in dfltTablet) {
+      if (!(k in tcfg)) tcfg[k] = dfltTablet[k];
+    }
+
+    return tcfg;
+  }
+  
 
   // -------------------- helpers --------------------
   const reduceMotion = () =>
@@ -541,28 +639,34 @@
     ctx.canvas.appendChild(wrap);
   }
 
-  // -------------------- DESKTOP: same layout as before --------------------
+  // -------------------- DESKTOP + TABLET: same layout, tablet has its own knobs --------------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
     const b = ctx.bounds;
 
+    // ---- breakpoints: phone / tablet / desktop ----
     const mobileBP =
       (window.PROCESS_CONFIG &&
         window.PROCESS_CONFIG.mobile &&
         window.PROCESS_CONFIG.mobile.BP) || 640;
 
-    const isCompact =
-      window.PROCESS_FORCE_MOBILE === true ||
-      window.innerWidth <= mobileBP;
+    const cfg = C(); // desktop defaults (also holds content: ITEMS, COPY_SEO_HTML)
+    const tabletBP = cfg.TABLET_BP || 1024;
+    const vw = window.innerWidth || b.sW || 1200;
 
-    if (isCompact) {
+    const isPhone =
+      window.PROCESS_FORCE_MOBILE === true || vw <= mobileBP;
+
+    if (isPhone) {
       drawMobile(ctx);
       return;
     }
 
-    const cfg = C();
+    const isTablet = vw > mobileBP && vw <= tabletBP;
+    const tcfg = isTablet ? T() : cfg;
+    const use = isTablet ? tcfg : cfg; // layout / typography come from here
 
-    // DESKTOP: right stack + rails + left copy
+    // ---- DESKTOP + TABLET SVG: right stack + rails + left copy ----
     const W = b.width;
     const H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
@@ -576,29 +680,29 @@
 
     makeFlowGradients(svg, { spanX: W * 0.15, y: 0 });
 
-    const boxW = W * cfg.BOX_W_RATIO;
-    const boxH = H * cfg.BOX_H_RATIO;
-    const gap = H * cfg.GAP_RATIO;
-    let x = W * cfg.STACK_X_RATIO + cfg.NUDGE_X;
-    let y = H * cfg.STACK_TOP_RATIO + cfg.NUDGE_Y;
+    const boxW = W * use.BOX_W_RATIO;
+    const boxH = H * use.BOX_H_RATIO;
+    const gap  = H * use.GAP_RATIO;
+    let x = W * use.STACK_X_RATIO + use.NUDGE_X;
+    let y = H * use.STACK_TOP_RATIO + use.NUDGE_Y;
     const itemsDrawn = [];
 
-    const list = cfg.ITEMS || [];
+    const list = cfg.ITEMS || []; // content stays the same across desktop + tablet
 
     // 1: circle
     if (list[0]) {
       const diam =
-        (list[0].circleDiamRatio || cfg.CIRCLE_DESKTOP_DIAM_RATIO) * W;
+        (list[0].circleDiamRatio || use.CIRCLE_DESKTOP_DIAM_RATIO) * W;
       const r = diam / 2;
       const cx = x + boxW / 2;
       const cy = y + r;
-      addCircle(svg, cx, cy, r, "url(#gradFlow)", cfg.STROKE_PX);
+      addCircle(svg, cx, cy, r, "url(#gradFlow)", use.STROKE_PX);
       addFO(svg, cx - r, cy - r, diam, diam, list[0].label, {
-        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_CIRCLE}pt ${cfg.FONT_FAMILY_BOX}`,
-        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+        font: `${use.FONT_WEIGHT_BOX} ${use.FONT_PT_CIRCLE}pt ${use.FONT_FAMILY_BOX}`,
+        letterSpacing: `${use.FONT_LETTER_SPACING}px`,
+        lineHeight: `${use.LINE_HEIGHT_EM}em`,
         padding: "3px 4px",
-        textTransform: cfg.UPPERCASE ? "uppercase" : "none"
+        textTransform: use.UPPERCASE ? "uppercase" : "none"
       });
       itemsDrawn.push({ x: cx - r, y: cy - r, w: diam, h: diam });
       y += diam + gap;
@@ -609,16 +713,16 @@
       const h = boxH * (list[1].heightRatio || 1);
       addPath(
         svg,
-        rr(x, y, boxW, h, cfg.RADIUS_PILL),
+        rr(x, y, boxW, h, use.RADIUS_PILL),
         "url(#gradFlow)",
-        cfg.STROKE_PX
+        use.STROKE_PX
       );
       addFO(svg, x, y, boxW, h, list[1].label, {
-        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_BOX}pt ${cfg.FONT_FAMILY_BOX}`,
-        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
-        padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`,
-        textTransform: cfg.UPPERCASE ? "uppercase" : "none"
+        font: `${use.FONT_WEIGHT_BOX} ${use.FONT_PT_BOX}pt ${use.FONT_FAMILY_BOX}`,
+        letterSpacing: `${use.FONT_LETTER_SPACING}px`,
+        lineHeight: `${use.LINE_HEIGHT_EM}em`,
+        padding: `${use.PADDING_Y}px ${use.PADDING_X}px`,
+        textTransform: use.UPPERCASE ? "uppercase" : "none"
       });
       itemsDrawn.push({ x, y, w: boxW, h });
       y += h + gap;
@@ -629,16 +733,16 @@
       const h = boxH * (list[2].heightRatio || 1);
       addPath(
         svg,
-        rr(x, y, boxW, h, cfg.RADIUS_RECT),
+        rr(x, y, boxW, h, use.RADIUS_RECT),
         "url(#gradFlow)",
-        cfg.STROKE_PX
+        use.STROKE_PX
       );
       addFO(svg, x, y, boxW, h, list[2].label, {
-        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_BOX}pt ${cfg.FONT_FAMILY_BOX}`,
-        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
-        padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`,
-        textTransform: cfg.UPPERCASE ? "uppercase" : "none"
+        font: `${use.FONT_WEIGHT_BOX} ${use.FONT_PT_BOX}pt ${use.FONT_FAMILY_BOX}`,
+        letterSpacing: `${use.FONT_LETTER_SPACING}px`,
+        lineHeight: `${use.LINE_HEIGHT_EM}em`,
+        padding: `${use.PADDING_Y}px ${use.PADDING_X}px`,
+        textTransform: use.UPPERCASE ? "uppercase" : "none"
       });
       itemsDrawn.push({ x, y, w: boxW, h });
       y += h + gap;
@@ -649,85 +753,85 @@
       const h = boxH * (list[3].heightRatio || 1);
       addPath(
         svg,
-        rr(x, y, boxW, h, cfg.RADIUS_OVAL),
+        rr(x, y, boxW, h, use.RADIUS_OVAL),
         "url(#gradFlow)",
-        cfg.STROKE_PX
+        use.STROKE_PX
       );
       addFO(svg, x, y, boxW, h, list[3].label, {
-        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_BOX}pt ${cfg.FONT_FAMILY_BOX}`,
-        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
-        padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`,
-        textTransform: cfg.UPPERCASE ? "uppercase" : "none"
+        font: `${use.FONT_WEIGHT_BOX} ${use.FONT_PT_BOX}pt ${use.FONT_FAMILY_BOX}`,
+        letterSpacing: `${use.FONT_LETTER_SPACING}px`,
+        lineHeight: `${use.LINE_HEIGHT_EM}em`,
+        padding: `${use.PADDING_Y}px ${use.PADDING_X}px`,
+        textTransform: use.UPPERCASE ? "uppercase" : "none"
       });
       itemsDrawn.push({ x, y, w: boxW, h });
-      y += h + cfg.DOTS_Y_OFFSET;
+      y += h + use.DOTS_Y_OFFSET;
     }
 
     // dots
-    if (cfg.DOTS_COUNT > 0) {
+    if (use.DOTS_COUNT > 0) {
       const centerX = x + boxW / 2;
       let dotY = y;
-      for (let i = 0; i < cfg.DOTS_COUNT; i++) {
+      for (let i = 0; i < use.DOTS_COUNT; i++) {
         const c = document.createElementNS(NS, "circle");
         c.setAttribute("cx", centerX);
         c.setAttribute("cy", dotY);
-        c.setAttribute("r", cfg.DOTS_SIZE_PX);
+        c.setAttribute("r", use.DOTS_SIZE_PX);
         c.setAttribute("fill", cfg.COLOR_CYAN);
         c.setAttribute("class", "glow");
         svg.appendChild(c);
-        dotY += cfg.DOTS_GAP_PX;
+        dotY += use.DOTS_GAP_PX;
       }
     }
 
-    // Title
-    if (cfg.TITLE_SHOW && itemsDrawn.length) {
+    // Title above the stack
+    if (use.TITLE_SHOW && itemsDrawn.length) {
       const t = document.createElementNS(NS, "text");
       const topBox = itemsDrawn[0];
       t.setAttribute(
         "x",
-        topBox.x + topBox.w / 2 + cfg.TITLE_OFFSET_X
+        topBox.x + topBox.w / 2 + use.TITLE_OFFSET_X
       );
-      t.setAttribute("y", topBox.y + cfg.TITLE_OFFSET_Y);
+      t.setAttribute("y", topBox.y + use.TITLE_OFFSET_Y);
       t.setAttribute("text-anchor", "middle");
       t.setAttribute("fill", "#ddeaef");
-      t.setAttribute("font-family", cfg.TITLE_FAMILY);
-      t.setAttribute("font-weight", cfg.TITLE_WEIGHT);
-      t.setAttribute("font-size", `${cfg.TITLE_PT}pt`);
-      t.textContent = cfg.TITLE_TEXT;
-      t.style.letterSpacing = `${cfg.TITLE_LETTER_SPACING}px`;
+      t.setAttribute("font-family", use.TITLE_FAMILY);
+      t.setAttribute("font-weight", use.TITLE_WEIGHT);
+      t.setAttribute("font-size", `${use.TITLE_PT}pt`);
+      t.textContent = use.TITLE_TEXT;
+      t.style.letterSpacing = `${use.TITLE_LETTER_SPACING}px`;
       svg.appendChild(t);
     }
 
     // Horizontal rails
     if (itemsDrawn.length) {
       const first = itemsDrawn[0];
-      const attachY = first.y + first.h * (0.5 + cfg.H_LINE_Y_BIAS);
+      const attachY = first.y + first.h * (0.5 + use.H_LINE_Y_BIAS);
 
-      if (cfg.SHOW_LEFT_LINE) {
-        const xs = W * Math.max(0, Math.min(1, cfg.LEFT_STOP_RATIO));
-        const xe = first.x - cfg.CONNECT_X_PAD;
+      if (use.SHOW_LEFT_LINE) {
+        const xs = W * Math.max(0, Math.min(1, use.LEFT_STOP_RATIO));
+        const xe = first.x - use.CONNECT_X_PAD;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
           addPath(
             svg,
             `M ${xs} ${attachY} H ${xe}`,
             stroke,
-            cfg.LINE_STROKE_PX
+            use.LINE_STROKE_PX
           );
         }
       }
 
-      if (cfg.SHOW_RIGHT_LINE) {
-        const xs = first.x + first.w + cfg.CONNECT_X_PAD;
-        const xe = W - cfg.RIGHT_MARGIN_PX;
+      if (use.SHOW_RIGHT_LINE) {
+        const xs = first.x + first.w + use.CONNECT_X_PAD;
+        const xe = W - use.RIGHT_MARGIN_PX;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
           addPath(
             svg,
             `M ${xs} ${attachY} H ${xe}`,
             stroke,
-            cfg.LINE_STROKE_PX
+            use.LINE_STROKE_PX
           );
         }
       }
@@ -735,36 +839,37 @@
 
     // Vertical connectors
     for (let i = 0; i < itemsDrawn.length - 1; i++) {
-      const a = itemsDrawn[i];
+      const a  = itemsDrawn[i];
       const b2 = itemsDrawn[i + 1];
       const xMid = a.x + a.w / 2;
-      const y1 = a.y + a.h;
-      const y2 = b2.y;
-      const pad = Math.max(2, cfg.STROKE_PX);
+      const y1   = a.y + a.h;
+      const y2   = b2.y;
+      const pad  = Math.max(2, use.STROKE_PX);
       addPath(
         svg,
         `M ${xMid} ${y1 + pad} V ${y2 - pad}`,
         "url(#gradTrailFlow)",
-        cfg.LINE_STROKE_PX
+        use.LINE_STROKE_PX
       );
     }
 
-    // Left copy (desktop)
-    const left = b.left + W * cfg.COPY_LEFT_RATIO + cfg.COPY_NUDGE_X;
-    const top = b.top + H * cfg.COPY_TOP_RATIO + cfg.COPY_NUDGE_Y;
+    // Left copy (desktop + tablet share same HTML; layout / type from `use`)
+    const left = b.left + W * use.COPY_LEFT_RATIO + use.COPY_NUDGE_X;
+    const top  = b.top  + H * use.COPY_TOP_RATIO + use.COPY_NUDGE_Y;
     if (typeof ctx.mountCopy === "function") {
       const el = ctx.mountCopy({ top, left, html: cfg.COPY_SEO_HTML });
-      el.style.maxWidth = `${cfg.COPY_MAX_W_PX}px`;
-      el.style.fontFamily = cfg.COPY_FAMILY;
+      el.style.maxWidth   = `${use.COPY_MAX_W_PX}px`;
+      el.style.fontFamily = use.COPY_FAMILY;
       const h3 = el.querySelector("h3");
       if (h3) {
-        h3.style.font = `${cfg.COPY_H_WEIGHT} ${cfg.COPY_H_PT}pt ${cfg.COPY_FAMILY}`;
+        h3.style.font =
+          `${use.COPY_H_WEIGHT} ${use.COPY_H_PT}pt ${use.COPY_FAMILY}`;
       }
       const p = el.querySelector("p");
       if (p) {
         p.style.cssText =
-          `font:${cfg.COPY_BODY_WEIGHT} ${cfg.COPY_BODY_PT}pt ${cfg.COPY_FAMILY}; ` +
-          `line-height:${cfg.COPY_LINE_HEIGHT}`;
+          `font:${use.COPY_BODY_WEIGHT} ${use.COPY_BODY_PT}pt ${use.COPY_FAMILY}; ` +
+          `line-height:${use.COPY_LINE_HEIGHT}`;
       }
     }
   };
