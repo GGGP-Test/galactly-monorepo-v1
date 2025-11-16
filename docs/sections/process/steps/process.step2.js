@@ -201,7 +201,7 @@
       COPY_LEFT_RATIO: 0.055,
       COPY_TOP_RATIO: base.COPY_TOP_RATIO,   // keep same vertical anchor as desktop
       // pixel nudges on top of the ratios
-      COPY_NUDGE_X: -30,       // + = right,  - = left
+      COPY_NUDGE_X: -50,       // + = right,  - = left
       COPY_NUDGE_Y: base.COPY_NUDGE_Y,       // + = down,   - = up
 
       // ----- BOX STACK (RIGHT SIDE) -----
@@ -264,7 +264,7 @@
       COPY_LINE_HEIGHT: base.COPY_LINE_HEIGHT,
 
       // ----- DOTS UNDER STACK -----
-      DOTS_COUNT:   base.DOTS_COUNT,
+      DOTS_COUNT:   0,
       DOTS_SIZE_PX: base.DOTS_SIZE_PX,
       DOTS_GAP_PX:  base.DOTS_GAP_PX,
       DOTS_Y_OFFSET: base.DOTS_Y_OFFSET
