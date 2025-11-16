@@ -296,7 +296,7 @@
 
           RIGHT_TITLE_PT: 12,      // font size in pt
           RIGHT_TITLE_WEIGHT: 700, // (optional) font weight
-          RIGHT_TITLE_NUDGE_X: 50,  // + = move title right,  - = left
+          RIGHT_TITLE_NUDGE_X: 100,  // + = move title right,  - = left
           RIGHT_TITLE_NUDGE_Y: 0   // + = move title down,   - = up
         },
 
