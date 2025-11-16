@@ -277,7 +277,7 @@
                     // === SVG layout overrides that process.step1.js actually reads ===
           // Boxes stack (right side)
           BOX_W_RATIO: 0.16,      // width of each box = W * 0.16
-          STACK_X_RATIO: 0.68,    // horizontal anchor of the box stack (0 = far left, 1 = far right)
+          STACK_X_RATIO: 1,    // horizontal anchor of the box stack (0 = far left, 1 = far right)
           STACK_TOP_RATIO: 0.18,  // vertical anchor of the first box (0 = very top, 1 = bottom)
           NUDGE_X: 180,          // extra px shove horizontally (negative = left)
           NUDGE_Y: -10,           // extra px shove vertically (negative = up)
