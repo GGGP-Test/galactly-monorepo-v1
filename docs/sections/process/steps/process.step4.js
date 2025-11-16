@@ -253,7 +253,7 @@
       RADIUS_RECT:    base.RADIUS_RECT,
       RADIUS_PILL:    base.RADIUS_PILL,
       RADIUS_OVAL:    base.RADIUS_OVAL,
-      DIAMOND_SCALE:  0.2,
+      DIAMOND_SCALE:  1,
 
       SHOW_LEFT_LINE:  base.SHOW_LEFT_LINE,
       SHOW_RIGHT_LINE: base.SHOW_RIGHT_LINE,
