@@ -196,7 +196,7 @@
     const dfltTablet = {
       // ----- COPY BLOCK (LEFT COLUMN) -----
       // max width of the text block on tablet
-      COPY_MAX_W_PX: 300,
+      COPY_MAX_W_PX: 200,
       // where the copy column starts (fraction of Step canvas width)
       COPY_LEFT_RATIO: 0.055,
       COPY_TOP_RATIO: base.COPY_TOP_RATIO,   // keep same vertical anchor as desktop
@@ -213,7 +213,7 @@
       STACK_TOP_RATIO: 0.20,                 // slightly higher / lower than desktop
 
       // nudge the ENTIRE stack (all shapes + dots + title)
-      NUDGE_X: -200,                         // + = move stack right,  - = left
+      NUDGE_X: 0,                         // + = move stack right,  - = left
       NUDGE_Y: base.NUDGE_Y,                 // + = move stack down,   - = up
 
       // ----- STROKES & CONNECTORS -----
