@@ -283,7 +283,7 @@
           NUDGE_Y: -10,           // extra px shove vertically (negative = up)
 
           // Copy column (left side)
-          COPY_LEFT_RATIO: 0.06,  // horizontal position of copy column (fraction of W)
+          COPY_LEFT_RATIO: 0,  // horizontal position of copy column (fraction of W)
           COPY_TOP_RATIO: 0.30,   // vertical anchor of copy (0 = top, 1 = bottom)
           COPY_NUDGE_X: -40,      // extra px shove horizontally
           COPY_NUDGE_Y: 0,        // extra px shove vertically
