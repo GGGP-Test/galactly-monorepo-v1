@@ -167,7 +167,7 @@
       T_COPY_BODY_PT: 14,
 
       // global scale for SVG on tablet
-      T_SCALE: 0.95,
+      T_SCALE: 0.3,
 
       // SVG geometry (tablet only)
       T_COL_GAP_RATIO: 0.08,
