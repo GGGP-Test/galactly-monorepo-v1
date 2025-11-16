@@ -264,22 +264,22 @@
           // Column widths
           LEFT_COL_PCT: 0.52,   // left column width fraction (0–1)
           RIGHT_COL_PCT: 0.48,  // right column width fraction (0–1)
-          COL_GAP: 32,          // gap between columns in px
+          COL_GAP: 30,          // gap between columns in px
         
           // Column nudges (tablet only)
-          LEFT_NUDGE_X: 0,      // + = move left col right, - = left
-          LEFT_NUDGE_Y: 0,      // + = move left col down, - = up
+          LEFT_NUDGE_X: -10,      // + = move left col right, - = left
+          LEFT_NUDGE_Y: 80,      // + = move left col down, - = up
           RIGHT_NUDGE_X: 0,     // + = move right col right, - = left
           RIGHT_NUDGE_Y: 0,     // + = move right col down, - = up
         
           // Box geometry
-          BOX_WIDTH_PCT: 100,   // % of right column width for each box
-          BOX_MIN_H: 52,        // min height in px
-          BOX_PAD_X: 18,        // horizontal padding (px)
-          BOX_PAD_Y: 12,        // vertical padding (px)
+          BOX_WIDTH_PCT: 80,   // % of right column width for each box
+          BOX_MIN_H: 48,        // min height in px
+          BOX_PAD_X: 8,        // horizontal padding (px)
+          BOX_PAD_Y: 92,        // vertical padding (px)
           BOX_BORDER: 2,        // border width (px)
           BOX_RADIUS: 18,       // corner radius (px)
-          BOX_FONT_PT: 9,       // font size in pt
+          BOX_FONT_PT: 8,       // font size in pt
           BOX_FONT_WEIGHT: 525, // font weight
           BOX_LETTER: 0.3,      // letter-spacing in px
           BOX_LINE: 1.25,       // line-height in em
@@ -288,7 +288,7 @@
           DIAMOND_SIZE_PX: 72,      // width AND height (one knob = perfect square)
           DIAMOND_BORDER: 2,        // border width (px)
           DIAMOND_PAD: 12,          // inner padding (px)
-          DIAMOND_LABEL_PT: 9       // label font size in pt
+          DIAMOND_LABEL_PT: 8       // label font size in pt
         },
 
         // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
