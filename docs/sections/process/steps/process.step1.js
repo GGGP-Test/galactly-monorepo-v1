@@ -174,7 +174,7 @@
       T_COPY_H_PT: 24,        // tablet copy h3 size
       T_COPY_BODY_PT: 15,     // tablet copy body size
       T_COPY_BODY_LINE: 1.6,  // tablet copy line-height
-      T_COPY_MAX_W_PX: 44,   // tablet max-width for copy block
+      T_COPY_MAX_W_PX: null,   // tablet max-width for copy block
       T_SECTION_TOP: 56,
       T_SECTION_BOTTOM: 88,
       T_BOX_W_PCT: 72,
