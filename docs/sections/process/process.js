@@ -274,9 +274,9 @@
         
           // Box geometry
           BOX_WIDTH_PCT: 100,   // % of right column width for each box
-          BOX_MIN_H: 15,        // min height in px
+          BOX_MIN_H: 20,        // min height in px
           BOX_PAD_X: 8,        // horizontal padding (px)
-          BOX_PAD_Y: 92,        // vertical padding (px)
+          BOX_PAD_Y: 9,        // vertical padding (px)
           BOX_BORDER: 2,        // border width (px)
           BOX_RADIUS: 18,       // corner radius (px)
           BOX_FONT_PT: 8,       // font size in pt
@@ -288,7 +288,12 @@
           DIAMOND_SIZE_PX: 72,      // width AND height (one knob = perfect square)
           DIAMOND_BORDER: 2,        // border width (px)
           DIAMOND_PAD: 12,          // inner padding (px)
-          DIAMOND_LABEL_PT: 8       // label font size in pt
+          DIAMOND_LABEL_PT: 8,       // label font size in pt
+
+          RIGHT_TITLE_PT: 13,      // font size in pt
+          RIGHT_TITLE_WEIGHT: 700, // (optional) font weight
+          RIGHT_TITLE_NUDGE_X: 50,  // + = move title right,  - = left
+          RIGHT_TITLE_NUDGE_Y: 0   // + = move title down,   - = up
         },
 
         // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
@@ -1318,6 +1323,20 @@
     const rightTitle = document.createElement("div");
     rightTitle.className = "step1-tab-right-kicker";
     rightTitle.textContent = "Intent Score";
+  
+    // apply title size + nudges from tablet knobs
+    const rtPt = T1.RIGHT_TITLE_PT ?? 13;
+    const rtWeight = T1.RIGHT_TITLE_WEIGHT ?? 700;
+    rightTitle.style.fontSize = `${rtPt}pt`;
+    rightTitle.style.fontWeight = rtWeight;
+    rightTitle.style.display = "inline-block";   // so translate works cleanly
+    rightTitle.style.textAlign = "left";         // you can change to "center" if you like
+  
+    const tNx = T1.RIGHT_TITLE_NUDGE_X ?? 0;
+    const tNy = T1.RIGHT_TITLE_NUDGE_Y ?? 0;
+    if (tNx || tNy) {
+      rightTitle.style.transform = `translate(${tNx}px, ${tNy}px)`;
+    }
   
     const stack = document.createElement("div");
     stack.className = "step1-tab-stack";
