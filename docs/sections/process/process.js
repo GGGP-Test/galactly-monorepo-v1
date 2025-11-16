@@ -167,7 +167,7 @@
 
           // ALL rectangular / pill boxes in this step
           box: {
-            widthPct: 500,
+            widthPct: 50,
             minH: 15, // change this to make them shorter/taller
             padX: 12,
             padY: 10,
@@ -272,7 +272,7 @@
           bottom: 90,       // space below this step
           maxW: 480,        // column width on tablet
           sidePad: 24,      // padding inside the column
-          nudgeX: 0,        // translate the whole block
+          nudgeX: 500,        // translate the whole block
           nudgeY: 0,
 
           // small title: "Intent Score"
