@@ -180,7 +180,7 @@
       T_BOX_W_PCT: 72,
       T_DIAMOND_SIZE_PCT: 46, // diamond width % on tablet
       T_BOX_PAD_X: 18,
-      T_BOX_PAD_Y: 12
+      T_BOX_PAD_Y: 12,
             // Tablet layout overrides for Step 1 (optional)
       T_BOX_W_RATIO: null,      // use BOX_W_RATIO if null
       T_STACK_X_RATIO: null,    // use STACK_X_RATIO if null
