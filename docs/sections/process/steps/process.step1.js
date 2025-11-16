@@ -165,7 +165,7 @@
       // ===== TABLET knobs (for fonts / spacing; layout stays like desktop) =====
       T_BREAKPOINT: 900,      // <= this is "tablet" for step1
       T_MAX_W: 70,
-      T_SIDE_PAD: 24,
+      T_SIDE_PAD: 2,
       T_STACK_GAP: 18,
       T_BOX_MIN_H: 60,
       T_BORDER_PX: 2,
@@ -174,7 +174,7 @@
       T_COPY_H_PT: 24,        // tablet copy h3 size
       T_COPY_BODY_PT: 15,     // tablet copy body size
       T_COPY_BODY_LINE: 1.6,  // tablet copy line-height
-      T_COPY_MAX_W_PX: 440,   // tablet max-width for copy block
+      T_COPY_MAX_W_PX: 44,   // tablet max-width for copy block
       T_SECTION_TOP: 56,
       T_SECTION_BOTTOM: 88,
       T_BOX_W_PCT: 72,
