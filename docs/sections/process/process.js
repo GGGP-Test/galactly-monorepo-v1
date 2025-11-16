@@ -302,7 +302,7 @@
           box: {
             widthPct: 72,
             minH: 46,
-            padX: 18,
+            padX: 180,
             padY: 12,
             border: 2,
             radius: 18,
@@ -310,7 +310,7 @@
             fontWeight: 525,
             letter: 0.3,
             lineEm: 1.25,
-            align: "left",
+            align: "center",
             nudgeX: 0,  // + = push boxes to the right
             nudgeY: 0   // + = push boxes down
           },
@@ -327,7 +327,7 @@
 
           // three dots under the diamond
           dots: {
-            show: true,
+            show: false,
             count: 3,
             size: 6,
             gap: 10,
