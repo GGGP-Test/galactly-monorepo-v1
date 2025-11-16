@@ -167,7 +167,7 @@
 
           // ALL rectangular / pill boxes in this step
           box: {
-            widthPct: 50,
+            widthPct: 500,
             minH: 15, // change this to make them shorter/taller
             padX: 12,
             padY: 10,
