@@ -8,6 +8,46 @@
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step1 = root.step1 || {};
     const cfg = root.step1;
+    
+        // --- NEW: read tablet.step1 knobs (from process.js) ---
+    const tStep1 =
+      (window.PROCESS_CONFIG.tablet &&
+        window.PROCESS_CONFIG.tablet.step1) ||
+      {};
+
+    // layout: boxes
+    if (tStep1.BOX_W_RATIO != null && cfg.T_BOX_W_RATIO == null)
+      cfg.T_BOX_W_RATIO = tStep1.BOX_W_RATIO;
+    if (tStep1.STACK_X_RATIO != null && cfg.T_STACK_X_RATIO == null)
+      cfg.T_STACK_X_RATIO = tStep1.STACK_X_RATIO;
+    if (tStep1.STACK_TOP_RATIO != null && cfg.T_STACK_TOP_RATIO == null)
+      cfg.T_STACK_TOP_RATIO = tStep1.STACK_TOP_RATIO;
+    if (tStep1.NUDGE_X != null && cfg.T_NUDGE_X == null)
+      cfg.T_NUDGE_X = tStep1.NUDGE_X;
+    if (tStep1.NUDGE_Y != null && cfg.T_NUDGE_Y == null)
+      cfg.T_NUDGE_Y = tStep1.NUDGE_Y;
+
+    // layout: copy column
+    if (tStep1.COPY_LEFT_RATIO != null && cfg.T_COPY_LEFT_RATIO == null)
+      cfg.T_COPY_LEFT_RATIO = tStep1.COPY_LEFT_RATIO;
+    if (tStep1.COPY_TOP_RATIO != null && cfg.T_COPY_TOP_RATIO == null)
+      cfg.T_COPY_TOP_RATIO = tStep1.COPY_TOP_RATIO;
+    if (tStep1.COPY_NUDGE_X != null && cfg.T_COPY_NUDGE_X == null)
+      cfg.T_COPY_NUDGE_X = tStep1.COPY_NUDGE_X;
+    if (tStep1.COPY_NUDGE_Y != null && cfg.T_COPY_NUDGE_Y == null)
+      cfg.T_COPY_NUDGE_Y = tStep1.COPY_NUDGE_Y;
+
+    // tablet copy width + typography
+    if (tStep1.COPY_MAX_PX != null && cfg.T_COPY_MAX_W_PX == null)
+      cfg.T_COPY_MAX_W_PX = tStep1.COPY_MAX_PX;
+    if (tStep1.COPY_H_PT != null && cfg.T_COPY_H_PT == null)
+      cfg.T_COPY_H_PT = tStep1.COPY_H_PT;
+    if (tStep1.COPY_BODY_PT != null && cfg.T_COPY_BODY_PT == null)
+      cfg.T_COPY_BODY_PT = tStep1.COPY_BODY_PT;
+    if (tStep1.COPY_BODY_LINE != null && cfg.T_COPY_BODY_LINE == null)
+      cfg.T_COPY_BODY_LINE = tStep1.COPY_BODY_LINE;
+    if (tStep1.TITLE_PT != null && cfg.T_TITLE_PT == null)
+      cfg.T_TITLE_PT = tStep1.TITLE_PT;
 
     // ---- Compatibility: map older mobile-theme-style knobs into the new ones if present ----
     if (cfg.top != null && cfg.M_SECTION_TOP == null) cfg.M_SECTION_TOP = cfg.top;
@@ -141,6 +181,17 @@
       T_DIAMOND_SIZE_PCT: 46, // diamond width % on tablet
       T_BOX_PAD_X: 18,
       T_BOX_PAD_Y: 12
+            // Tablet layout overrides for Step 1 (optional)
+      T_BOX_W_RATIO: null,      // use BOX_W_RATIO if null
+      T_STACK_X_RATIO: null,    // use STACK_X_RATIO if null
+      T_STACK_TOP_RATIO: null,  // use STACK_TOP_RATIO if null
+      T_NUDGE_X: null,          // extra px shove for boxes
+      T_NUDGE_Y: null,          // extra px shove for boxes (vertical)
+
+      T_COPY_LEFT_RATIO: null,  // use COPY_LEFT_RATIO if null
+      T_COPY_TOP_RATIO: null,   // use COPY_TOP_RATIO if null
+      T_COPY_NUDGE_X: null,     // use COPY_NUDGE_X if null
+      T_COPY_NUDGE_Y: null,     // use COPY_NUDGE_Y if null
     };
 
     for (const k in dflt) if (!(k in cfg)) cfg[k] = dflt[k];
@@ -508,6 +559,12 @@
     ctx.canvas.appendChild(wrap);
   }
 
+
+
+
+
+
+
   // ---------------- DESKTOP + TABLET DRAW (SVG scene) ----------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
@@ -533,7 +590,7 @@
       return drawMobile(ctx);
     }
 
-    // DESKTOP + TABLET path: SVG scene (same layout), tablet can tweak fonts
+    // DESKTOP + TABLET path: SVG scene (same layout), tablet can tweak fonts + layout
     const W = b.width;
     const H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
@@ -547,31 +604,51 @@
 
     makeFlowGradients(svg, { spanX: W * 0.15, y: 0 });
 
-    const boxW = W * C().BOX_W_RATIO;
-    const boxH = H * C().BOX_H_RATIO;
-    const gap = H * C().GAP_RATIO;
-    let x = W * C().STACK_X_RATIO + C().NUDGE_X;
-    let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
+    const cfg = C();
+
+    // -------- BOX STACK POSITION (tablet overrides desktop) --------
+    const boxWRatio =
+      isTablet && cfg.T_BOX_W_RATIO != null
+        ? cfg.T_BOX_W_RATIO
+        : cfg.BOX_W_RATIO;
+    const stackXRatio =
+      isTablet && cfg.T_STACK_X_RATIO != null
+        ? cfg.T_STACK_X_RATIO
+        : cfg.STACK_X_RATIO;
+    const stackTopRatio =
+      isTablet && cfg.T_STACK_TOP_RATIO != null
+        ? cfg.T_STACK_TOP_RATIO
+        : cfg.STACK_TOP_RATIO;
+    const nudgeX =
+      isTablet && cfg.T_NUDGE_X != null ? cfg.T_NUDGE_X : cfg.NUDGE_X;
+    const nudgeY =
+      isTablet && cfg.T_NUDGE_Y != null ? cfg.T_NUDGE_Y : cfg.NUDGE_Y;
+
+    const boxW = W * boxWRatio;
+    const boxH = H * cfg.BOX_H_RATIO;
+    const gap = H * cfg.GAP_RATIO;
+    let x = W * stackXRatio + nudgeX;
+    let y = H * stackTopRatio + nudgeY;
     const cx = x + boxW / 2;
     const items = [];
 
     // rect 1
     {
-      const d = rr(x, y, boxW, boxH, C().RADIUS_PILL);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      const d = rr(x, y, boxW, boxH, cfg.RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         boxH,
-        C().LABEL_RECT_1,
+        cfg.LABEL_RECT_1,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_PILL}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h: boxH });
@@ -580,21 +657,21 @@
 
     // rect 2
     {
-      const d = rr(x, y, boxW, boxH, C().RADIUS_PILL);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      const d = rr(x, y, boxW, boxH, cfg.RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         boxH,
-        C().LABEL_RECT_2,
+        cfg.LABEL_RECT_2,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_PILL}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h: boxH });
@@ -603,21 +680,21 @@
 
     // rounded 3
     {
-      const d = rr(x, y, boxW, boxH, C().RADIUS_PILL);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      const d = rr(x, y, boxW, boxH, cfg.RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         boxH,
-        C().LABEL_ROUND_3,
+        cfg.LABEL_ROUND_3,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_ROUND}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_ROUND}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h: boxH });
@@ -627,20 +704,20 @@
     // oval 4
     {
       const d = rr(x, y, boxW, boxH, 999);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         boxH,
-        C().LABEL_OVAL_4,
+        cfg.LABEL_OVAL_4,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_OVAL}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_OVAL}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h: boxH });
@@ -649,81 +726,81 @@
 
     // diamond 5
     {
-      const h = boxH * C().DIAMOND_SCALE;
+      const h = boxH * cfg.DIAMOND_SCALE;
       const d = diamond(cx, y + h / 2, boxW, h);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         h,
-        C().LABEL_DIAMOND_5,
+        cfg.LABEL_DIAMOND_5,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_DIAMOND}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${Math.max(2, C().PADDING_Y - 2)}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_DIAMOND}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${Math.max(2, cfg.PADDING_Y - 2)}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h });
-      y += h + C().DOTS_Y_OFFSET;
+      y += h + cfg.DOTS_Y_OFFSET;
     }
 
     // dots
-    if (C().DOTS_COUNT > 0) {
+    if (cfg.DOTS_COUNT > 0) {
       const centerX = x + boxW / 2;
       let dotY = y;
-      for (let i = 0; i < C().DOTS_COUNT; i++) {
+      for (let i = 0; i < cfg.DOTS_COUNT; i++) {
         const c = document.createElementNS(NS, "circle");
         c.setAttribute("cx", centerX);
         c.setAttribute("cy", dotY);
-        c.setAttribute("r", C().DOTS_SIZE_PX);
-        c.setAttribute("fill", C().COLOR_CYAN);
+        c.setAttribute("r", cfg.DOTS_SIZE_PX);
+        c.setAttribute("fill", cfg.COLOR_CYAN);
         c.setAttribute("class", "glow");
         svg.appendChild(c);
-        dotY += C().DOTS_GAP_PX;
+        dotY += cfg.DOTS_GAP_PX;
       }
     }
 
     // title (desktop+tablet; tablet can bump font size)
-    if (C().TITLE_SHOW) {
+    if (cfg.TITLE_SHOW) {
       const t = document.createElementNS(NS, "text");
       const topBox = items[0];
-      t.setAttribute("x", topBox.x + topBox.w / 2 + C().TITLE_OFFSET_X);
-      t.setAttribute("y", topBox.y + C().TITLE_OFFSET_Y);
+      t.setAttribute("x", topBox.x + topBox.w / 2 + cfg.TITLE_OFFSET_X);
+      t.setAttribute("y", topBox.y + cfg.TITLE_OFFSET_Y);
       t.setAttribute("text-anchor", "middle");
       t.setAttribute("fill", "#ddeaef");
-      t.setAttribute("font-family", C().TITLE_FAMILY);
-      t.setAttribute("font-weight", C().TITLE_WEIGHT);
-      const titlePt = isTablet ? (C().T_TITLE_PT || C().TITLE_PT) : C().TITLE_PT;
+      t.setAttribute("font-family", cfg.TITLE_FAMILY);
+      t.setAttribute("font-weight", cfg.TITLE_WEIGHT);
+      const titlePt = isTablet ? (cfg.T_TITLE_PT || cfg.TITLE_PT) : cfg.TITLE_PT;
       t.setAttribute("font-size", `${titlePt}pt`);
-      t.textContent = C().TITLE_TEXT;
-      t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
+      t.textContent = cfg.TITLE_TEXT;
+      t.style.letterSpacing = `${cfg.TITLE_LETTER_SPACING}px`;
       svg.appendChild(t);
     }
 
     // rails
     if (items.length) {
       const first = items[0];
-      const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
+      const attachY = first.y + first.h * (0.5 + cfg.H_LINE_Y_BIAS);
 
-      if (C().SHOW_LEFT_LINE) {
-        const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
-        const xe = first.x - C().CONNECT_X_PAD;
+      if (cfg.SHOW_LEFT_LINE) {
+        const xs = W * Math.max(0, Math.min(1, cfg.LEFT_STOP_RATIO));
+        const xe = first.x - cfg.CONNECT_X_PAD;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, cfg.LINE_STROKE_PX);
         }
       }
 
-      if (C().SHOW_RIGHT_LINE) {
-        const xs = first.x + first.w + C().CONNECT_X_PAD;
-        const xe = W - C().RIGHT_MARGIN_PX;
+      if (cfg.SHOW_RIGHT_LINE) {
+        const xs = first.x + first.w + cfg.CONNECT_X_PAD;
+        const xe = W - cfg.RIGHT_MARGIN_PX;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, cfg.LINE_STROKE_PX);
         }
       }
     }
@@ -735,44 +812,62 @@
       const xMid = a.x + a.w / 2;
       const y1 = a.y + a.h;
       const y2 = b2.y;
-      const pad = Math.max(2, C().STROKE_PX);
+      const pad = Math.max(2, cfg.STROKE_PX);
       addPath(
         svg,
         `M ${xMid} ${y1 + pad} V ${y2 - pad}`,
         "url(#gradTrailFlow)",
-        C().LINE_STROKE_PX
+        cfg.LINE_STROKE_PX
       );
     }
 
-    // Copy block (desktop + tablet; tablet gets separate knobs)
-    const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
-    const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
+    // -------- COPY BLOCK POSITION (tablet overrides desktop) --------
+    const copyLeftRatio =
+      isTablet && cfg.T_COPY_LEFT_RATIO != null
+        ? cfg.T_COPY_LEFT_RATIO
+        : cfg.COPY_LEFT_RATIO;
+    const copyTopRatio =
+      isTablet && cfg.T_COPY_TOP_RATIO != null
+        ? cfg.T_COPY_TOP_RATIO
+        : cfg.COPY_TOP_RATIO;
+    const copyNudgeX =
+      isTablet && cfg.T_COPY_NUDGE_X != null
+        ? cfg.T_COPY_NUDGE_X
+        : cfg.COPY_NUDGE_X;
+    const copyNudgeY =
+      isTablet && cfg.T_COPY_NUDGE_Y != null
+        ? cfg.T_COPY_NUDGE_Y
+        : cfg.COPY_NUDGE_Y;
+
+    const left = b.left + W * copyLeftRatio + copyNudgeX;
+    const top = b.top + H * copyTopRatio + copyNudgeY;
+
     const html = `
       <h3>Who buys your stuff?</h3>
       <p>Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle.
       We weight recent signals like RFQ/RFP language, pricing &amp; sample page hits, ad creative volume and more, then surface the prospects your team should contact.</p>
     `;
+
     if (typeof ctx.mountCopy === "function") {
       const el = ctx.mountCopy({ top, left, html });
 
-      // tablet-specific typography like Step 0’s tablet knobs
-      const copyH = isTablet ? (C().T_COPY_H_PT || C().COPY_H_PT) : C().COPY_H_PT;
-      const copyBody = isTablet ? (C().T_COPY_BODY_PT || C().COPY_BODY_PT) : C().COPY_BODY_PT;
+      const copyH = isTablet ? (cfg.T_COPY_H_PT || cfg.COPY_H_PT) : cfg.COPY_H_PT;
+      const copyBody = isTablet ? (cfg.T_COPY_BODY_PT || cfg.COPY_BODY_PT) : cfg.COPY_BODY_PT;
       const copyLine = isTablet
-        ? (C().T_COPY_BODY_LINE || C().COPY_LINE_HEIGHT)
-        : C().COPY_LINE_HEIGHT;
+        ? (cfg.T_COPY_BODY_LINE || cfg.COPY_LINE_HEIGHT)
+        : cfg.COPY_LINE_HEIGHT;
       const copyMaxW = isTablet
-        ? (C().T_COPY_MAX_W_PX || C().COPY_MAX_W_PX)
-        : C().COPY_MAX_W_PX;
+        ? (cfg.T_COPY_MAX_W_PX || cfg.COPY_MAX_W_PX)
+        : cfg.COPY_MAX_W_PX;
 
       el.style.maxWidth = `${copyMaxW}px`;
-      el.style.fontFamily = C().COPY_FAMILY;
+      el.style.fontFamily = cfg.COPY_FAMILY;
       const h3 = el.querySelector("h3");
       if (h3)
-        h3.style.font = `${C().COPY_H_WEIGHT} ${copyH}pt ${C().COPY_FAMILY}`;
+        h3.style.font = `${cfg.COPY_H_WEIGHT} ${copyH}pt ${cfg.COPY_FAMILY}`;
       const p = el.querySelector("p");
       if (p)
-        p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${copyBody}pt ${C().COPY_FAMILY}; line-height:${copyLine}`;
+        p.style.cssText = `font:${cfg.COPY_BODY_WEIGHT} ${copyBody}pt ${cfg.COPY_FAMILY}; line-height:${copyLine}`;
     }
   };
 })();
