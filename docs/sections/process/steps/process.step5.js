@@ -68,17 +68,17 @@
         "Platform Score"
       ],
       HEAD_PT: 7.8, // desktop
-      M_HEAD_PT: 4.5, // mobile
+      M_HEAD_PT: 4.5, // phone
       HEAD_WEIGHT: 850,
       HEAD_COLOR: "#ddeaef",
       HEAD_LETTER_SPACING: 0.2,
       HEAD_ALIGN: "center",
-      HEAD_BOX_H: 26, // desktop
-      HEAD_SPACING: 8, // desktop
-      HEAD_OFFSET_Y: 0, // desktop
+      HEAD_BOX_H: 26,
+      HEAD_SPACING: 8,
+      HEAD_OFFSET_Y: 0,
       HEAD_ONE_LINE: true,
-      HEAD_MAX_WIDTH_PCT: 1.95, // desktop
-      HEAD_BASELINE_BIAS: 0.74, // desktop
+      HEAD_MAX_WIDTH_PCT: 1.95,
+      HEAD_BASELINE_BIAS: 0.74,
 
       // ---- section title (both)
       TITLE_SHOW: true,
@@ -108,9 +108,8 @@
         'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       COPY_LINE_HEIGHT: 1.6,
 
-      // ================= MOBILE OVERRIDES (phones/tablets) =================
-      MOBILE_BREAKPOINT: (window.PROCESS_CONFIG?.mobile?.BP ?? 840),
-      TABLET_BREAKPOINT: 1024,  // <-- NEW: upper bound for tablet row-layout
+      // ================= PHONE OVERRIDES (existing mobile) =================
+      MOBILE_BREAKPOINT: (window.PROCESS_CONFIG?.mobile?.BP ?? 640),
       M_MAX_W: 820,
       M_SIDE_PAD: 16,
       M_SECTION_TOP: 40,
@@ -118,8 +117,6 @@
       M_TITLE_PT: 12,
       M_COPY_H_PT: 22,
       M_COPY_BODY_PT: 14,
-
-      // Global phone scaler — shrink whole SVG as a unit (0.5–1.0)
       M_SCALE: 0.9,
 
       M_COL_GAP_RATIO: 0.09,
@@ -144,9 +141,8 @@
       M_SHAPE_COLOR_BY_STEP: null,
       M_SHAPE_WIDTH_BY_STEP: null,
       M_LINE_STYLE_BY_PAIR: null,
-      M_LAST_DIM: 0.85, // number = uniform opacity for last item
+      M_LAST_DIM: 0.85,
 
-      // Mobile headings
       M_HEAD_BOX_H: null,
       M_HEAD_SPACING: null,
       M_HEAD_OFFSET_Y: -40,
@@ -154,9 +150,63 @@
       M_HEAD_BASELINE_BIAS: null,
       M_TITLE_OFFSET_X: null,
       M_TITLE_OFFSET_Y: 40,
-
-      // mobile-specific padding from last item to first dot
       M_DOTS_TOP_PAD: 30,
+
+      // ================= TABLET-ONLY OVERRIDES (your new knobs) =================
+      TABLET_BREAKPOINT: 1024,
+
+      // row-layout container (width / padding / vertical spacing)
+      T_MAX_W: 820,
+      T_SIDE_PAD: 24,
+      T_SECTION_TOP: 40,
+      T_SECTION_BOTTOM: 72,
+
+      // copy + section title typography (tablet only)
+      T_TITLE_PT: 14,
+      T_COPY_H_PT: 22,
+      T_COPY_BODY_PT: 14,
+
+      // global scale for SVG on tablet
+      T_SCALE: 0.95,
+
+      // SVG geometry (tablet only)
+      T_COL_GAP_RATIO: 0.08,
+      T_COL_W_RATIO: 0.13,
+      T_ITEM_H_RATIO: 0.09,
+      T_ITEM_GAP_RATIO: 0.018,
+      T_RADIUS_RECT: 14,
+      T_RADIUS_PILL: 22,
+      T_RADIUS_OVAL: 999,
+      T_SHAPE_COLOR: null,
+      T_SHAPE_WIDTH: null,
+      T_LINE_COLOR: null,
+      T_LINE_WIDTH: 1.0,
+      T_CONNECT_GAP: null,
+
+      T_COL_W_MULTS: null,
+      T_COL_Y_OFFSETS: { step0: 70, step1: 0, step2: 0, step3: 0, step4: 0 },
+      T_COL_X_OFFSETS: null,
+      T_ITEM_Y_OFFSETS: null,
+      T_ITEM_H_MULTS: null,
+      T_SHAPE_COLOR_BY_STEP: null,
+      T_SHAPE_WIDTH_BY_STEP: null,
+      T_LINE_STYLE_BY_PAIR: null,
+      T_LAST_DIM: 0.85,
+
+      // column headings over each stack (tablet only)
+      T_HEAD_PT: 7.8,
+      T_HEAD_BOX_H: null,
+      T_HEAD_SPACING: null,
+      T_HEAD_OFFSET_Y: -40,
+      T_HEAD_MAX_WIDTH_PCT: null,
+      T_HEAD_BASELINE_BIAS: null,
+
+      // section title offsets for tablet row layout
+      T_TITLE_OFFSET_X: null,
+      T_TITLE_OFFSET_Y: 40,
+
+      // dots spacing under last item (tablet)
+      T_DOTS_TOP_PAD: 30,
 
       // ---- columns recipes
       COLS: [
@@ -234,19 +284,26 @@
     return c;
   };
 
-  // mobile override helpers
-  const pick = (isMobile, key) => {
-    const mKey = "M_" + key;
+  // mode-aware overrides: mode = "desktop" | "phone" | "tablet"
+  const pick = (mode, key) => {
     const cfg = C();
-    return isMobile && mKey in cfg && cfg[mKey] != null ? cfg[mKey] : cfg[key];
-  };
-  const pickMap = (isMobile, key) => {
-    const m = pick(isMobile, key);
-    return m || C()[key];
+    if (mode === "phone") {
+      const mKey = "M_" + key;
+      if (mKey in cfg && cfg[mKey] != null) return cfg[mKey];
+    } else if (mode === "tablet") {
+      const tKey = "T_" + key;
+      if (tKey in cfg && cfg[tKey] != null) return cfg[tKey];
+    }
+    return cfg[key];
   };
 
-  // SVG title helper
-  function drawHead(svg, { text, x, y, w, h, isMobile, idx }) {
+  const pickMap = (mode, key) => {
+    const v = pick(mode, key);
+    return v || C()[key];
+  };
+
+  // SVG column heading helper
+  function drawHead(svg, { text, x, y, w, h, mode, idx }) {
     const id = `p5h_clip_${idx}_${Math.random().toString(36).slice(2, 7)}`;
     let defsNode = svg.querySelector("defs");
     if (!defsNode) {
@@ -268,16 +325,23 @@
     g.setAttribute("clip-path", `url(#${id})`);
 
     const t = document.createElementNS(NS, "text");
-    const size = isMobile ? C().M_HEAD_PT : C().HEAD_PT;
-    const baselineBias = pick(isMobile, "HEAD_BASELINE_BIAS");
+    const cfg = C();
+    const size =
+      mode === "phone"
+        ? cfg.M_HEAD_PT
+        : mode === "tablet"
+        ? (cfg.T_HEAD_PT ?? cfg.HEAD_PT)
+        : cfg.HEAD_PT;
+
+    const baselineBias = pick(mode, "HEAD_BASELINE_BIAS");
     t.setAttribute("x", x + w / 2);
     t.setAttribute("y", y + h * baselineBias);
     t.setAttribute("text-anchor", "middle");
-    t.setAttribute("fill", C().HEAD_COLOR);
-    t.setAttribute("font-family", C().COPY_FAMILY);
-    t.setAttribute("font-weight", C().HEAD_WEIGHT);
+    t.setAttribute("fill", cfg.HEAD_COLOR);
+    t.setAttribute("font-family", cfg.COPY_FAMILY);
+    t.setAttribute("font-weight", cfg.HEAD_WEIGHT);
     t.setAttribute("font-size", `${size}pt`);
-    t.style.letterSpacing = `${C().HEAD_LETTER_SPACING}px`;
+    t.style.letterSpacing = `${cfg.HEAD_LETTER_SPACING}px`;
     t.textContent = text || "";
     g.appendChild(t);
     svg.appendChild(g);
@@ -291,7 +355,7 @@
     );
   }
 
-  // ---------------- mobile CSS ----------------
+  // ---------------- phone CSS (unchanged) ----------------
   function ensureMobileCSS() {
     const id = "p5m-style";
     if (document.getElementById(id)) return;
@@ -337,32 +401,83 @@
     document.head.appendChild(s);
   }
 
-  function drawMobile(ctx, dims) {
-    ensureMobileCSS();
+  // ---------------- stacked layout (phone + tablet) ----------------
+  function drawStacked(ctx, dims, mode) {
+    const cfg = C();
+    if (mode === "phone") ensureMobileCSS();
+
     ctx.canvas.style.position = "relative";
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
-    wrap.className = "p5m-wrap";
-    
-      // keep Step 5 inside the “lamp” width on tablets
-    wrap.style.maxWidth = `${dims.W}px`;
-    wrap.style.margin = "0 auto";
+    if (mode === "tablet") {
+      // tablet: inline styles using T_* knobs
+      wrap.className = "p5t-wrap";
+      wrap.style.position = "relative";
+      wrap.style.margin = `${cfg.T_SECTION_TOP}px auto ${cfg.T_SECTION_BOTTOM}px`;
+      wrap.style.maxWidth = `${cfg.T_MAX_W}px`;
+      wrap.style.padding = `0 ${cfg.T_SIDE_PAD}px 12px`;
+      wrap.style.zIndex = 0;
+    } else {
+      // phone uses CSS
+      wrap.className = "p5m-wrap";
+    }
 
+    // row 1: copy + section title
     wrap.innerHTML =
       `<div class="p5m-copy">${seoCopyHTML()}</div>` +
-      (C().TITLE_SHOW
-        ? `<div class="p5m-title" style="transform:translate(${pick(
-            true,
-            "TITLE_OFFSET_X"
-          ) || 0}px,${pick(true, "TITLE_OFFSET_Y") ?? 0}px)">${
-            C().TITLE_TEXT
-          }</div>`
-        : "");
+      (cfg.TITLE_SHOW ? `<div class="p5m-title">${cfg.TITLE_TEXT}</div>` : "");
 
+    const copyEl = wrap.querySelector(".p5m-copy");
+    const titleEl = wrap.querySelector(".p5m-title");
+
+    if (mode === "tablet") {
+      // retag classes so phone CSS doesn't touch them
+      copyEl.className = "p5t-copy";
+      if (titleEl) titleEl.className = "p5t-title";
+
+      // copy block styles (tablet knobs)
+      copyEl.style.margin = "0 auto 10px";
+      copyEl.style.color = cfg.COPY_COLOR_BODY;
+
+      const h3 = copyEl.querySelector("h3");
+      if (h3) {
+        h3.style.margin = "0 0 8px";
+        h3.style.color = cfg.COPY_COLOR_HEAD;
+        h3.style.font =
+          `${cfg.COPY_H_WEIGHT} ${cfg.T_COPY_H_PT}px Newsreader, Georgia, serif`;
+      }
+      copyEl.querySelectorAll("p").forEach((p) => {
+        p.style.margin = "0 0 6px";
+        p.style.font =
+          `${cfg.COPY_BODY_WEIGHT} ${cfg.T_COPY_BODY_PT}px/1.6 Inter, system-ui`;
+      });
+
+      // section title (tablet knobs)
+      if (titleEl) {
+        titleEl.style.textAlign = "left";
+        titleEl.style.color = cfg.TITLE_COLOR;
+        titleEl.style.font =
+          `${cfg.TITLE_WEIGHT} ${cfg.T_TITLE_PT}pt ${cfg.TITLE_FAMILY}`;
+        titleEl.style.letterSpacing = `${cfg.TITLE_LETTER_SPACING}px`;
+        const offX = cfg.T_TITLE_OFFSET_X ?? 0;
+        const offY = cfg.T_TITLE_OFFSET_Y ?? 0;
+        titleEl.style.transform = `translate(${offX}px,${offY}px)`;
+        titleEl.style.margin = "14px 0 10px";
+      }
+    } else {
+      // phone: just tweak transform via M_ knobs, rest handled by CSS
+      if (titleEl) {
+        const offX = pick("phone", "TITLE_OFFSET_X") || 0;
+        const offY = pick("phone", "TITLE_OFFSET_Y") ?? 0;
+        titleEl.style.transform = `translate(${offX}px,${offY}px)`;
+      }
+    }
+
+    // row 2: SVG
     const svg = document.createElementNS(NS, "svg");
-    svg.classList.add("p5m-svg");
+    svg.classList.add(mode === "tablet" ? "p5t-svg" : "p5m-svg");
     svg.setAttribute("viewBox", `0 0 ${dims.W} ${dims.H}`);
     svg.setAttribute("width", "100%");
     svg.setAttribute("height", "100%");
@@ -380,37 +495,46 @@
 
     const vw = window.innerWidth || bounds.sW || bounds.width;
 
-    // phones: same breakpoint logic as before
     const isPhone =
       window.PROCESS_FORCE_MOBILE === true ||
       vw <= cfg.MOBILE_BREAKPOINT;
 
-    // tablets: NEW → between phone BP and tablet BP
     const isTablet =
       !isPhone && vw <= (cfg.TABLET_BREAKPOINT || 1024);
 
-    // use stacked row layout (title+copy row, SVG row) for phones + tablets
+    const layoutMode = isPhone ? "phone" : isTablet ? "tablet" : "desktop";
     const useStackedRows = isPhone || isTablet;
 
     const fullW = bounds.width;
     const H = Math.min(cfg.HEIGHT_MAX_PX, bounds.sH - 40);
-    
-    // phones = full width, tablets/desktop = same WIDTH_RATIO as before
-    const W = isPhone ? fullW : Math.max(300, fullW * cfg.WIDTH_RATIO);
-    
-    // phones are centered; tablets/desktop use original right-rail placement
-    const x0 = isPhone ? 0 : fullW * cfg.STACK_X_RATIO + cfg.NUDGE_X;
+
+    // phones = full width, tablet/desktop = lamp WIDTH_RATIO
+    const W =
+      layoutMode === "phone"
+        ? fullW
+        : Math.max(300, fullW * cfg.WIDTH_RATIO);
+
+    // desktop uses right rail placement; stacked (phone/tablet) are drawn from x0 = 0
+    const x0 =
+      layoutMode === "desktop"
+        ? fullW * cfg.STACK_X_RATIO + cfg.NUDGE_X
+        : 0;
     const y0 = H * cfg.STACK_TOP_RATIO + cfg.NUDGE_Y;
 
-    // Global scale knob for small screens (phones/tablets)
-    const scale = useStackedRows ? (cfg.M_SCALE != null ? cfg.M_SCALE : 1) : 1;
+    let scale = 1;
+    if (layoutMode === "phone") {
+      scale = cfg.M_SCALE != null ? cfg.M_SCALE : 1;
+    } else if (layoutMode === "tablet") {
+      scale = cfg.T_SCALE != null ? cfg.T_SCALE : 1;
+    }
 
     let svg;
-    if (useStackedRows) {
-      // stacked rows: row 1 = title+copy, row 2 = SVG (same markup for phone+tablet)
-      svg = drawMobile(ctx, { W, H });
+    if (layoutMode === "phone") {
+      svg = drawStacked(ctx, { W, H }, "phone");
+    } else if (layoutMode === "tablet") {
+      svg = drawStacked(ctx, { W, H }, "tablet");
     } else {
-      // desktop: original right-rail SVG
+      // desktop SVG
       svg = document.createElementNS(NS, "svg");
       svg.style.position = "absolute";
       svg.style.left = bounds.left + "px";
@@ -431,8 +555,8 @@
     defs.appendChild(f);
     svg.appendChild(defs);
 
-    // Section title (desktop only; phones/tablets already show title in row 1)
-    if (!useStackedRows && cfg.TITLE_SHOW) {
+    // Section title (desktop only; phone/tablet have it in row 1)
+    if (layoutMode === "desktop" && cfg.TITLE_SHOW) {
       const t = document.createElementNS(NS, "text");
       t.setAttribute("x", x0 + W / 2 + cfg.TITLE_OFFSET_X);
       t.setAttribute("y", y0 + cfg.TITLE_OFFSET_Y);
@@ -446,51 +570,50 @@
       svg.appendChild(t);
     }
 
-    // Dimensions / knobs with mobile overrides + scale
-    const colGap   = W * pick(useStackedRows, "COL_GAP_RATIO") * scale;
-    const colWBase = W * pick(useStackedRows, "COL_W_RATIO") * scale;
-    const baseH    = H * pick(useStackedRows, "ITEM_H_RATIO") * scale;
-    const gap      = H * pick(useStackedRows, "ITEM_GAP_RATIO") * scale;
+    // Dimensions / knobs with mode-aware overrides + scale
+    const colGap   = W * pick(layoutMode, "COL_GAP_RATIO") * scale;
+    const colWBase = W * pick(layoutMode, "COL_W_RATIO") * scale;
+    const baseH    = H * pick(layoutMode, "ITEM_H_RATIO") * scale;
+    const gap      = H * pick(layoutMode, "ITEM_GAP_RATIO") * scale;
 
     const colWArray = cfg.COLS.map(
-      (c) => colWBase * (pickMap(useStackedRows, "COL_W_MULTS")[c.key] || 1)
+      (c) => colWBase * (pickMap(layoutMode, "COL_W_MULTS")[c.key] || 1)
     );
     const innerW =
       colWArray.reduce((a, b) => a + b, 0) + (cfg.COLS.length - 1) * colGap;
     const left = x0 + (W - innerW) / 2;
     const top  = y0 + 8 * scale;
 
-    const SHAPE_W    = pick(useStackedRows, "SHAPE_WIDTH") * scale;
-    const SHAPE_COLOR= pick(useStackedRows, "SHAPE_COLOR");
-    const LINE_W     = pick(useStackedRows, "LINE_WIDTH") * scale;
-    const LINE_COLOR = pick(useStackedRows, "LINE_COLOR");
-    const CONNECT_GAP= pick(useStackedRows, "CONNECT_GAP") * scale;
-    const R_RECT     = pick(useStackedRows, "RADIUS_RECT");
-    const R_PILL     = pick(useStackedRows, "RADIUS_PILL");
-    const R_OVAL     = pick(useStackedRows, "RADIUS_OVAL");
+    const SHAPE_W     = pick(layoutMode, "SHAPE_WIDTH") * scale;
+    const SHAPE_COLOR = pick(layoutMode, "SHAPE_COLOR");
+    const LINE_W      = pick(layoutMode, "LINE_WIDTH") * scale;
+    const LINE_COLOR  = pick(layoutMode, "LINE_COLOR");
+    const CONNECT_GAP = pick(layoutMode, "CONNECT_GAP") * scale;
+    const R_RECT      = pick(layoutMode, "RADIUS_RECT");
+    const R_PILL      = pick(layoutMode, "RADIUS_PILL");
+    const R_OVAL      = pick(layoutMode, "RADIUS_OVAL");
 
     const anchorsByCol = [];
     const headBoxes    = [];
-
     let xCursor = left;
 
     cfg.COLS.forEach((col, ci) => {
       const key  = col.key;
-      const colX = xCursor + (pickMap(useStackedRows, "COL_X_OFFSETS")[key] || 0);
+      const colX = xCursor + (pickMap(layoutMode, "COL_X_OFFSETS")[key] || 0);
       const colW = colWArray[ci];
-      const colY0= top + (pickMap(useStackedRows, "COL_Y_OFFSETS")[key] || 0);
+      const colY0= top + (pickMap(layoutMode, "COL_Y_OFFSETS")[key] || 0);
 
-      // headings
-      const headW = colW * pick(useStackedRows, "HEAD_MAX_WIDTH_PCT");
-      const headHBase = pick(useStackedRows, "HEAD_BOX_H") || cfg.HEAD_BOX_H;
+      // headings over each stack
+      const headW = colW * pick(layoutMode, "HEAD_MAX_WIDTH_PCT");
+      const headHBase = pick(layoutMode, "HEAD_BOX_H") || cfg.HEAD_BOX_H;
       const headH = headHBase * scale;
       const headOffsetY =
-        (pick(useStackedRows, "HEAD_OFFSET_Y") != null
-          ? pick(useStackedRows, "HEAD_OFFSET_Y")
+        (pick(layoutMode, "HEAD_OFFSET_Y") != null
+          ? pick(layoutMode, "HEAD_OFFSET_Y")
           : cfg.HEAD_OFFSET_Y) * scale;
       const headSpacing =
-        (pick(useStackedRows, "HEAD_SPACING") != null
-          ? pick(useStackedRows, "HEAD_SPACING")
+        (pick(layoutMode, "HEAD_SPACING") != null
+          ? pick(layoutMode, "HEAD_SPACING")
           : cfg.HEAD_SPACING) * scale;
 
       const headX = colX + (colW - headW) / 2;
@@ -502,16 +625,16 @@
 
       const leftAnch  = [];
       const rightAnch = [];
-      const yOffsets  = pickMap(useStackedRows, "ITEM_Y_OFFSETS")[key] || [];
-      const hMults    = pickMap(useStackedRows, "ITEM_H_MULTS")[key] || [];
+      const yOffsets  = pickMap(layoutMode, "ITEM_Y_OFFSETS")[key] || [];
+      const hMults    = pickMap(layoutMode, "ITEM_H_MULTS")[key] || [];
       const perStepColor =
-        pickMap(useStackedRows, "SHAPE_COLOR_BY_STEP")[key] || SHAPE_COLOR;
+        pickMap(layoutMode, "SHAPE_COLOR_BY_STEP")[key] || SHAPE_COLOR;
       const perStepWidth =
-        pickMap(useStackedRows, "SHAPE_WIDTH_BY_STEP")[key] || SHAPE_W;
+        pickMap(layoutMode, "SHAPE_WIDTH_BY_STEP")[key] || SHAPE_W;
 
       col.items.forEach((type, i) => {
         const hm = hMults[i] != null ? hMults[i] : 1;
-        const h =
+        const hShape =
           type === "circle" || type === "diamond"
             ? baseH * 0.9 * hm
             : baseH * hm;
@@ -520,7 +643,7 @@
         let cx, cy, r, d;
 
         const isLast = i === col.items.length - 1;
-        let dimConfig = pick(useStackedRows, "LAST_DIM");
+        let dimConfig = pick(layoutMode, "LAST_DIM");
         let dimSpec;
 
         if (typeof dimConfig === "number") {
@@ -538,29 +661,29 @@
         }
 
         if (type === "rect") {
-          d = rr(colX, yAdj, colW, h, R_RECT);
+          d = rr(colX, yAdj, colW, hShape, R_RECT);
           addPath(svg, d, perStepColor, perStepWidth, opacity, filterId);
           cx = colX + colW / 2;
-          cy = yAdj + h / 2;
+          cy = yAdj + hShape / 2;
         } else if (type === "pill") {
-          d = rr(colX, yAdj, colW, h, R_PILL);
+          d = rr(colX, yAdj, colW, hShape, R_PILL);
           addPath(svg, d, perStepColor, perStepWidth, opacity, filterId);
           cx = colX + colW / 2;
-          cy = yAdj + h / 2;
+          cy = yAdj + hShape / 2;
         } else if (type === "oval") {
-          d = rr(colX, yAdj, colW, h, R_OVAL);
+          d = rr(colX, yAdj, colW, hShape, R_OVAL);
           addPath(svg, d, perStepColor, perStepWidth, opacity, filterId);
           cx = colX + colW / 2;
-          cy = yAdj + h / 2;
+          cy = yAdj + hShape / 2;
         } else if (type === "circle") {
-          r  = Math.min(colW, h) / 2;
+          r  = Math.min(colW, hShape) / 2;
           cx = colX + colW / 2;
-          cy = yAdj + h / 2;
+          cy = yAdj + hShape / 2;
           addCircle(svg, cx, cy, r, perStepColor, perStepWidth, opacity, filterId);
         } else if (type === "diamond") {
           cx = colX + colW / 2;
-          cy = yAdj + h / 2;
-          d  = diamondPath(cx, cy, colW * 0.9, h * 0.9);
+          cy = yAdj + hShape / 2;
+          d  = diamondPath(cx, cy, colW * 0.9, hShape * 0.9);
           addPath(svg, d, perStepColor, perStepWidth, opacity, filterId);
         }
 
@@ -578,13 +701,13 @@
         leftAnch.push({ x: leftX - CONNECT_GAP, y: cy });
         rightAnch.push({ x: rightX + CONNECT_GAP, y: cy });
 
-        y = yAdj + h + gap;
+        y = yAdj + hShape + gap;
       });
 
       anchorsByCol.push({ key, left: leftAnch, right: rightAnch });
       xCursor += colW + colGap;
 
-      // Dots
+      // Dots under last item in this column
       if (col.dots > 0) {
         const lastRight = anchorsByCol[anchorsByCol.length - 1]?.right || [];
         const lastY = lastRight.length
@@ -592,8 +715,8 @@
           : 0;
 
         const padBase =
-          pick(useStackedRows, "DOTS_TOP_PAD") != null
-            ? pick(useStackedRows, "DOTS_TOP_PAD")
+          pick(layoutMode, "DOTS_TOP_PAD") != null
+            ? pick(layoutMode, "DOTS_TOP_PAD")
             : cfg.DOTS_TOP_PAD != null
             ? cfg.DOTS_TOP_PAD
             : 6;
@@ -614,9 +737,9 @@
       }
     });
 
-    // connections
+    // connections between columns
     const pairStyles =
-      pick(useStackedRows, "LINE_STYLE_BY_PAIR") || cfg.LINE_STYLE_BY_PAIR || {};
+      pick(layoutMode, "LINE_STYLE_BY_PAIR") || cfg.LINE_STYLE_BY_PAIR || {};
     for (let i = 0; i < anchorsByCol.length - 1; i++) {
       const A = anchorsByCol[i];
       const B = anchorsByCol[i + 1];
@@ -642,13 +765,13 @@
           w,
           h,
           idx,
-          isMobile: useStackedRows
+          mode: layoutMode
         });
       });
     }
 
     // left SEO copy (desktop only)
-    if (!useStackedRows && typeof ctx.mountCopy === "function") {
+    if (layoutMode === "desktop" && typeof ctx.mountCopy === "function") {
       const l =
         bounds.left +
         bounds.width * cfg.COPY_LEFT_RATIO +
@@ -661,10 +784,15 @@
 
       const h3 = el.querySelector("h3");
       if (h3) {
-        h3.style.cssText = `margin:0 0 8px;color:${cfg.COPY_COLOR_HEAD};font:${cfg.COPY_H_WEIGHT} ${cfg.COPY_H_PT}pt Newsreader, Georgia, serif`;
+        h3.style.cssText =
+          `margin:0 0 8px;color:${cfg.COPY_COLOR_HEAD};` +
+          `font:${cfg.COPY_H_WEIGHT} ${cfg.COPY_H_PT}pt Newsreader, Georgia, serif`;
       }
       el.querySelectorAll("p").forEach((p) => {
-        p.style.cssText = `margin:0 0 8px;color:${cfg.COPY_COLOR_BODY};font:${cfg.COPY_BODY_WEIGHT} ${cfg.COPY_BODY_PT}pt ${cfg.COPY_FAMILY};line-height:${cfg.COPY_LINE_HEIGHT}`;
+        p.style.cssText =
+          `margin:0 0 8px;color:${cfg.COPY_COLOR_BODY};` +
+          `font:${cfg.COPY_BODY_WEIGHT} ${cfg.COPY_BODY_PT}pt ${cfg.COPY_FAMILY};` +
+          `line-height:${cfg.COPY_LINE_HEIGHT}`;
       });
     }
   };
