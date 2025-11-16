@@ -269,7 +269,7 @@
           // Column nudges (tablet only)
           LEFT_NUDGE_X: -10,      // + = move left col right, - = left
           LEFT_NUDGE_Y: 100,      // + = move left col down, - = up
-          RIGHT_NUDGE_X: 0,     // + = move right col right, - = left
+          RIGHT_NUDGE_X: -50,     // + = move right col right, - = left
           RIGHT_NUDGE_Y: 100,     // + = move right col down, - = up
         
           // Box geometry
