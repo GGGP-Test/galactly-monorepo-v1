@@ -270,7 +270,7 @@
           LEFT_NUDGE_X: -10,      // + = move left col right, - = left
           LEFT_NUDGE_Y: 100,      // + = move left col down, - = up
           RIGHT_NUDGE_X: 0,     // + = move right col right, - = left
-          RIGHT_NUDGE_Y: 0,     // + = move right col down, - = up
+          RIGHT_NUDGE_Y: 100,     // + = move right col down, - = up
         
           // Box geometry
           BOX_WIDTH_PCT: 80,   // % of right column width for each box
@@ -285,10 +285,14 @@
           BOX_LINE: 1.25,       // line-height in em
         
           // Diamond geometry (always a true diamond: equal width/height)
-          DIAMOND_SIZE_PX: 72,      // width AND height (one knob = perfect square)
+          DIAMOND_SIZE_PX: 64,      // width AND height (one knob = perfect square)
           DIAMOND_BORDER: 2,        // border width (px)
           DIAMOND_PAD: 12,          // inner padding (px)
           DIAMOND_LABEL_PT: 8,       // label font size in pt
+          DIAMOND_ALIGN: "center",
+          DIAMOND_NUDGE_X: 0,       // + right / - left
+          DIAMOND_NUDGE_Y: 0,       // + down  / - up
+
 
           RIGHT_TITLE_PT: 12,      // font size in pt
           RIGHT_TITLE_WEIGHT: 700, // (optional) font weight
@@ -1267,44 +1271,89 @@
   /* ----------------- TABLET: Step 1 DOM (NEW, two-column) ----------------- */
   function renderStep1Tablet() {
     const b = boundsDesktop();
-    const T1 = TCFG().step1 || {};
+    const tCfg = TCFG() || {};
   
+    // Pull tablet.step1 knobs, with sane fallbacks that mirror your current values
+    const T1 = Object.assign(
+      {
+        LEFT_COL_PCT: 0.52,
+        RIGHT_COL_PCT: 0.48,
+        COL_GAP: 30,
+  
+        LEFT_NUDGE_X: 0,
+        LEFT_NUDGE_Y: 0,
+        RIGHT_NUDGE_X: 0,
+        RIGHT_NUDGE_Y: 0,
+  
+        BOX_WIDTH_PCT: 80,
+        BOX_MIN_H: 20,
+        BOX_PAD_X: 8,
+        BOX_PAD_Y: 9,
+        BOX_BORDER: 2,
+        BOX_RADIUS: 18,
+        BOX_FONT_PT: 8,
+        BOX_FONT_WEIGHT: 525,
+        BOX_LETTER: 0.3,
+        BOX_LINE: 1.25,
+  
+        DIAMOND_SIZE_PX: 64,
+        DIAMOND_BORDER: 2,
+        DIAMOND_PAD: 12,
+        DIAMOND_LABEL_PT: 8,
+        DIAMOND_ALIGN: "center",
+        DIAMOND_NUDGE_X: 0,
+        DIAMOND_NUDGE_Y: 0,
+  
+        RIGHT_TITLE_PT: 12,
+        RIGHT_TITLE_WEIGHT: 700,
+        RIGHT_TITLE_NUDGE_X: 0,
+        RIGHT_TITLE_NUDGE_Y: 0
+      },
+      tCfg.step1 || {}
+    );
+  
+    // ---------------- WRAP (two columns) ----------------
     const wrap = document.createElement("div");
     wrap.className = "step1-tab-wrap";
     wrap.style.position = "absolute";
     wrap.style.left = `${b.left}px`;
-    wrap.style.top = `${b.top + 40}px`; // small offset from top of lamp area
+    wrap.style.top = `${b.top + 40}px`;
     wrap.style.width = `${b.width}px`;
-    wrap.style.gap = `${T1.COL_GAP ?? 32}px`;
-    canvas.appendChild(wrap);
+    wrap.style.display = "flex";
+    wrap.style.alignItems = "flex-start";
+    wrap.style.justifyContent = "space-between";
+    wrap.style.gap = `${T1.COL_GAP}px`;
   
-    // ----- Column setup (width + nudges) -----
+    // Columns
     const leftCol = document.createElement("div");
     leftCol.className = "step1-tab-col-left";
     const rightCol = document.createElement("div");
     rightCol.className = "step1-tab-col-right";
+    rightCol.style.display = "flex";
+    rightCol.style.flexDirection = "column";
+    rightCol.style.alignItems = "flex-start";
   
-    const leftPct = (T1.LEFT_COL_PCT ?? 0.52) * 100;
-    const rightPct = (T1.RIGHT_COL_PCT ?? 0.48) * 100;
-  
+    const leftPct = (T1.LEFT_COL_PCT || 0.5) * 100;
+    const rightPct = (T1.RIGHT_COL_PCT || 0.5) * 100;
     leftCol.style.flex = `0 0 ${leftPct}%`;
     leftCol.style.maxWidth = `${leftPct}%`;
     rightCol.style.flex = `0 0 ${rightPct}%`;
     rightCol.style.maxWidth = `${rightPct}%`;
   
-    const lNx = T1.LEFT_NUDGE_X ?? 0;
-    const lNy = T1.LEFT_NUDGE_Y ?? 0;
+    // Column nudges (whole columns, not inner padding)
+    const lNx = T1.LEFT_NUDGE_X || 0;
+    const lNy = T1.LEFT_NUDGE_Y || 0;
     if (lNx || lNy) {
       leftCol.style.transform = `translate(${lNx}px, ${lNy}px)`;
     }
   
-    const rNx = T1.RIGHT_NUDGE_X ?? 0;
-    const rNy = T1.RIGHT_NUDGE_Y ?? 0;
+    const rNx = T1.RIGHT_NUDGE_X || 0;
+    const rNy = T1.RIGHT_NUDGE_Y || 0;
     if (rNx || rNy) {
       rightCol.style.transform = `translate(${rNx}px, ${rNy}px)`;
     }
   
-    // ----- Left column: title + copy -----
+    // ---------------- LEFT COLUMN: title + copy ----------------
     const leftTitle = document.createElement("h3");
     leftTitle.className = "step1-tab-left-title";
     leftTitle.textContent = "Who buys your stuff?";
@@ -1319,104 +1368,146 @@
     leftCol.appendChild(leftTitle);
     leftCol.appendChild(leftCopy);
   
-    // ----- Right column: kicker + stack -----
+    // ---------------- RIGHT COLUMN: Intent Score title ----------------
     const rightTitle = document.createElement("div");
     rightTitle.className = "step1-tab-right-kicker";
     rightTitle.textContent = "Intent Score";
+    rightTitle.style.display = "inline-block";
   
-    // apply title size + nudges from tablet knobs
-    const rtPt = T1.RIGHT_TITLE_PT ?? 13;
-    const rtWeight = T1.RIGHT_TITLE_WEIGHT ?? 700;
+    const rtPt = T1.RIGHT_TITLE_PT || 12;
+    const rtWeight = T1.RIGHT_TITLE_WEIGHT || 700;
     rightTitle.style.fontSize = `${rtPt}pt`;
     rightTitle.style.fontWeight = rtWeight;
-    rightTitle.style.display = "inline-block";   // so translate works cleanly
-    rightTitle.style.textAlign = "left";         // you can change to "center" if you like
   
-    const tNx = T1.RIGHT_TITLE_NUDGE_X ?? 0;
-    const tNy = T1.RIGHT_TITLE_NUDGE_Y ?? 0;
+    const tNx = T1.RIGHT_TITLE_NUDGE_X || 0;
+    const tNy = T1.RIGHT_TITLE_NUDGE_Y || 0;
     if (tNx || tNy) {
       rightTitle.style.transform = `translate(${tNx}px, ${tNy}px)`;
     }
   
+    // ---------------- STACK: boxes + diamond ----------------
     const stack = document.createElement("div");
     stack.className = "step1-tab-stack";
+    stack.style.display = "flex";
+    stack.style.flexDirection = "column";
+    stack.style.gap = "14px";
+    stack.style.width = "100%";
+    stack.style.alignItems = "flex-end"; // right-aligned by default
   
-    const sCfg = window.PROCESS_CONFIG.step1 || {};
+    const stepCfg = window.PROCESS_CONFIG.step1 || {};
     const labels = {
-      rect1:    sCfg.LABEL_RECT_1    || "Metrics Match Score (daily)",
-      rect2:    sCfg.LABEL_RECT_2    || "RFQ/RFP Keywords Detected",
-      round3:   sCfg.LABEL_ROUND_3   || "Pricing & Sample Page Hits",
-      oval4:    sCfg.LABEL_OVAL_4    || "Rising # of Ad Creatives (last 14d)",
-      diamond5: sCfg.LABEL_DIAMOND_5 || "Imp/Exp Cycle"
+      rect1: stepCfg.LABEL_RECT_1    || "Metrics Match Score (daily)",
+      rect2: stepCfg.LABEL_RECT_2    || "RFQ/RFP Keywords Detected",
+      round3: stepCfg.LABEL_ROUND_3  || "Pricing & Sample Page Hits",
+      oval4: stepCfg.LABEL_OVAL_4    || "Rising # of Ad Creatives (last 14d)",
+      diamond5: stepCfg.LABEL_DIAMOND_5 || "Imp/Exp Cycle"
     };
   
-    // Helper: apply box geometry from tablet knobs
-    function styleBox(el) {
-      const wPct   = T1.BOX_WIDTH_PCT   ?? 100;
-      const minH   = T1.BOX_MIN_H       ?? 52;
-      const padX   = T1.BOX_PAD_X       ?? 18;
-      const padY   = T1.BOX_PAD_Y       ?? 12;
-      const border = T1.BOX_BORDER      ?? 2;
-      const radius = T1.BOX_RADIUS      ?? 18;
-      const fPt    = T1.BOX_FONT_PT     ?? 9;
+    // ---- helpers for geometry ----
+    function styleBox(el, isOval) {
+      const wPct   = T1.BOX_WIDTH_PCT ?? 100;
+      const minH   = T1.BOX_MIN_H ?? 20;
+      const padX   = T1.BOX_PAD_X ?? 8;
+      const padY   = T1.BOX_PAD_Y ?? 9;
+      const border = T1.BOX_BORDER ?? 2;
+      const radius = isOval ? 9999 : (T1.BOX_RADIUS ?? 18);
+      const fPt    = T1.BOX_FONT_PT ?? 8;
       const fW     = T1.BOX_FONT_WEIGHT ?? 525;
-      const letter = T1.BOX_LETTER      ?? 0.3;
-      const line   = T1.BOX_LINE        ?? 1.25;
+      const letter = T1.BOX_LETTER ?? 0.3;
+      const line   = T1.BOX_LINE ?? 1.25;
   
       el.style.width = `${wPct}%`;
       el.style.minHeight = `${minH}px`;
       el.style.padding = `${padY}px ${padX}px`;
-      el.style.borderWidth = `${border}px`;
+      el.style.border = `${border}px solid rgba(99,211,255,.95)`;
       el.style.borderRadius = `${radius}px`;
-      el.style.font = `${fW} ${fPt}pt Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+      el.style.background = "rgba(255,255,255,.02)";
+      el.style.color = "#ddeaef";
+      el.style.display = "flex";
+      el.style.alignItems = "center";
+      el.style.justifyContent = "center";
+      el.style.textAlign = "center";
+      el.style.fontFamily =
+        'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+      el.style.fontWeight = fW;
+      el.style.fontSize = `${fPt}pt`;
       el.style.letterSpacing = `${letter}px`;
       el.style.lineHeight = `${line}em`;
     }
   
-    // Helper: apply diamond geometry (square -> diamond)
-    function styleDiamond(el, innerSpan) {
-      const size   = T1.DIAMOND_SIZE_PX  ?? 72;
-      const border = T1.DIAMOND_BORDER   ?? (T1.BOX_BORDER ?? 2);
-      const pad    = T1.DIAMOND_PAD      ?? 12;
-      const labelPt = T1.DIAMOND_LABEL_PT ?? (T1.BOX_FONT_PT ?? 9);
-  
-      // one knob controls both — always a square before rotation
-      el.style.width = `${size}px`;
-      el.style.height = `${size}px`;
-      el.style.borderWidth = `${border}px`;
-  
-      innerSpan.style.padding = `${pad}px`;
-      innerSpan.style.fontSize = `${labelPt}pt`;
-    }
-  
-    function makeBox(extraClass, text) {
+    function makeBox(label, isOval) {
       const box = document.createElement("div");
-      box.className = "step1-tab-box" + (extraClass ? " " + extraClass : "");
-      box.textContent = text;
-      styleBox(box);
+      box.className = "step1-tab-box";
+      if (isOval) box.classList.add("oval");
+      box.textContent = label;
+      styleBox(box, isOval);
       return box;
     }
   
-    // 4 rectangular / pill boxes
-    stack.appendChild(makeBox("", labels.rect1));
-    stack.appendChild(makeBox("", labels.rect2));
-    stack.appendChild(makeBox("", labels.round3));
-    stack.appendChild(makeBox("oval", labels.oval4));
+    // 4 boxes (rect, rect, rect, pill)
+    stack.appendChild(makeBox(labels.rect1, false));
+    stack.appendChild(makeBox(labels.rect2, false));
+    stack.appendChild(makeBox(labels.round3, false));
+    stack.appendChild(makeBox(labels.oval4, true));
   
-    // Diamond at the bottom
+    // ---- diamond at the bottom (true diamond: square + rotate) ----
     const diamond = document.createElement("div");
     diamond.className = "step1-tab-diamond";
+    const size = T1.DIAMOND_SIZE_PX ?? 64;
+    const dBorder = T1.DIAMOND_BORDER ?? (T1.BOX_BORDER ?? 2);
+  
+    diamond.style.width = `${size}px`;
+    diamond.style.height = `${size}px`;
+    diamond.style.border = `${dBorder}px solid rgba(99,211,255,.95)`;
+    diamond.style.background = "rgba(255,255,255,.02)";
+    diamond.style.display = "flex";
+    diamond.style.alignItems = "center";
+    diamond.style.justifyContent = "center";
+  
+    // alignment inside the stack
+    const align = (T1.DIAMOND_ALIGN || "center").toLowerCase();
+    if (align === "left") diamond.style.alignSelf = "flex-start";
+    else if (align === "right") diamond.style.alignSelf = "flex-end";
+    else diamond.style.alignSelf = "center";
+  
+    // XY nudge + rotation (keeps it a proper diamond)
+    const dNx = T1.DIAMOND_NUDGE_X || 0;
+    const dNy = T1.DIAMOND_NUDGE_Y || 0;
+    diamond.style.transform = `translate(${dNx}px, ${dNy}px) rotate(45deg)`;
+  
     const dSpan = document.createElement("span");
     dSpan.textContent = labels.diamond5;
+    dSpan.style.transform = "rotate(-45deg)";
+    dSpan.style.display = "flex";
+    dSpan.style.alignItems = "center";
+    dSpan.style.justifyContent = "center";
+    dSpan.style.textAlign = "center";
+    dSpan.style.width = "70%";
+    dSpan.style.height = "70%";
+  
+    const dPad = T1.DIAMOND_PAD ?? 12;
+    const dLabelPt = T1.DIAMOND_LABEL_PT ?? (T1.BOX_FONT_PT ?? 8);
+    dSpan.style.padding = `${dPad}px`;
+    dSpan.style.color = "#ddeaef";
+    dSpan.style.fontFamily =
+      'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    dSpan.style.fontWeight = T1.BOX_FONT_WEIGHT ?? 525;
+    dSpan.style.fontSize = `${dLabelPt}pt`;
+    dSpan.style.lineHeight = `${T1.BOX_LINE ?? 1.25}em`;
+  
     diamond.appendChild(dSpan);
-    styleDiamond(diamond, dSpan);
     stack.appendChild(diamond);
   
+    // mount right column
     rightCol.appendChild(rightTitle);
     rightCol.appendChild(stack);
   
+    // mount columns into wrap
     wrap.appendChild(leftCol);
     wrap.appendChild(rightCol);
+  
+    // mount into canvas
+    canvas.appendChild(wrap);
   }
 
   /* ----------------- ROUTERS ----------------- */
