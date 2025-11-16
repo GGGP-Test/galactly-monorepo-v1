@@ -290,13 +290,13 @@
           DIAMOND_PAD: 12,          // inner padding (px)
           DIAMOND_LABEL_PT: 8,       // label font size in pt
           DIAMOND_ALIGN: "center",
-          DIAMOND_NUDGE_X: 30,       // + right / - left
+          DIAMOND_NUDGE_X: 25,       // + right / - left
           DIAMOND_NUDGE_Y: 0,       // + down  / - up
 
 
           RIGHT_TITLE_PT: 12,      // font size in pt
           RIGHT_TITLE_WEIGHT: 700, // (optional) font weight
-          RIGHT_TITLE_NUDGE_X: 150,  // + = move title right,  - = left
+          RIGHT_TITLE_NUDGE_X: 50,  // + = move title right,  - = left
           RIGHT_TITLE_NUDGE_Y: 0   // + = move title down,   - = up
         },
 
