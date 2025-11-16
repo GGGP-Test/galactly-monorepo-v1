@@ -213,7 +213,7 @@
       STACK_TOP_RATIO: 0.20,                 // slightly higher / lower than desktop
 
       // nudge the ENTIRE stack (all shapes + dots + title)
-      NUDGE_X: 0,                         // + = move stack right,  - = left
+      NUDGE_X: -20,                         // + = move stack right,  - = left
       NUDGE_Y: base.NUDGE_Y,                 // + = move stack down,   - = up
 
       // ----- STROKES & CONNECTORS -----
@@ -223,7 +223,7 @@
       RADIUS_RECT:    base.RADIUS_RECT,
       RADIUS_PILL:    base.RADIUS_PILL,
       RADIUS_OVAL:    base.RADIUS_OVAL,
-      CIRCLE_DESKTOP_DIAM_RATIO: 0.1,
+      CIRCLE_DESKTOP_DIAM_RATIO: 0.2,
 
       SHOW_LEFT_LINE:  base.SHOW_LEFT_LINE,
       SHOW_RIGHT_LINE: base.SHOW_RIGHT_LINE,
