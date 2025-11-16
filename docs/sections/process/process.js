@@ -263,7 +263,7 @@
         step1: {
           
          // NEW: specific copy width just for step 1 on tablet
-          COPY_MAX_PX: 390,   // or 300, 340, whatever looks right
+          COPY_MAX_PX: 790,   // or 300, 340, whatever looks right
           
           useTheme: true,
 
@@ -272,7 +272,7 @@
           bottom: 90,       // space below this step
           maxW: 480,        // column width on tablet
           sidePad: 24,      // padding inside the column
-          nudgeX: 500,        // translate the whole block
+          nudgeX: 0,        // translate the whole block
           nudgeY: 0,
 
           // small title: "Intent Score"
