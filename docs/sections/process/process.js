@@ -274,7 +274,7 @@
         
           // Box geometry
           BOX_WIDTH_PCT: 80,   // % of right column width for each box
-          BOX_MIN_H: 48,        // min height in px
+          BOX_MIN_H: 15,        // min height in px
           BOX_PAD_X: 8,        // horizontal padding (px)
           BOX_PAD_Y: 92,        // vertical padding (px)
           BOX_BORDER: 2,        // border width (px)
