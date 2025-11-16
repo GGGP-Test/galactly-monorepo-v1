@@ -431,20 +431,20 @@
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
-    // ---------- OUTER WRAP (kept inside lamp width) ----------
     const wrap = document.createElement("div");
     if (mode === "tablet") {
       // tablet: inline styles using T_* knobs
       wrap.className = "p5t-wrap";
       wrap.style.position = "relative";
 
-      // distance from lamp edge → top of Step 5 block
       const topGap    = cfg.T_SECTION_TOP  != null ? cfg.T_SECTION_TOP  : 40;
       const bottomGap = cfg.T_SECTION_BOTTOM != null ? cfg.T_SECTION_BOTTOM : 40;
       wrap.style.margin = `${topGap}px auto ${bottomGap}px`;
 
-      // clamp to lamp rail width (dims.W is computed from WIDTH_RATIO)
-      wrap.style.maxWidth = `${dims.W}px`;
+      // ✅ use T_ROW1_MAX_W as the main width knob for tablet row 1
+      const row1Max = cfg.T_ROW1_MAX_W || cfg.T_MAX_W || dims.W;
+      wrap.style.maxWidth = `${row1Max}px`;
+
       wrap.style.padding = `0 ${cfg.T_SIDE_PAD ?? 24}px 12px`;
       wrap.style.zIndex = 0;
     } else {
@@ -457,9 +457,8 @@
     row1.className = mode === "tablet" ? "p5t-row1" : "p5m-row1";
 
     if (mode === "tablet") {
-      // THIS is the max width for the COPY ROW, inside the lamp
-      const row1Max = cfg.T_ROW1_MAX_W || cfg.T_MAX_W || dims.W;
-      row1.style.maxWidth = `${row1Max}px`;
+      // row 1 just fills the tablet wrapper
+      row1.style.maxWidth = "100%";
       row1.style.margin = "0 auto";
     }
 
