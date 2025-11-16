@@ -220,7 +220,7 @@
         BP_MAX: 900, // <= px is treated as "tablet" for these knobs
 
         // copy column width on tablet (Section 3 subtitle + body)
-        COPY_MAX_PX: 300,
+        COPY_MAX_PX: 200,
 
         // rail wrap when docked (left side step buttons)
         RAIL_DOCK_LEFT_PX: 12,
@@ -261,6 +261,10 @@
 
         // ===== STEP 1: TABLET-ONLY LAYOUT (boxes + diamond) =====
         step1: {
+          
+         // NEW: specific copy width just for step 1 on tablet
+          COPY_MAX_PX: 320,   // or 300, 340, whatever looks right
+          
           useTheme: true,
 
           // whole-step placement on tablet
@@ -601,11 +605,16 @@
     makeFlowGradients
   });
 
-  function mountCopy({ top, left, html }) {
+  function mountCopy({ top, left, html, maxWidth }) {
     const el = document.createElement("div");
     el.className = "copy";
     el.style.top = `${top}px`;
     el.style.left = `${left}px`;
+    if (maxWidth != null) {
+      // number => px, string => raw (e.g. "22rem")
+      el.style.maxWidth =
+        typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth;
+    }
     el.innerHTML = html;
     canvas.appendChild(el);
     requestAnimationFrame(() => el.classList.add("show"));
@@ -838,10 +847,20 @@
       </p>
     `;
   
+    const TCFG = () => window.PROCESS_CONFIG?.tablet || {};
+    
+    ...
+    
+    const onTablet = !isMobile && isTabletLike; // whatever logic you already have
+    const T1 = TCFG().step1 || {};
+    const step1CopyMax =
+      onTablet && T1.COPY_MAX_PX != null ? T1.COPY_MAX_PX : null;
+    
     const copy = mountCopy({
       top: copyTop,
-      left: fromRail,
-      html: copyHTML
+      left: copyLeft,
+      html: copyHTML,
+      maxWidth: step1CopyMax    // <- this is the new bit
     });
 
     requestAnimationFrame(() => {
