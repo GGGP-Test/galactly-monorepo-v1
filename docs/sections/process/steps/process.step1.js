@@ -191,7 +191,7 @@
       T_COPY_LEFT_RATIO: null,  // use COPY_LEFT_RATIO if null
       T_COPY_TOP_RATIO: null,   // use COPY_TOP_RATIO if null
       T_COPY_NUDGE_X: null,     // use COPY_NUDGE_X if null
-      T_COPY_NUDGE_Y: null,     // use COPY_NUDGE_Y if null
+      T_COPY_NUDGE_Y: null     // use COPY_NUDGE_Y if null
     };
 
     for (const k in dflt) if (!(k in cfg)) cfg[k] = dflt[k];
