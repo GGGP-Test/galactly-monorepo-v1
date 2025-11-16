@@ -411,12 +411,17 @@
     ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
-    if (mode === "tablet") {
+        if (mode === "tablet") {
       // tablet: inline styles using T_* knobs
       wrap.className = "p5t-wrap";
       wrap.style.position = "relative";
+
+      // top / bottom gap between lamp edge and Step 5 content
       wrap.style.margin = `${cfg.T_SECTION_TOP}px auto ${cfg.T_SECTION_BOTTOM}px`;
-      wrap.style.maxWidth = `${cfg.T_MAX_W}px`;
+
+      // KEY: keep Step 5 strictly inside the lamp's right rail width
+      // (dims.W is the W we computed in main draw using WIDTH_RATIO)
+      wrap.style.maxWidth = `${dims.W}px`;
       wrap.style.padding = `0 ${cfg.T_SIDE_PAD}px 12px`;
       wrap.style.zIndex = 0;
     } else {
@@ -508,10 +513,11 @@
     const fullW = bounds.width;
     const H = Math.min(cfg.HEIGHT_MAX_PX, bounds.sH - 40);
 
-    // phones = full width, tablet/desktop = lamp WIDTH_RATIO
     const W =
       layoutMode === "phone"
         ? fullW
+        : layoutMode === "tablet"
+        ? Math.min(cfg.T_MAX_W, Math.max(300, fullW * cfg.WIDTH_RATIO))
         : Math.max(300, fullW * cfg.WIDTH_RATIO);
 
     // desktop uses right rail placement; stacked (phone/tablet) are drawn from x0 = 0
