@@ -1238,209 +1238,37 @@
   }
   
   
-  /* ----------------- TABLET: Step 1 DOM (tablet-only) ----------------- */
-  function renderStep1_TABLET() {
-    const cfg = window.PROCESS_CONFIG.step1 || {};
-    const T = TCFG().step1 || {};
+  
 
-    // Outer container for the whole step (tablet column)
-    const wrap = mStepContainer({
-      top: T.top ?? 50,
-      bottom: T.bottom ?? 90,
-      maxW: T.maxW ?? 480,
-      sidePad: T.sidePad ?? 24,
-      nudgeX: T.nudgeX ?? 0,
-      nudgeY: T.nudgeY ?? 0
-    });
-    wrap.classList.add("mstep-tablet", "mstep1-tablet");
+  /* ----------------- ROUTERS ----------------- */
+  // Desktop route (used for desktop + tablet)
+  function drawDesktop() {
+    clearCanvas();
 
-    // center the column horizontally
-    wrap.style.marginLeft = "auto";
-    wrap.style.marginRight = "auto";
-
-    // 1) COPY BLOCK (same text as desktop, tablet knobs for sizes/colors)
-    const copy = document.createElement("div");
-    copy.className = "mstep-copy";
-    copy.style.marginBottom = `${T.copyGapBottom ?? 18}px`;
-    copy.innerHTML = `
-      <h3 style="
-        margin:0 0 ${(T.copyHGap ?? 10)}px;
-        color:${T.copyHColor ?? "#eaf0f6"};
-        font:600 ${(T.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;
-      ">
-        Who buys your stuff?
-      </h3>
-      <p style="
-        margin:0;
-        color:${T.copyColor ?? "#a7bacb"};
-        font:400 ${(T.copyBodyPt ?? 14)}px/${(T.copyLine ?? 1.6)} Inter, system-ui;
-      ">
-        Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle.
-        We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing &amp; sample pages,
-        and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.
-      </p>`;
-    wrap.appendChild(copy);
-
-    // 2) STEP TITLE ("Intent Score")
-    if (T.titleShow !== false) {
-      const t = document.createElement("div");
-      t.className = "mstep-title";
-      t.innerHTML = '<span class="mstep-title-intent">Intent</span> Score';
-      t.style.textAlign = T.titleAlign || "left";
-      t.style.fontWeight = String(T.titleWeight ?? 700);
-      t.style.fontSize = `${T.titlePt ?? 13}pt`;
-      t.style.letterSpacing = `${T.titleLetter ?? 0.3}px`;
-      t.style.marginTop = `${T.titleMarginTop ?? 10}px`;
-      t.style.marginBottom = `${T.titleMarginBottom ?? 16}px`;
-
-      const tNx = T.titleNudgeX ?? 0;
-      const tNy = T.titleNudgeY ?? 0;
-      if (tNx || tNy) {
-        t.style.transform = `translate(${tNx}px, ${tNy}px)`;
-      }
-
-      wrap.appendChild(t);
+    // Step 0 pill scene (already tablet-aware via TCFG().step0)
+    if (step === 0 && phase === 1) {
+      scenePill();
+      return;
     }
 
-    // 3) BOX STACK (4 boxes + diamond)
-    const stack = document.createElement("div");
-    stack.className = "mstack";
-    stack.style.gap = `${T.stackGap ?? 14}px`;
-
-    const labels = {
-      rect1: cfg.LABEL_RECT_1 ?? "Metrics Match Score (daily)",
-      rect2: cfg.LABEL_RECT_2 ?? "RFQ/RFP Keywords Detected",
-      round3: cfg.LABEL_ROUND_3 ?? "Pricing & Sample Page Hits",
-      oval4:
-        cfg.LABEL_OVAL_4 ??
-        "Rising # of Ad Creatives (last 14d)",
-      diamond5: cfg.LABEL_DIAMOND_5 ?? "Imp/Exp Cycle"
-    };
-
-    const order = Array.isArray(T.order)
-      ? T.order
-      : ["rect1", "rect2", "round3", "oval4", "diamond5"];
-
-    const baseBox = T.box || {};
-    const OVR = T.overrides || {};
-
-    for (const key of order) {
-      const ov = OVR[key] || {};
-
-      if (key === "diamond5") {
-        // diamond at the bottom
-        const dWrap = document.createElement("div");
-        dWrap.className = "mdiamond";
-
-        const dCfg = T.diamond || {};
-        if (typeof dCfg.widthPct === "number") {
-          dWrap.style.width = `${dCfg.widthPct}%`;
-        } else if (typeof dCfg.size === "number") {
-          dWrap.style.width = `${dCfg.size}px`;
-        } else {
-          dWrap.style.width = "40%";
-        }
-
-        dWrap.style.border = `${dCfg.border ?? 2}px solid rgba(99,211,255,.95)`;
-
-        const dNx = ov.nudgeX ?? baseBox.nudgeX ?? 0;
-        const dNy =
-          ov.nudgeY ?? baseBox.nudgeY ?? (dCfg.nudgeY ?? 0);
-        let transform = "rotate(45deg)";
-        if (dNx || dNy) {
-          transform = `translate(${dNx}px, ${dNy}px) ${transform}`;
-        }
-        dWrap.style.transform = transform;
-
-        const s = document.createElement("span");
-        s.textContent = labels[key];
-        s.style.width = "70%";
-        s.style.height = "70%";
-        s.style.font = `${
-          baseBox.fontWeight ?? 525
-        } ${(dCfg.labelPt ?? baseBox.fontPt ?? 9)}pt Inter, system-ui`;
-        s.style.letterSpacing = `${baseBox.letter ?? 0.3}px`;
-        s.style.lineHeight = `${baseBox.lineEm ?? 1.25}em`;
-        s.style.padding = `${dCfg.pad ?? 14}px`;
-        dWrap.appendChild(s);
-        stack.appendChild(dWrap);
-      } else {
-        const box = document.createElement("div");
-        box.className = "mbox" + (key === "oval4" ? " oval" : "");
-        box.textContent = labels[key];
-        applyBoxStyles(
-          box,
-          baseBox,
-          Object.assign(
-            {},
-            key === "oval4" ? { radius: 9999 } : {},
-            ov
-          )
-        );
-        stack.appendChild(box);
+    // Steps 1–5: use the SVG scenes from sections/process/steps/*.js
+    const scene = window.PROCESS_SCENES[step];
+    if (typeof scene === "function") {
+      try {
+        const cfg = deepClone(window.PROCESS_CONFIG["step" + step]);
+        scene({
+          ns,
+          canvas,
+          bounds: boundsDesktop(), // desktop + tablet share this
+          config: cfg,
+          makeFlowGradients,
+          mountCopy
+        });
+      } catch (err) {
+        console.error("process scene error (step " + step + "):", err);
       }
     }
-
-    // 4) DOTS ROW UNDER DIAMOND
-    const dotsCfg = T.dots || {};
-    if (dotsCfg.show !== false) {
-      const row = document.createElement("div");
-      row.className = "mdots";
-      row.style.gap = `${dotsCfg.gap ?? 10}px`;
-      row.style.paddingTop = `${dotsCfg.padTop ?? 8}px`;
-      const n = Math.max(0, dotsCfg.count ?? 3);
-      for (let i = 0; i < n; i++) {
-        const dot = document.createElement("i");
-        const size = `${dotsCfg.size ?? 6}px`;
-        dot.style.width = size;
-        dot.style.height = size;
-        row.appendChild(dot);
-      }
-      stack.appendChild(row);
-    }
-
-    wrap.appendChild(stack);
-    canvas.appendChild(wrap);
   }
-  
-  
-  
-
-    /* ----------------- ROUTERS ----------------- */
-    // Desktop route (original — used for desktop + tablet)
-    function drawDesktop() {
-      clearCanvas();
-  
-      if (step === 0 && phase === 1) {
-        // Step 0 pill scene (already tablet-aware via TCFG().step0)
-        scenePill();
-        return;
-      }
-  
-      // >>> TABLET-ONLY STEP 1 DOM LAYOUT <<<
-      if (isTablet() && step === 1) {
-        renderStep1_TABLET();
-        return;
-      }
-  
-      // default: desktop SVG scenes (also used for other tablet steps)
-      const scene = window.PROCESS_SCENES[step];
-      if (typeof scene === "function") {
-        try {
-          const cfg = deepClone(window.PROCESS_CONFIG["step" + step]);
-          scene({
-            ns,
-            canvas,
-            bounds: boundsDesktop(),
-            config: cfg,
-            makeFlowGradients,
-            mountCopy
-          });
-        } catch (err) {
-          console.error("process scene error (step " + step + "):", err);
-        }
-      }
-    }
 
   // Spacer utility
   function push(yPx) {
