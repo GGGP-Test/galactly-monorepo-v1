@@ -1,5 +1,17 @@
-/* Section 4: Orbit — SVG icons + smooth snap + perf gating */
+/* Section 4: Orbit — polished SVG icons, smooth snap, perf gating
+   Controls:
+     - ICON_STYLE.color  : icon stroke color
+     - ICON_STYLE.stroke : stroke width in px
+     - ICON_STYLE.sizePct: icon scale (%) inside circular badge
+*/
 (function(){
+  // ---- Appearance controls for icons (adjust these) ----
+  const ICON_STYLE = {
+    color: '#dbe8f2',
+    stroke: 1.4,
+    sizePct: 64
+  };
+
   const CONFIG = {
     SPEED_FULL_DPS: 6,
     SPEED_EASE: 0.06,
@@ -16,48 +28,43 @@
   mount.style.transition = 'opacity 260ms cubic-bezier(.22,.61,.36,1)';
 
   // RAF lifecycle
-  let active = false;
-  let rafId = null;
-  function startOrbit(){ if(active) return; active = true; mount.style.opacity = '1'; rafId = requestAnimationFrame(tick); }
-  function stopOrbit(){ if(!active) return; active = false; if(rafId) cancelAnimationFrame(rafId); rafId = null; mount.style.opacity = '0'; }
+  let active = false, rafId = null;
+  function startOrbit(){ if(active) return; active = true; mount.style.opacity='1'; rafId=requestAnimationFrame(tick); }
+  function stopOrbit(){  if(!active) return; active = false; if(rafId) cancelAnimationFrame(rafId); rafId=null; mount.style.opacity='0'; }
 
   // Host label
   const LS = window.localStorage;
   const host = (()=>{ try { return (JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "" } catch{ return "" } })() || "yourcompany.com";
 
-  // ---------- Icons (inline SVG) ----------
+  // ---------- Icon set (clean line icons, 24x24 grid) ----------
   const ICONS = {
     buyers: () => `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="9" cy="8" r="3"/>
-        <circle cx="15" cy="8" r="3"/>
-        <path d="M3.5 18.5c2-3.3 6-3.3 8-3.3s6 0 8 3.3"/>
+        <circle cx="8.5" cy="8" r="2.7"/>
+        <circle cx="15.5" cy="8" r="2.7"/>
+        <path d="M3.5 18.5c1.8-3 5.2-3.3 7-3.3s5.2.3 7 3.3"/>
       </svg>`,
-
     competition: () => `
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M6 6l12 12M18 6L6 18"/>
-        <circle cx="6" cy="6" r="1"/>
-        <circle cx="18" cy="18" r="1"/>
+        <circle cx="6" cy="6" r="1.2"/>
+        <circle cx="18" cy="18" r="1.2"/>
       </svg>`,
-
     rfp: () => `
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
         <path d="M14 3v6h6"/>
         <path d="M9 13h6M9 17h6"/>
       </svg>`,
-
     market: () => `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3 11l10-4v10L3 13z"/>
-        <path d="M13 7l5-2v14l-5-2"/>
-        <path d="M8 14l1 5"/>
+        <path d="M3 12l8-4v8l-8-4z"/>
+        <path d="M11 8l6-3v14l-6-3"/>
+        <path d="M7.5 14.5l.8 4.5"/>
       </svg>`,
-
     heat: () => `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 3c-2 3 1 4 1 6s-1 3-1 5 1.5 3 3 3 4-2 4-6-3-6-7-8z"/>
+        <path d="M12 3c-2.2 3.2 1 4.2 1 6.1S12 12 12 14s1.6 3 3.1 3 4-2.1 4-6.1S16.3 5.1 12 3z"/>
       </svg>`
   };
 
@@ -78,7 +85,8 @@
           <h2>Where your buyers light up</h2>
           <div class="sub">Simple orbit map of the strongest intent signals for <span style="color:var(--gold-300)">${host}</span></div>
         </div>
-        <div class="orbit-panel"><div class="orbit-stage" id="orbitStage">
+        <div class="orbit-panel"><div class="orbit-stage" id="orbitStage"
+             style="--icon-color:${ICON_STYLE.color};--icon-stroke:${ICON_STYLE.stroke}px;--icon-size:${ICON_STYLE.sizePct}%">
           <div class="orbit-ring" id="orbitRing"></div>
 
           <div class="orbit-center">
@@ -99,7 +107,7 @@
     </section>
   `;
 
-  // Inline CSS for icons + card (keeps changes local to JS)
+  // Inline CSS for crisp, professional icons (variable-driven)
   (function injectCSS(){
     if (document.getElementById("orbitInlineCSS")) return;
     const css = `
@@ -111,17 +119,29 @@
       .orbit-card .card-bd{font-size:13px;color:#bcd0e0;line-height:1.4}
       .orbit-node.locked{filter:brightness(1.05)}
 
-      /* SVG styling */
+      /* SVG styling: variable color/size/stroke; crisp rendering */
+      .orbit-node .ico{
+        display:grid; place-items:center; width:100%; height:100%;
+        color: var(--icon-color);
+      }
       .orbit-node .ico svg,
       .orbit-card .icon svg{
         display:block;
-        width:62%; height:62%;
-        stroke: currentColor;
+        width: var(--icon-size); height: var(--icon-size);
+        stroke: var(--icon-color);
         fill: none;
-        stroke-width: 1.8;
+        stroke-width: var(--icon-stroke);
         stroke-linecap: round;
         stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
+        shape-rendering: geometricPrecision;
+        opacity: .95;
       }
+      .orbit-node:hover .ico svg,
+      .orbit-node:focus-visible .ico svg{ opacity: 1; }
+
+      /* Card icon inherits same style */
+      .orbit-card .icon{ color: var(--icon-color); }
     `;
     const s = document.createElement("style");
     s.id = "orbitInlineCSS"; s.textContent = css; document.head.appendChild(s);
@@ -201,12 +221,12 @@
       const k = easeInOutCubic(t);
       angle = lerp(angle, targetAngle, k);
       if (t >= 1){
-        angle = targetAngle;   // land exactly
+        angle = targetAngle;
         targetAngle = null;
-        vel = 0; velTarget = 0;  // kill residual drift (fixes nudge)
+        vel = 0; velTarget = 0;  // no nudge
       }
     } else if (locked){
-      vel = 0; velTarget = 0;    // stay frozen while open
+      vel = 0; velTarget = 0;
     } else {
       angle += vel * dt;
       vel = lerp(vel, velTarget, CONFIG.SPEED_EASE);
@@ -235,6 +255,12 @@
   // Card helpers
   function showCard(item, modelEntry){
     cardIcon.innerHTML = ICONS[item.icon]();
+    // sync card icon style with stage variables
+    const icon = cardIcon.firstElementChild;
+    if (icon){
+      icon.style.stroke = getComputedStyle(stage).getPropertyValue('--icon-color').trim() || ICON_STYLE.color;
+      icon.style.strokeWidth = (parseFloat(getComputedStyle(stage).getPropertyValue('--icon-stroke')) || ICON_STYLE.stroke) + 'px';
+    }
     cardTitle.textContent = item.label;
     cardBody.textContent  = item.desc;
     card.hidden = false;
