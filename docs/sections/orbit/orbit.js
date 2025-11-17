@@ -9,7 +9,7 @@
   const ICON_STYLE = {
     color: '#dbe8f2',
     stroke: 1.0,
-    sizePct: 64
+    sizePct: 58
   };
 
   const CONFIG = {
