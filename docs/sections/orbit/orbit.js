@@ -306,31 +306,4 @@
     vel = 0;
     velTarget = CONFIG.SPEED_FULL_DPS/1000;
   });
-  
-  /* Soft halo around each circular badge */
-  .orbit-node .ico::after{
-    content:"";
-    position:absolute; inset:-10px;        /* size of the glow */
-    border-radius:50%;
-    /* Radial falloff — no blur filter (cheap on GPU) */
-    background:
-      radial-gradient(closest-side,
-        rgba(var(--halo-rgb), .60) 0%,
-        rgba(var(--halo-rgb), .22) 55%,
-        rgba(var(--halo-rgb), 0.00) 72%);
-    opacity: var(--halo-base);
-    transition: opacity .22s ease, transform .22s ease;
-    z-index: 0;           /* sits behind the icon glyph */
-  }
-  
-  .orbit-node:hover .ico::after,
-  .orbit-node:focus-visible .ico::after{
-    opacity: var(--halo-hover);
-    transform: scale(1.03);
-  }
-  
-  .orbit-node.locked .ico::after{
-    opacity: var(--halo-locked);
-    transform: scale(1.06);
-  }
 })();
