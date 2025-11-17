@@ -1,15 +1,12 @@
-/* Section 4: Orbit — polished SVG icons, smooth snap, perf gating
-   Controls:
-     - ICON_STYLE.color  : icon stroke color
-     - ICON_STYLE.stroke : stroke width in px
-     - ICON_STYLE.sizePct: icon scale (%) inside circular badge
+/* Section 4: Orbit — Lucide icons (MIT), smooth snap, perf gating
+   Customize icon look at ICON_STYLE below.
 */
 (function(){
-  // ---- Appearance controls for icons (adjust these) ----
+  // ---- One-stop controls for icon appearance ----
   const ICON_STYLE = {
-    color: '#dbe8f2',
-    stroke: 1.0,
-    sizePct: 58
+    color: '#dbe8f2', // stroke color (inherits via CSS currentColor)
+    stroke: 1.4,      // 1.2–1.8 looks best
+    sizePct: 64       // % of circular badge
   };
 
   const CONFIG = {
@@ -23,58 +20,58 @@
   const mount = document.getElementById("section-orbit");
   if (!mount) return;
 
-  // Local fade (not using global .reveal)
+  // Fade lifecycle not tied to global reveal
   mount.style.opacity = '0';
   mount.style.transition = 'opacity 260ms cubic-bezier(.22,.61,.36,1)';
 
   // RAF lifecycle
   let active = false, rafId = null;
-  function startOrbit(){ if(active) return; active = true; mount.style.opacity='1'; rafId=requestAnimationFrame(tick); }
-  function stopOrbit(){  if(!active) return; active = false; if(rafId) cancelAnimationFrame(rafId); rafId=null; mount.style.opacity='0'; }
+  function startOrbit(){ if(active) return; active=true; mount.style.opacity='1'; rafId=requestAnimationFrame(tick); }
+  function stopOrbit(){  if(!active) return; active=false; if(rafId) cancelAnimationFrame(rafId); rafId=null; mount.style.opacity='0'; }
+
+  // Load Lucide once (from CDN, MIT license)
+  // Docs: https://lucide.dev (but you don't need to visit—this just works)
+  let lucideReady;
+  function loadScriptOnce(src){
+    return new Promise((resolve, reject)=>{
+      if (document.querySelector(`script[src="${src}"]`)) return resolve();
+      const s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = ()=> resolve();
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  function ensureLucide(){
+    if (!lucideReady){
+      // UMD build exposes window.lucide
+      lucideReady = loadScriptOnce('https://unpkg.com/lucide@latest/dist/umd/lucide.min.js')
+        .then(()=>{ if(!window.lucide) throw new Error('Lucide failed to load'); });
+    }
+    return lucideReady;
+  }
 
   // Host label
   const LS = window.localStorage;
   const host = (()=>{ try { return (JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "" } catch{ return "" } })() || "yourcompany.com";
 
-  // ---------- Icon set (clean line icons, 24x24 grid) ----------
-  const ICONS = {
-    buyers: () => `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="8.5" cy="8" r="2.7"/>
-        <circle cx="15.5" cy="8" r="2.7"/>
-        <path d="M3.5 18.5c1.8-3 5.2-3.3 7-3.3s5.2.3 7 3.3"/>
-      </svg>`,
-    competition: () => `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6 6l12 12M18 6L6 18"/>
-        <circle cx="6" cy="6" r="1.2"/>
-        <circle cx="18" cy="18" r="1.2"/>
-      </svg>`,
-    rfp: () => `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
-        <path d="M14 3v6h6"/>
-        <path d="M9 13h6M9 17h6"/>
-      </svg>`,
-    market: () => `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3 12l8-4v8l-8-4z"/>
-        <path d="M11 8l6-3v14l-6-3"/>
-        <path d="M7.5 14.5l.8 4.5"/>
-      </svg>`,
-    heat: () => `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 3c-2.2 3.2 1 4.2 1 6.1S12 12 12 14s1.6 3 3.1 3 4-2.1 4-6.1S16.3 5.1 12 3z"/>
-      </svg>`
+  // Map our items to Lucide icon names
+  // Picked for clarity + availability.
+  const ICON_NAME = {
+    buyers:      'users',      // Buyers
+    competition: 'trophy',     // Competition
+    rfp:         'file-text',  // RFPs & Docs
+    market:      'megaphone',  // Market Buzz
+    heat:        'flame'       // Buyer Heat
   };
 
   // Data
   const ITEMS = [
-    { id:"buyers",      label:"Buyers",       icon:"buyers",      desc:"Verified companies that match your ICP and are actively exploring suppliers." },
-    { id:"competition", label:"Competition",  icon:"competition", desc:"Signals where competitors are winning, losing, or being compared." },
-    { id:"rfp",         label:"RFPs & Docs",  icon:"rfp",         desc:"Recent RFPs, RFQs, specs, and procurement docs pulled from public sources." },
-    { id:"market",      label:"Market Buzz",  icon:"market",      desc:"Mentions in news, forums, and launches that imply packaging needs." },
-    { id:"heat",        label:"Buyer Heat",   icon:"heat",        desc:"On-site behavior & third-party intent that spikes for your strengths." }
+    { id:"buyers",      label:"Buyers",       icon: ICON_NAME.buyers,      desc:"Verified companies that match your ICP and are actively exploring suppliers." },
+    { id:"competition", label:"Competition",  icon: ICON_NAME.competition, desc:"Signals where competitors are winning, losing, or being compared." },
+    { id:"rfp",         label:"RFPs & Docs",  icon: ICON_NAME.rfp,         desc:"Recent RFPs, RFQs, specs, and procurement docs pulled from public sources." },
+    { id:"market",      label:"Market Buzz",  icon: ICON_NAME.market,      desc:"Mentions in news, forums, and launches that imply packaging needs." },
+    { id:"heat",        label:"Buyer Heat",   icon: ICON_NAME.heat,        desc:"On-site behavior & third-party intent that spikes for your strengths." }
   ];
 
   // ---------- Build DOM ----------
@@ -95,11 +92,11 @@
           </div>
 
           ${ITEMS.map(i=>`<button class="orbit-node" data-id="${i.id}" aria-label="${i.label}">
-            <span class="ico">${ICONS[i.icon]()}</span>
-          </button>`).join("")}
+              <span class="ico"><i data-lucide="${i.icon}"></i></span>
+            </button>`).join("")}
 
           <div class="orbit-card" id="orbitCard" hidden>
-            <div class="card-hd"><span class="icon" id="cardIcon"></span><span id="cardTitle"></span></div>
+            <div class="card-hd"><span class="icon" id="cardIcon"><i data-lucide="${ITEMS[0].icon}"></i></span><span id="cardTitle"></span></div>
             <div class="card-bd" id="cardBody"></div>
           </div>
         </div></div>
@@ -107,7 +104,7 @@
     </section>
   `;
 
-  // Inline CSS for crisp, professional icons (variable-driven)
+  // Inline CSS to style Lucide SVGs consistently
   (function injectCSS(){
     if (document.getElementById("orbitInlineCSS")) return;
     const css = `
@@ -119,33 +116,45 @@
       .orbit-card .card-bd{font-size:13px;color:#bcd0e0;line-height:1.4}
       .orbit-node.locked{filter:brightness(1.05)}
 
-      /* SVG styling: variable color/size/stroke; crisp rendering */
-      .orbit-node .ico{
-        display:grid; place-items:center; width:100%; height:100%;
-        color: var(--icon-color);
-      }
+      /* Lucide icons use currentColor; size/weight via variables */
+      .orbit-node .ico{ display:grid; place-items:center; width:100%; height:100%; color: var(--icon-color); }
       .orbit-node .ico svg,
       .orbit-card .icon svg{
         display:block;
-        width: var(--icon-size); height: var(--icon-size);
-        stroke: var(--icon-color);
+        width: var(--icon-size) !important;
+        height: var(--icon-size) !important;
+        stroke: currentColor !important;
         fill: none;
-        stroke-width: var(--icon-stroke);
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        vector-effect: non-scaling-stroke;
-        shape-rendering: geometricPrecision;
+        stroke-width: var(--icon-stroke) !important;
+        stroke-linecap: round; stroke-linejoin: round;
+        vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision;
         opacity: .95;
       }
       .orbit-node:hover .ico svg,
       .orbit-node:focus-visible .ico svg{ opacity: 1; }
-
-      /* Card icon inherits same style */
       .orbit-card .icon{ color: var(--icon-color); }
     `;
     const s = document.createElement("style");
     s.id = "orbitInlineCSS"; s.textContent = css; document.head.appendChild(s);
   })();
+
+  // After DOM is ready, render Lucide icons
+  function renderIcons(scope){
+    if (!window.lucide) return;
+    window.lucide.createIcons({
+      nameAttr: 'data-lucide',
+      attrs: {
+        // Let CSS override size; we still set these so SSR tools are happy
+        width: 24, height: 24,
+        color: 'currentColor',
+        stroke: 'currentColor',
+        'stroke-width': ICON_STYLE.stroke
+      },
+      // Optional: pass a root element to limit work
+      icons: undefined
+    }, scope);
+  }
+  ensureLucide().then(()=> renderIcons(mount));
 
   const stage = document.getElementById("orbitStage");
   const ring  = document.getElementById("orbitRing");
@@ -181,10 +190,10 @@
 
   // State
   let angle = 0;
-  let velTarget = CONFIG.SPEED_FULL_DPS/1000; // deg/ms
+  let velTarget = CONFIG.SPEED_FULL_DPS/1000;
   let vel = velTarget;
-  let locked = null;               // model entry
-  let targetAngle = null;          // snap target (deg)
+  let locked = null;
+  let targetAngle = null;
   let snapStart = 0;
 
   // Layout
@@ -221,9 +230,9 @@
       const k = easeInOutCubic(t);
       angle = lerp(angle, targetAngle, k);
       if (t >= 1){
-        angle = targetAngle;
+        angle = targetAngle;   // exact landing
         targetAngle = null;
-        vel = 0; velTarget = 0;  // no nudge
+        vel = 0; velTarget = 0; // kill residual drift (no nudge)
       }
     } else if (locked){
       vel = 0; velTarget = 0;
@@ -254,13 +263,8 @@
 
   // Card helpers
   function showCard(item, modelEntry){
-    cardIcon.innerHTML = ICONS[item.icon]();
-    // sync card icon style with stage variables
-    const icon = cardIcon.firstElementChild;
-    if (icon){
-      icon.style.stroke = getComputedStyle(stage).getPropertyValue('--icon-color').trim() || ICON_STYLE.color;
-      icon.style.strokeWidth = (parseFloat(getComputedStyle(stage).getPropertyValue('--icon-stroke')) || ICON_STYLE.stroke) + 'px';
-    }
+    cardIcon.innerHTML = `<i data-lucide="${item.icon}"></i>`;
+    ensureLucide().then(()=> renderIcons(cardIcon));
     cardTitle.textContent = item.label;
     cardBody.textContent  = item.desc;
     card.hidden = false;
@@ -280,7 +284,7 @@
       el.classList.add("locked");
       locked = model[i];
 
-      // Pause and snap locked node to top (-90°)
+      // Pause and snap to top (-90°)
       velTarget = 0;
       const current = (locked.base + angle) % 360;
       const desired = -90;
