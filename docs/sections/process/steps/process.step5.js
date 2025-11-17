@@ -169,7 +169,7 @@
       T_SECTION_BOTTOM: 72,   // space under row 2
       
       // per-row max widths (cannot exceed lamp rail width)
-      T_ROW1_MAX_W: 720,      // row 1: copy + "Our Realtime AI Orchestrator"
+      T_ROW1_MAX_W: 1000,      // row 1: copy + "Our Realtime AI Orchestrator"
       T_ROW2_MAX_W: 720,      // row 2: SVG + headings + dots
       
       // per-row vertical offsets inside the block
