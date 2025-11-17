@@ -4,7 +4,7 @@
    - Centered sun + single ring
    - CIRCULAR node badges + label underneath
    - Faint aurora backdrop
-   - Inner + Outer halo around badges
+   - Inner + flush OUTER halo around badges
    ------------------------- */
 
 .orbit-section { padding: 36px 0 84px; }
@@ -25,16 +25,19 @@
 .orbit-panel { position: relative; width: 100%; }
 .orbit-stage {
   /* --- Halo controls (tune here) --- */
-  --halo-rgb: 200, 224, 255;   /* inner & outer glow color (RGB) */
-  /* inner */
+  --halo-rgb: 200, 224, 255;      /* glow color (RGB) */
+
+  /* inner halo (kept) */
   --halo-base: .28;
   --halo-hover: .55;
   --halo-locked: .70;
-  /* outer */
-  --halo-outer-base: .22;
-  --halo-outer-hover: .45;
-  --halo-outer-locked: .60;
-  --halo-outer-size: 26px;     /* thickness/radius outside the badge */
+
+  /* OUTER halo (flush to edge; no gap) */
+  --oglow-base: .22;              /* idle opacity */
+  --oglow-hover: .40;             /* hover/focus opacity */
+  --oglow-locked: .55;            /* selected opacity */
+  --oglow-blur: 22px;             /* softness */
+  --oglow-spread: 8px;            /* how far it starts outside the edge */
 
   position: relative;
   height: 520px;
@@ -137,38 +140,9 @@
   line-height: 0;
 }
 
-/* Outer halo (sits OUTSIDE the circle) */
-.orbit-node::before{
-  content:"";
-  position:absolute; left:50%; top:50%;
-  transform: translate(-50%, -50%);
-  width: calc(var(--badge) + var(--halo-outer-size)*2);
-  height: calc(var(--badge) + var(--halo-outer-size)*2);
-  border-radius: 50%;
-  pointer-events: none;
-  /* outside ring falloff */
-  background:
-    radial-gradient(closest-side,
-      rgba(var(--halo-rgb), 0.00) 60%,
-      rgba(var(--halo-rgb), .14) 74%,
-      rgba(var(--halo-rgb), .00) 96%);
-  opacity: var(--halo-outer-base);
-  transition: opacity .22s ease, transform .22s ease;
-  z-index: 0; /* below the badge */
-}
-.orbit-node:hover::before,
-.orbit-node:focus-visible::before{
-  opacity: var(--halo-outer-hover);
-  transform: translate(-50%, -50%) scale(1.04);
-}
-.orbit-node.locked::before{
-  opacity: var(--halo-outer-locked);
-  transform: translate(-50%, -50%) scale(1.08);
-}
-
 /* Circular badge (the inner icon holder) */
 .orbit-node .ico{
-  position: relative;   /* creates a local stacking context for inner glow */
+  position: relative;  /* for inner halo */
   z-index: 1;
   display: grid;
   place-items: center;
@@ -177,14 +151,16 @@
   border-radius: 50%;
   background: rgba(15,22,34,.88);
   border:1px solid rgba(255,255,255,.10);
+  /* OUTER GLOW — begins at edge (no gap) using spread shadow */
   box-shadow:
     0 10px 24px rgba(0,0,0,.35),
-    0 0 0 1px rgba(255,255,255,.06) inset;
+    0 0 0 1px rgba(255,255,255,.06) inset,
+    0 0 var(--oglow-blur) var(--oglow-spread) rgba(var(--halo-rgb), var(--oglow-base));
   backdrop-filter: blur(6px);
-  color: #e9f1f7; /* icon color (Lucide uses currentColor) */
+  color: #e9f1f7; /* Lucide uses currentColor */
 }
 
-/* Inner halo (kept from previous version) */
+/* Inner halo (kept) */
 .orbit-node .ico::after{
   content:"";
   position:absolute; inset:-10px;        /* extends slightly beyond the circle */
@@ -197,15 +173,6 @@
   opacity: var(--halo-base);
   transition: opacity .22s ease, transform .22s ease;
   z-index: 0;
-}
-.orbit-node:hover .ico::after,
-.orbit-node:focus-visible .ico::after{
-  opacity: var(--halo-hover);
-  transform: scale(1.03);
-}
-.orbit-node.locked .ico::after{
-  opacity: var(--halo-locked);
-  transform: scale(1.06);
 }
 
 /* Label UNDER the circle, using aria-label */
@@ -226,22 +193,33 @@
   text-shadow: 0 1px 0 rgba(0,0,0,.35);
 }
 
-/* Depth/hover/focus states for the badge border */
+/* Hover/focus — strengthen border and OUTER glow */
 .orbit-node:hover .ico,
 .orbit-node:focus-visible .ico{
   border-color: rgba(255,255,255,.18);
   box-shadow:
     0 14px 28px rgba(0,0,0,.40),
-    0 0 0 1px rgba(255,255,255,.10) inset;
+    0 0 0 1px rgba(255,255,255,.10) inset,
+    0 0 calc(var(--oglow-blur) + 4px) calc(var(--oglow-spread) + 2px) rgba(var(--halo-rgb), var(--oglow-hover));
   outline: none;
 }
+.orbit-node:hover .ico::after,
+.orbit-node:focus-visible .ico::after{
+  opacity: var(--halo-hover);
+  transform: scale(1.03);
+}
 
-/* Selected/locked */
+/* Selected/locked — strongest OUTER + inner glow */
 .orbit-node.locked .ico{
   border-color: rgba(230,195,107,.55);
   box-shadow:
-    0 16px 36px rgba(240,185,62,.18),
-    0 0 0 1px rgba(255,255,255,.10) inset;
+    0 16px 36px rgba(0,0,0,.42),
+    0 0 0 1px rgba(255,255,255,.10) inset,
+    0 0 calc(var(--oglow-blur) + 6px) calc(var(--oglow-spread) + 3px) rgba(var(--halo-rgb), var(--oglow-locked));
+}
+.orbit-node.locked .ico::after{
+  opacity: var(--halo-locked);
+  transform: scale(1.06);
 }
 
 /* Keep info card above nodes */
