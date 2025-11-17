@@ -1,8 +1,8 @@
 /* -------------------------
-   Section 3: Orbit (styles)
+   Section 4: Orbit (styles)
    - Transparent stage (no pane)
    - Centered sun + single ring
-   - Cute, readable chips
+   - CIRCULAR node badges + label underneath
    - Faint aurora backdrop
    ------------------------- */
 
@@ -25,10 +25,17 @@
 .orbit-stage {
   position: relative;
   height: 520px;
-  overflow: visible; /* chips/cards can exceed */
-  isolation: isolate; /* keep stage effects contained */
+  overflow: visible;
+  isolation: isolate;
+  /* Badge sizing token for all nodes */
+  --badge: 56px;
 }
-@media (max-width: 900px){ .orbit-stage{ height: 420px; } }
+@media (max-width: 900px){
+  .orbit-stage{ height: 420px; --badge: 52px; }
+}
+@media (min-width: 1200px){
+  .orbit-stage{ --badge: 60px; }
+}
 
 /* Soft aurora like Section 1, but faint and wide */
 .orbit-stage::before{
@@ -53,18 +60,15 @@
   z-index:1;
 }
 
-/* ---- SUN & LABEL (precise centering) ----
-   Trick: make the centering box zero-size so the label
-   cannot pull the sun off the true geometric center.
-*/
+/* ---- SUN & LABEL (precise centering) ---- */
 .orbit-center{
   position:absolute; left:50%; top:50%;
   transform: translate(-50%, -50%);
-  width:0; height:0; /* zero-size anchor */
+  width:0; height:0; /* zero-size anchor so label can't offset center */
   z-index:2;
 }
 
-/* ~10% smaller than before (was 84px) */
+/* ~10% smaller than before */
 .orbit-core{
   --sun: 76px;
   position:absolute; left:0; top:0;
@@ -74,7 +78,7 @@
   box-shadow:
     0 0 60px rgba(240,185,62,.45),
     0 0 160px rgba(240,185,62,.25);
-  animation: sunGlow 2.4s ease-in-out infinite; /* shimmer (no outward ping) */
+  animation: sunGlow 2.4s ease-in-out infinite;
 }
 @keyframes sunGlow{
   0% { filter:brightness(1.00) }
@@ -82,7 +86,7 @@
   100%{ filter:brightness(1.00) }
 }
 
-/* Place the label BELOW the true center by (sun/2 + 10px) */
+/* Host label below sun center */
 .orbit-domain{
   position:absolute; left:0; top: calc(var(--sun)/2 + 10px);
   transform: translate(-50%, 0);
@@ -96,42 +100,85 @@
   box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;
 }
 
-/* Nodes (chips) — cute, readable, hoverable */
+/* ================================
+   NODES = circular badges + label
+   ================================ */
+
+/* Container (absolutely positioned by JS) */
 .orbit-node{
   position:absolute;
   left:0; top:0;
-  transform: translate(-50%, -50%);
-  padding: 8px 12px;
-  font: 600 13px/1.1 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color:#e9f1f7;
-  border-radius: 999px;
+  transform: translate(-50%, -50%); /* keep mathematical center on the ring */
+  width: var(--badge);
+  height: var(--badge);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  z-index:3;
+
+  /* Hide the original inline text to avoid pills,
+     we'll print the label via ::after */
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+/* Circular badge (the inner icon holder) */
+.orbit-node .ico{
+  display: grid;
+  place-items: center;
+  width: var(--badge);
+  height: var(--badge);
+  border-radius: 50%;
   background: rgba(15,22,34,.88);
   border:1px solid rgba(255,255,255,.10);
   box-shadow:
     0 10px 24px rgba(0,0,0,.35),
     0 0 0 1px rgba(255,255,255,.06) inset;
   backdrop-filter: blur(6px);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-  z-index:3;
+
+  /* Icon size (emoji now, SVG next pass) */
+  font-size: calc(var(--badge) * 0.42);
+  color: #e9f1f7;
 }
-.orbit-node .ico{ margin-right:8px; font-size:15px; }
-.orbit-node:hover,
-.orbit-node:focus-visible{
-  transform: translate(-50%, -50%) translateY(-1px);
+
+/* Label UNDER the circle, using aria-label */
+.orbit-node::after{
+  content: attr(aria-label);
+  position: absolute;
+  left: 50%;
+  top: calc(var(--badge) + 8px);
+  transform: translateX(-50%);
+  display: block;
+  min-width: max-content;
+  padding: 0 6px;
+  color: #e9f1f7;
+  font: 600 12px/1.15 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  letter-spacing: .1px;
+  white-space: nowrap;
+  pointer-events: none;
+  /* subtle text glow to match the glass style */
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+}
+
+/* Depth/hover/focus states */
+.orbit-node:hover .ico,
+.orbit-node:focus-visible .ico{
   border-color: rgba(255,255,255,.18);
   box-shadow:
     0 14px 28px rgba(0,0,0,.40),
     0 0 0 1px rgba(255,255,255,.10) inset;
   outline: none;
 }
-.orbit-node.locked{
+
+/* Selected/locked */
+.orbit-node.locked .ico{
   border-color: rgba(230,195,107,.55);
   box-shadow:
     0 16px 36px rgba(240,185,62,.18),
     0 0 0 1px rgba(255,255,255,.10) inset;
 }
 
-/* The info card is injected by JS; keep it above chips */
+/* Keep info card above nodes */
 .orbit-card{ z-index:4; }
