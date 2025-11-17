@@ -8,7 +8,7 @@
   // ---- Appearance controls for icons (adjust these) ----
   const ICON_STYLE = {
     color: '#dbe8f2',
-    stroke: 1.4,
+    stroke: 1.0,
     sizePct: 64
   };
 
