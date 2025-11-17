@@ -516,29 +516,29 @@
     }
 
     // ---------- ROW 2: SVG (columns + lines) ----------
-    const row2Max = Math.min(cfg.T_ROW2_MAX_W || dims.W, dims.W);
+    const row2 = document.createElement("div");
     row2.className = mode === "tablet" ? "p5t-row2" : "p5m-row2";
-
+    
     if (mode === "tablet") {
-      // THIS is the max width for the SVG ROW, inside the lamp
-      const row2Max = cfg.T_ROW2_MAX_W || cfg.T_MAX_W || dims.W;
+      // max width for the SVG row, clamped to lamp width
+      const row2Max = Math.min(cfg.T_ROW2_MAX_W || cfg.T_MAX_W || dims.W, dims.W);
       row2.style.maxWidth = `${row2Max}px`;
       row2.style.margin = "24px auto 0";
     }
-
+    
     const svg = document.createElementNS(NS, "svg");
     svg.classList.add(mode === "tablet" ? "p5t-svg" : "p5m-svg");
     svg.setAttribute("viewBox", `0 0 ${dims.W} ${dims.H}`);
     svg.setAttribute("width", "100%");
     svg.setAttribute("height", "100%");
-
+    
     row2.appendChild(svg);
-
+    
     // attach both rows
     wrap.appendChild(row1);
     wrap.appendChild(row2);
     ctx.canvas.appendChild(wrap);
-
+    
     return svg;
   }
 
