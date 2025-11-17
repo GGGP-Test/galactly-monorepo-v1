@@ -168,11 +168,11 @@
       T_SIDE_PAD: 24,        // left/right padding inside that rail
 
       // gap between lamp edge and Step 5 block on tablet
-      T_SECTION_TOP: -300,     // distance from lamp edge down to row 1
+      T_SECTION_TOP: -400,     // distance from lamp edge down to row 1
       T_SECTION_BOTTOM: 72,  // space under row 2
 
       // per-row max widths (THIS is what you asked for)
-      T_ROW1_MAX_W: 740,     // row 1: copy + "Our Realtime AI Orchestrator"
+      T_ROW1_MAX_W: 1000,     // row 1: copy + "Our Realtime AI Orchestrator"
       T_ROW2_MAX_W: 720,     // row 2: SVG + headings + dots
 
       // tablet-only typography knobs
