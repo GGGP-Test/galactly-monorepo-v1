@@ -233,7 +233,7 @@
       COPY_MAX_W_PX: 200,          // narrower copy on tablets
       COPY_LEFT_RATIO: 0.055,      // push copy a bit right vs desktop
       COPY_TOP_RATIO: base.COPY_TOP_RATIO,
-      COPY_NUDGE_X: -50,
+      COPY_NUDGE_X: -150,
       COPY_NUDGE_Y: base.COPY_NUDGE_Y,
 
       // ----- RIGHT STACK (ALL SHAPES) -----
