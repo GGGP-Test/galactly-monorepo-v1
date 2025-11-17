@@ -23,6 +23,11 @@
 /* Stage — transparent, no borders */
 .orbit-panel { position: relative; width: 100%; }
 .orbit-stage {
+  --halo-rgb: 200, 224, 255;   /* glow color (RGB) */
+  --halo-base: .28;            /* idle opacity */
+  --halo-hover: .55;           /* hover/focus opacity */
+  --halo-locked: .70;          /* selected opacity */
+
   position: relative;
   height: 520px;
   overflow: visible;
@@ -126,6 +131,8 @@
 
 /* Circular badge (the inner icon holder) */
 .orbit-node .ico{
+  position: relative;   /* new */
+  z-index: 1;           /* new */
   display: grid;
   place-items: center;
   width: var(--badge);
