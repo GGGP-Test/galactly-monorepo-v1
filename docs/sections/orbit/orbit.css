@@ -36,7 +36,7 @@
   --oglow-base: .22;              /* idle opacity */
   --oglow-hover: .60;             /* hover/focus opacity */
   --oglow-locked: .20;            /* selected opacity */
-  --oglow-blur: 17px;             /* softness */
+  --oglow-blur: 27px;             /* softness */
   --oglow-spread: .5px;            /* how far it starts outside the edge */
 
   position: relative;
