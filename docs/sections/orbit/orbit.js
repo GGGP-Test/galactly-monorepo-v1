@@ -1,15 +1,10 @@
-/* Section 3: Orbit — smooth & efficient
-   - Fixes post-snap "nudge" by zeroing velocity on completion.
-   - Uses easeInOutCubic for a cleaner snap.
-   - Freezes rotation while a node is locked (card open).
-   - Starts early via local IntersectionObserver and pauses off-screen.
-*/
+/* Section 4: Orbit — SVG icons + smooth snap + perf gating */
 (function(){
   const CONFIG = {
-    SPEED_FULL_DPS: 6,        // degrees per second (full drift)
-    SPEED_EASE: 0.06,         // velocity easing factor
-    SNAP_MS: 700,             // snap duration (ms)
-    DIAMETER_FRACTION: 0.70,  // orbit diameter vs stage
+    SPEED_FULL_DPS: 6,
+    SPEED_EASE: 0.06,
+    SNAP_MS: 700,
+    DIAMETER_FRACTION: 0.70,
     ANGLE_OFFSET_DEG: -35
   };
 
@@ -23,31 +18,56 @@
   // RAF lifecycle
   let active = false;
   let rafId = null;
-  function startOrbit(){
-    if (active) return;
-    active = true;
-    mount.style.opacity = '1';
-    rafId = requestAnimationFrame(tick);
-  }
-  function stopOrbit(){
-    if (!active) return;
-    active = false;
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = null;
-    mount.style.opacity = '0';
-  }
+  function startOrbit(){ if(active) return; active = true; mount.style.opacity = '1'; rafId = requestAnimationFrame(tick); }
+  function stopOrbit(){ if(!active) return; active = false; if(rafId) cancelAnimationFrame(rafId); rafId = null; mount.style.opacity = '0'; }
 
-  // Pull host/domain for center label
+  // Host label
   const LS = window.localStorage;
   const host = (()=>{ try { return (JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "" } catch{ return "" } })() || "yourcompany.com";
 
-  // Data (we’ll replace emojis with SVGs after CSS change)
+  // ---------- Icons (inline SVG) ----------
+  const ICONS = {
+    buyers: () => `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="9" cy="8" r="3"/>
+        <circle cx="15" cy="8" r="3"/>
+        <path d="M3.5 18.5c2-3.3 6-3.3 8-3.3s6 0 8 3.3"/>
+      </svg>`,
+
+    competition: () => `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18"/>
+        <circle cx="6" cy="6" r="1"/>
+        <circle cx="18" cy="18" r="1"/>
+      </svg>`,
+
+    rfp: () => `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+        <path d="M14 3v6h6"/>
+        <path d="M9 13h6M9 17h6"/>
+      </svg>`,
+
+    market: () => `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 11l10-4v10L3 13z"/>
+        <path d="M13 7l5-2v14l-5-2"/>
+        <path d="M8 14l1 5"/>
+      </svg>`,
+
+    heat: () => `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3c-2 3 1 4 1 6s-1 3-1 5 1.5 3 3 3 4-2 4-6-3-6-7-8z"/>
+      </svg>`
+  };
+
+  // Data
   const ITEMS = [
-    { id:"buyers",      label:"Buyers",       emoji:"👥", desc:"Verified companies that match your ICP and are actively exploring suppliers." },
-    { id:"competition", label:"Competition",  emoji:"✖️", desc:"Signals where competitors are winning, losing, or being compared." },
-    { id:"rfp",         label:"RFPs & Docs",  emoji:"📄", desc:"Recent RFPs, RFQs, specs, and procurement docs pulled from public sources." },
-    { id:"market",      label:"Market Buzz",  emoji:"📣", desc:"Mentions in news, forums, and launches that imply packaging needs." },
-    { id:"heat",        label:"Buyer Heat",   emoji:"🔥", desc:"On-site behavior & third-party intent that spikes for your strengths." }
+    { id:"buyers",      label:"Buyers",       icon:"buyers",      desc:"Verified companies that match your ICP and are actively exploring suppliers." },
+    { id:"competition", label:"Competition",  icon:"competition", desc:"Signals where competitors are winning, losing, or being compared." },
+    { id:"rfp",         label:"RFPs & Docs",  icon:"rfp",         desc:"Recent RFPs, RFQs, specs, and procurement docs pulled from public sources." },
+    { id:"market",      label:"Market Buzz",  icon:"market",      desc:"Mentions in news, forums, and launches that imply packaging needs." },
+    { id:"heat",        label:"Buyer Heat",   icon:"heat",        desc:"On-site behavior & third-party intent that spikes for your strengths." }
   ];
 
   // ---------- Build DOM ----------
@@ -67,11 +87,11 @@
           </div>
 
           ${ITEMS.map(i=>`<button class="orbit-node" data-id="${i.id}" aria-label="${i.label}">
-            <span class="ico">${i.emoji}</span> ${i.label}
+            <span class="ico">${ICONS[i.icon]()}</span>
           </button>`).join("")}
 
           <div class="orbit-card" id="orbitCard" hidden>
-            <div class="card-hd"><span class="emoji" id="cardEmoji"></span><span id="cardTitle"></span></div>
+            <div class="card-hd"><span class="icon" id="cardIcon"></span><span id="cardTitle"></span></div>
             <div class="card-bd" id="cardBody"></div>
           </div>
         </div></div>
@@ -79,7 +99,7 @@
     </section>
   `;
 
-  // inline CSS for card (unchanged)
+  // Inline CSS for icons + card (keeps changes local to JS)
   (function injectCSS(){
     if (document.getElementById("orbitInlineCSS")) return;
     const css = `
@@ -87,8 +107,21 @@
         padding:10px 12px;border-radius:12px;background:rgba(10,16,28,.92);backdrop-filter:blur(6px);
         border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:80}
       .orbit-card .card-hd{display:flex;gap:8px;align-items:center;font-weight:700;margin-bottom:6px}
-      .orbit-card .emoji{font-size:16px} .orbit-card .card-bd{font-size:13px;color:#bcd0e0;line-height:1.4}
+      .orbit-card .icon{display:inline-grid;place-items:center;width:18px;height:18px}
+      .orbit-card .card-bd{font-size:13px;color:#bcd0e0;line-height:1.4}
       .orbit-node.locked{filter:brightness(1.05)}
+
+      /* SVG styling */
+      .orbit-node .ico svg,
+      .orbit-card .icon svg{
+        display:block;
+        width:62%; height:62%;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
     `;
     const s = document.createElement("style");
     s.id = "orbitInlineCSS"; s.textContent = css; document.head.appendChild(s);
@@ -97,7 +130,7 @@
   const stage = document.getElementById("orbitStage");
   const ring  = document.getElementById("orbitRing");
   const card  = document.getElementById("orbitCard");
-  const cardEmoji = document.getElementById("cardEmoji");
+  const cardIcon = document.getElementById("cardIcon");
   const cardTitle = document.getElementById("cardTitle");
   const cardBody  = document.getElementById("cardBody");
   const nodes = Array.from(stage.querySelectorAll(".orbit-node"));
@@ -166,20 +199,14 @@
     if (targetAngle != null){
       const t = Math.min(1, (now - snapStart)/CONFIG.SNAP_MS);
       const k = easeInOutCubic(t);
-      // interpolate from the original angle at snap start
-      // to guarantee exact landing at targetAngle
       angle = lerp(angle, targetAngle, k);
-
       if (t >= 1){
         angle = targetAngle;   // land exactly
         targetAngle = null;
-        vel = 0;               // kill any residual drift (fixes "nudge")
-        velTarget = 0;
+        vel = 0; velTarget = 0;  // kill residual drift (fixes nudge)
       }
     } else if (locked){
-      // While a node is locked, keep it exactly at top.
-      vel = 0;
-      velTarget = 0;
+      vel = 0; velTarget = 0;    // stay frozen while open
     } else {
       angle += vel * dt;
       vel = lerp(vel, velTarget, CONFIG.SPEED_EASE);
@@ -192,19 +219,10 @@
   // Start early & pause off-screen
   if ('IntersectionObserver' in window){
     const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{
-        if (e.isIntersecting) startOrbit();
-        else stopOrbit();
-      });
-    },{
-      root: null,
-      rootMargin: '0px 0px 60% 0px', // pre-start before it fully enters
-      threshold: 0.01
-    });
+      entries.forEach(e=>{ if (e.isIntersecting) startOrbit(); else stopOrbit(); });
+    },{ root:null, rootMargin:'0px 0px 60% 0px', threshold:0.01 });
     io.observe(mount);
-  } else {
-    startOrbit();
-  }
+  } else { startOrbit(); }
 
   document.addEventListener('visibilitychange', ()=>{
     if (document.hidden) stopOrbit(); else {
@@ -216,7 +234,7 @@
 
   // Card helpers
   function showCard(item, modelEntry){
-    cardEmoji.textContent = item.emoji;
+    cardIcon.innerHTML = ICONS[item.icon]();
     cardTitle.textContent = item.label;
     cardBody.textContent  = item.desc;
     card.hidden = false;
