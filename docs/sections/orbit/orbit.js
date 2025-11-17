@@ -6,7 +6,7 @@
   const ICON_STYLE = {
     color: '#dbe8f2', // stroke color (inherits via CSS currentColor)
     stroke: 1.0,      // 1.2–1.8 looks best
-    sizePct: 64       // % of circular badge
+    sizePct: 50       // % of circular badge
   };
 
   const CONFIG = {
