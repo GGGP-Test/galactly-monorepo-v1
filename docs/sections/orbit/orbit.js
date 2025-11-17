@@ -27,6 +27,28 @@
 
   const mount = document.getElementById("section-orbit");
   if (!mount) return;
+  
+    // Local fade (we're not using the global .reveal anymore)
+  mount.style.opacity = '0';
+  mount.style.transition = 'opacity 260ms cubic-bezier(.22,.61,.36,1)';
+
+  // Control the animation loop
+  let active = false;
+  let rafId = null;
+
+  function startOrbit(){
+    if (active) return;
+    active = true;
+    mount.style.opacity = '1';
+    rafId = requestAnimationFrame(tick);  // tick will now self-schedule only when active
+  }
+  function stopOrbit(){
+    if (!active) return;
+    active = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    mount.style.opacity = '0';
+  }
 
   // Pull host/domain for center label
   const LS = window.localStorage;
@@ -166,9 +188,45 @@
     }
 
     place();
-    requestAnimationFrame(tick);
+
+    // Only keep looping while active
+    if (active) rafId = requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
+  // NOTE: do not call requestAnimationFrame(tick) here; startOrbit() will.
+
+
+      // Start early and pause when off-screen
+  if ('IntersectionObserver' in window){
+    // Positive bottom rootMargin expands the viewport downward, so we "pre-see" Section 4
+    // while the user is still finishing Section 3.
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if (e.isIntersecting) startOrbit();
+        else stopOrbit();
+      });
+    },{
+      root: null,
+      // Tweak to your taste: 60% means "start when the section is within ~0.6 viewport heights below"
+      rootMargin: '0px 0px 60% 0px',
+      threshold: 0.01
+    });
+    io.observe(mount);
+  } else {
+    // Fallback: just start
+    startOrbit();
+  }
+
+  // Optional bonus: pause when tab is hidden
+  document.addEventListener('visibilitychange', ()=>{
+    if (document.hidden) stopOrbit(); else {
+      // Only restart if we're approximately near view
+      const r = mount.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      if (r.top < vh*1.6 && r.bottom > -vh*0.6) startOrbit();
+    }
+  });
+
+
 
   // Show card helper
   function showCard(item, modelEntry){
