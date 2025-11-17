@@ -4,6 +4,7 @@
    - Centered sun + single ring
    - CIRCULAR node badges + label underneath
    - Faint aurora backdrop
+   - Inner + Outer halo around badges
    ------------------------- */
 
 .orbit-section { padding: 36px 0 84px; }
@@ -23,10 +24,17 @@
 /* Stage — transparent, no borders */
 .orbit-panel { position: relative; width: 100%; }
 .orbit-stage {
-  --halo-rgb: 200, 224, 255;   /* glow color (RGB) */
-  --halo-base: .28;            /* idle opacity */
-  --halo-hover: .55;           /* hover/focus opacity */
-  --halo-locked: .70;          /* selected opacity */
+  /* --- Halo controls (tune here) --- */
+  --halo-rgb: 200, 224, 255;   /* inner & outer glow color (RGB) */
+  /* inner */
+  --halo-base: .28;
+  --halo-hover: .55;
+  --halo-locked: .70;
+  /* outer */
+  --halo-outer-base: .22;
+  --halo-outer-hover: .45;
+  --halo-outer-locked: .60;
+  --halo-outer-size: 26px;     /* thickness/radius outside the badge */
 
   position: relative;
   height: 520px;
@@ -129,10 +137,39 @@
   line-height: 0;
 }
 
+/* Outer halo (sits OUTSIDE the circle) */
+.orbit-node::before{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  transform: translate(-50%, -50%);
+  width: calc(var(--badge) + var(--halo-outer-size)*2);
+  height: calc(var(--badge) + var(--halo-outer-size)*2);
+  border-radius: 50%;
+  pointer-events: none;
+  /* outside ring falloff */
+  background:
+    radial-gradient(closest-side,
+      rgba(var(--halo-rgb), 0.00) 60%,
+      rgba(var(--halo-rgb), .14) 74%,
+      rgba(var(--halo-rgb), .00) 96%);
+  opacity: var(--halo-outer-base);
+  transition: opacity .22s ease, transform .22s ease;
+  z-index: 0; /* below the badge */
+}
+.orbit-node:hover::before,
+.orbit-node:focus-visible::before{
+  opacity: var(--halo-outer-hover);
+  transform: translate(-50%, -50%) scale(1.04);
+}
+.orbit-node.locked::before{
+  opacity: var(--halo-outer-locked);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
 /* Circular badge (the inner icon holder) */
 .orbit-node .ico{
-  position: relative;   /* new */
-  z-index: 1;           /* new */
+  position: relative;   /* creates a local stacking context for inner glow */
+  z-index: 1;
   display: grid;
   place-items: center;
   width: var(--badge);
@@ -144,10 +181,31 @@
     0 10px 24px rgba(0,0,0,.35),
     0 0 0 1px rgba(255,255,255,.06) inset;
   backdrop-filter: blur(6px);
+  color: #e9f1f7; /* icon color (Lucide uses currentColor) */
+}
 
-  /* Icon size (emoji now, SVG next pass) */
-  font-size: calc(var(--badge) * 0.42);
-  color: #e9f1f7;
+/* Inner halo (kept from previous version) */
+.orbit-node .ico::after{
+  content:"";
+  position:absolute; inset:-10px;        /* extends slightly beyond the circle */
+  border-radius:50%;
+  background:
+    radial-gradient(closest-side,
+      rgba(var(--halo-rgb), .60) 0%,
+      rgba(var(--halo-rgb), .22) 55%,
+      rgba(var(--halo-rgb), 0.00) 72%);
+  opacity: var(--halo-base);
+  transition: opacity .22s ease, transform .22s ease;
+  z-index: 0;
+}
+.orbit-node:hover .ico::after,
+.orbit-node:focus-visible .ico::after{
+  opacity: var(--halo-hover);
+  transform: scale(1.03);
+}
+.orbit-node.locked .ico::after{
+  opacity: var(--halo-locked);
+  transform: scale(1.06);
 }
 
 /* Label UNDER the circle, using aria-label */
@@ -165,11 +223,10 @@
   letter-spacing: .1px;
   white-space: nowrap;
   pointer-events: none;
-  /* subtle text glow to match the glass style */
   text-shadow: 0 1px 0 rgba(0,0,0,.35);
 }
 
-/* Depth/hover/focus states */
+/* Depth/hover/focus states for the badge border */
 .orbit-node:hover .ico,
 .orbit-node:focus-visible .ico{
   border-color: rgba(255,255,255,.18);
@@ -189,31 +246,3 @@
 
 /* Keep info card above nodes */
 .orbit-card{ z-index:4; }
-
-
-/* Soft halo around each circular badge */
-.orbit-node .ico::after{
-  content:"";
-  position:absolute; inset:-10px;        /* size of the glow */
-  border-radius:50%;
-  /* Radial falloff — no blur filter (cheap on GPU) */
-  background:
-    radial-gradient(closest-side,
-      rgba(var(--halo-rgb), .60) 0%,
-      rgba(var(--halo-rgb), .22) 55%,
-      rgba(var(--halo-rgb), 0.00) 72%);
-  opacity: var(--halo-base);
-  transition: opacity .22s ease, transform .22s ease;
-  z-index: 0;           /* sits behind the icon glyph */
-}
-
-.orbit-node:hover .ico::after,
-.orbit-node:focus-visible .ico::after{
-  opacity: var(--halo-hover);
-  transform: scale(1.03);
-}
-
-.orbit-node.locked .ico::after{
-  opacity: var(--halo-locked);
-  transform: scale(1.06);
-}
