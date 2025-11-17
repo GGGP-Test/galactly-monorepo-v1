@@ -34,8 +34,8 @@
 
   /* OUTER halo (flush to edge; no gap) */
   --oglow-base: .22;              /* idle opacity */
-  --oglow-hover: .40;             /* hover/focus opacity */
-  --oglow-locked: .55;            /* selected opacity */
+  --oglow-hover: .60;             /* hover/focus opacity */
+  --oglow-locked: .20;            /* selected opacity */
   --oglow-blur: 22px;             /* softness */
   --oglow-spread: 8px;            /* how far it starts outside the edge */
 
