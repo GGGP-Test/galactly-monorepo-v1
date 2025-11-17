@@ -13,6 +13,7 @@
       STACK_X_RATIO: 0.555,
       STACK_TOP_RATIO: 0.18,
       WIDTH_RATIO: 0.54,
+      T_WIDTH_RATIO: 0.60,
       HEIGHT_MAX_PX: 560,
       NUDGE_X: -230,
       NUDGE_Y: -12,
@@ -163,18 +164,22 @@
       
       
       
-            // ===== TABLET-ONLY ROW LAYOUT (Step 5) =====
-      T_MAX_W: 820,          // overall rail width inside the lamp for Step 5
-      T_SIDE_PAD: 24,        // left/right padding inside that rail
-
       // gap between lamp edge and Step 5 block on tablet
-      T_SECTION_TOP: -400,     // distance from lamp edge down to row 1
-      T_SECTION_BOTTOM: 72,  // space under row 2
-
-      // per-row max widths (THIS is what you asked for)
-      T_ROW1_MAX_W: 1000,     // row 1: copy + "Our Realtime AI Orchestrator"
-      T_ROW2_MAX_W: 720,     // row 2: SVG + headings + dots
-
+      T_SECTION_TOP: 40,      // distance from section-3 title/lamp edge down to row 1
+      T_SECTION_BOTTOM: 72,   // space under row 2
+      
+      // per-row max widths (cannot exceed lamp rail width)
+      T_ROW1_MAX_W: 720,      // row 1: copy + "Our Realtime AI Orchestrator"
+      T_ROW2_MAX_W: 720,      // row 2: SVG + headings + dots
+      
+      // per-row vertical offsets inside the block
+      T_ROW1_OFFSET_Y: 0,     // extra margin-top for row 1
+      T_ROW2_OFFSET_Y: 24,    // gap between row 1 and row 2
+      
+      // optional per-row horizontal nudges (px; +right, -left)
+      T_ROW1_OFFSET_X: 0,
+      T_ROW2_OFFSET_X: 0,
+      
       // tablet-only typography knobs
       T_TITLE_PT: 13,
       T_COPY_H_PT: 20,
@@ -451,16 +456,19 @@
       wrap.className = "p5m-wrap";
     }
 
-    // ---------- ROW 1: copy + section title ----------
     const row1 = document.createElement("div");
     row1.className = mode === "tablet" ? "p5t-row1" : "p5m-row1";
-
+    
     if (mode === "tablet") {
-      // row 1 width knob, but clamped to lamp width
+      // clamp to lamp rail width
       const row1Max = Math.min(cfg.T_ROW1_MAX_W || dims.W, dims.W);
+      const row1OffsetY = cfg.T_ROW1_OFFSET_Y ?? 0;
+      const row1OffsetX = cfg.T_ROW1_OFFSET_X ?? 0;
+    
       row1.style.maxWidth = `${row1Max}px`;
       row1.style.width = "100%";
-      row1.style.margin = "0 auto";
+      row1.style.margin = `${row1OffsetY}px auto 0`;
+      row1.style.transform = `translateX(${row1OffsetX}px)`;
     }
 
     // copy block
@@ -520,10 +528,13 @@
     row2.className = mode === "tablet" ? "p5t-row2" : "p5m-row2";
     
     if (mode === "tablet") {
-      // max width for the SVG row, clamped to lamp width
       const row2Max = Math.min(cfg.T_ROW2_MAX_W || cfg.T_MAX_W || dims.W, dims.W);
+      const row2OffsetY = cfg.T_ROW2_OFFSET_Y ?? 24;
+      const row2OffsetX = cfg.T_ROW2_OFFSET_X ?? 0;
+    
       row2.style.maxWidth = `${row2Max}px`;
-      row2.style.margin = "24px auto 0";
+      row2.style.margin = `${row2OffsetY}px auto 0`;
+      row2.style.transform = `translateX(${row2OffsetX}px)`;
     }
     
     const svg = document.createElementNS(NS, "svg");
@@ -563,13 +574,18 @@
     const fullW = bounds.width;
     const H = Math.min(cfg.HEIGHT_MAX_PX, bounds.sH - 40);
 
+    const widthRatio =
+      layoutMode === "tablet" && cfg.T_WIDTH_RATIO != null
+        ? cfg.T_WIDTH_RATIO
+        : cfg.WIDTH_RATIO;
+    
     const W =
       layoutMode === "phone"
         ? fullW
         : layoutMode === "tablet"
-        ? Math.min(cfg.T_MAX_W, Math.max(300, fullW * cfg.WIDTH_RATIO))
-        : Math.max(300, fullW * cfg.WIDTH_RATIO);
-
+        ? Math.min(cfg.T_MAX_W, Math.max(300, fullW * widthRatio))
+        : Math.max(300, fullW * widthRatio);
+        
     // desktop uses right rail placement; stacked (phone/tablet) are drawn from x0 = 0
     const x0 =
       layoutMode === "desktop"
