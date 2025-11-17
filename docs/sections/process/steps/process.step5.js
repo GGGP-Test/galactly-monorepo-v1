@@ -436,15 +436,14 @@
       // tablet: inline styles using T_* knobs
       wrap.className = "p5t-wrap";
       wrap.style.position = "relative";
-
+    
       const topGap    = cfg.T_SECTION_TOP  != null ? cfg.T_SECTION_TOP  : 40;
       const bottomGap = cfg.T_SECTION_BOTTOM != null ? cfg.T_SECTION_BOTTOM : 40;
       wrap.style.margin = `${topGap}px auto ${bottomGap}px`;
-
-      // ✅ use T_ROW1_MAX_W as the main width knob for tablet row 1
-      const row1Max = cfg.T_ROW1_MAX_W || cfg.T_MAX_W || dims.W;
-      wrap.style.maxWidth = `${row1Max}px`;
-
+    
+      // 🔒 keep the whole Step-5 block inside the lamp width
+      wrap.style.maxWidth = `${dims.W}px`;
+    
       wrap.style.padding = `0 ${cfg.T_SIDE_PAD ?? 24}px 12px`;
       wrap.style.zIndex = 0;
     } else {
@@ -457,8 +456,10 @@
     row1.className = mode === "tablet" ? "p5t-row1" : "p5m-row1";
 
     if (mode === "tablet") {
-      // row 1 just fills the tablet wrapper
-      row1.style.maxWidth = "100%";
+      // row 1 width knob, but clamped to lamp width
+      const row1Max = Math.min(cfg.T_ROW1_MAX_W || dims.W, dims.W);
+      row1.style.maxWidth = `${row1Max}px`;
+      row1.style.width = "100%";
       row1.style.margin = "0 auto";
     }
 
@@ -515,7 +516,7 @@
     }
 
     // ---------- ROW 2: SVG (columns + lines) ----------
-    const row2 = document.createElement("div");
+    const row2Max = Math.min(cfg.T_ROW2_MAX_W || dims.W, dims.W);
     row2.className = mode === "tablet" ? "p5t-row2" : "p5m-row2";
 
     if (mode === "tablet") {
