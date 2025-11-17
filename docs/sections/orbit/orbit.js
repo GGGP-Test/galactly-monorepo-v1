@@ -1,46 +1,33 @@
-/* Section 3: Orbit  — minimal, self-contained
-   - Nodes evenly spaced.
-   - Click a node -> snaps to top (-90°), shows a card BELOW the title, pauses rotation.
-   - Click outside -> hides card and resumes rotation with ramp-up.
-   - Tweak speed & diameter via the CONFIG block below.
+/* Section 3: Orbit — smooth & efficient
+   - Fixes post-snap "nudge" by zeroing velocity on completion.
+   - Uses easeInOutCubic for a cleaner snap.
+   - Freezes rotation while a node is locked (card open).
+   - Starts early via local IntersectionObserver and pauses off-screen.
 */
 (function(){
-  // ---------------- CONFIG (edit these) ----------------
   const CONFIG = {
-    // Rotation speed: degrees per second at full speed (default 6 dps ~ a calm drift).
-    SPEED_FULL_DPS: 6,
-
-    // How quickly we ramp toward target speed [0..1] (higher = snappier).
-    SPEED_EASE: 0.06,
-
-    // Snap-to-top tween (ms)
-    SNAP_MS: 650,
-
-    // Orbit diameter as a fraction of the available stage (0.0..1.0).
-    // This sets the ring size AND the path nodes follow so they stay perfectly aligned.
-    DIAMETER_FRACTION: 0.70, // <-- tweak diameter here later
-
-    // Initial angular offset so the first item isn't exactly at the top.
+    SPEED_FULL_DPS: 6,        // degrees per second (full drift)
+    SPEED_EASE: 0.06,         // velocity easing factor
+    SNAP_MS: 700,             // snap duration (ms)
+    DIAMETER_FRACTION: 0.70,  // orbit diameter vs stage
     ANGLE_OFFSET_DEG: -35
   };
-  // -----------------------------------------------------
 
   const mount = document.getElementById("section-orbit");
   if (!mount) return;
-  
-    // Local fade (we're not using the global .reveal anymore)
+
+  // Local fade (not using global .reveal)
   mount.style.opacity = '0';
   mount.style.transition = 'opacity 260ms cubic-bezier(.22,.61,.36,1)';
 
-  // Control the animation loop
+  // RAF lifecycle
   let active = false;
   let rafId = null;
-
   function startOrbit(){
     if (active) return;
     active = true;
     mount.style.opacity = '1';
-    rafId = requestAnimationFrame(tick);  // tick will now self-schedule only when active
+    rafId = requestAnimationFrame(tick);
   }
   function stopOrbit(){
     if (!active) return;
@@ -54,7 +41,7 @@
   const LS = window.localStorage;
   const host = (()=>{ try { return (JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "" } catch{ return "" } })() || "yourcompany.com";
 
-  // Data for nodes + card copy (edit text here)
+  // Data (we’ll replace emojis with SVGs after CSS change)
   const ITEMS = [
     { id:"buyers",      label:"Buyers",       emoji:"👥", desc:"Verified companies that match your ICP and are actively exploring suppliers." },
     { id:"competition", label:"Competition",  emoji:"✖️", desc:"Signals where competitors are winning, losing, or being compared." },
@@ -92,7 +79,7 @@
     </section>
   `;
 
-  // Inject tiny bit of CSS so the card looks right without touching your CSS file.
+  // inline CSS for card (unchanged)
   (function injectCSS(){
     if (document.getElementById("orbitInlineCSS")) return;
     const css = `
@@ -120,7 +107,7 @@
   const BASE_SPACING = 360 / N;
   const model = nodes.map((el, i) => ({ el, base: CONFIG.ANGLE_OFFSET_DEG + i*BASE_SPACING, id: ITEMS[i].id }));
 
-  // Geometry: size ring + path from DIAMETER_FRACTION so visuals & math match
+  // Geometry
   let center = { x:0, y:0 }, radius = 0;
   function measure(){
     const s = stage.getBoundingClientRect();
@@ -133,10 +120,11 @@
   measure();
   addEventListener("resize", measure, { passive:true });
 
-  // Math helpers
+  // Helpers
   const toRad = d => d * Math.PI/180;
   const lerp = (a,b,t)=> a + (b-a)*t;
   const normDeg = d => { let x=d%360; if(x>180) x-=360; if(x<-180) x+=360; return x; };
+  const easeInOutCubic = t => (t<0.5) ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
 
   // State
   let angle = 0;
@@ -146,7 +134,7 @@
   let targetAngle = null;          // snap target (deg)
   let snapStart = 0;
 
-  // Layout nodes
+  // Layout
   function place(){
     model.forEach(m=>{
       const a = toRad((m.base + angle)%360);
@@ -154,24 +142,22 @@
       const y = center.y + radius * Math.sin(a);
       m.el.style.left = x + "px";
       m.el.style.top  = y + "px";
-      // parallax-ish depth
       const depth = (Math.sin(a)+1)/2;
       m.el.style.opacity = String(0.72 + 0.22*depth);
       m.el.style.zIndex  = String(40 + Math.round(depth*60));
     });
 
-    // If card visible, keep it locked under the locked node
     if (!card.hidden && locked){
       const rect = locked.el.getBoundingClientRect();
       const host = stage.getBoundingClientRect();
       const nodeCenterX = rect.left - host.left + rect.width/2;
-      const nodeBottomY = rect.top  - host.top  + rect.height + 10; // 10px gap
+      const nodeBottomY = rect.top  - host.top  + rect.height + 10;
       card.style.left = nodeCenterX + "px";
       card.style.top  = nodeBottomY + "px";
     }
   }
 
-  // Animation loop
+  // Animation
   let prev = 0;
   function tick(now){
     if (!prev) prev = now;
@@ -179,26 +165,32 @@
 
     if (targetAngle != null){
       const t = Math.min(1, (now - snapStart)/CONFIG.SNAP_MS);
-      const ease = 1 - Math.pow(1 - t, 3);
-      angle = lerp(angle, targetAngle, ease);
-      if (t >= 1) targetAngle = null;
+      const k = easeInOutCubic(t);
+      // interpolate from the original angle at snap start
+      // to guarantee exact landing at targetAngle
+      angle = lerp(angle, targetAngle, k);
+
+      if (t >= 1){
+        angle = targetAngle;   // land exactly
+        targetAngle = null;
+        vel = 0;               // kill any residual drift (fixes "nudge")
+        velTarget = 0;
+      }
+    } else if (locked){
+      // While a node is locked, keep it exactly at top.
+      vel = 0;
+      velTarget = 0;
     } else {
       angle += vel * dt;
       vel = lerp(vel, velTarget, CONFIG.SPEED_EASE);
     }
 
     place();
-
-    // Only keep looping while active
     if (active) rafId = requestAnimationFrame(tick);
   }
-  // NOTE: do not call requestAnimationFrame(tick) here; startOrbit() will.
 
-
-      // Start early and pause when off-screen
+  // Start early & pause off-screen
   if ('IntersectionObserver' in window){
-    // Positive bottom rootMargin expands the viewport downward, so we "pre-see" Section 4
-    // while the user is still finishing Section 3.
     const io = new IntersectionObserver((entries)=>{
       entries.forEach(e=>{
         if (e.isIntersecting) startOrbit();
@@ -206,36 +198,29 @@
       });
     },{
       root: null,
-      // Tweak to your taste: 60% means "start when the section is within ~0.6 viewport heights below"
-      rootMargin: '0px 0px 60% 0px',
+      rootMargin: '0px 0px 60% 0px', // pre-start before it fully enters
       threshold: 0.01
     });
     io.observe(mount);
   } else {
-    // Fallback: just start
     startOrbit();
   }
 
-  // Optional bonus: pause when tab is hidden
   document.addEventListener('visibilitychange', ()=>{
     if (document.hidden) stopOrbit(); else {
-      // Only restart if we're approximately near view
       const r = mount.getBoundingClientRect();
       const vh = window.innerHeight || document.documentElement.clientHeight;
       if (r.top < vh*1.6 && r.bottom > -vh*0.6) startOrbit();
     }
   });
 
-
-
-  // Show card helper
+  // Card helpers
   function showCard(item, modelEntry){
     cardEmoji.textContent = item.emoji;
     cardTitle.textContent = item.label;
     cardBody.textContent  = item.desc;
     card.hidden = false;
 
-    // initial positioning (will be refined each frame in place())
     const rect = modelEntry.el.getBoundingClientRect();
     const host = stage.getBoundingClientRect();
     card.style.left = (rect.left - host.left + rect.width/2) + "px";
@@ -251,7 +236,7 @@
       el.classList.add("locked");
       locked = model[i];
 
-      // Pause rotation smoothly and snap locked node to top (-90°)
+      // Pause and snap locked node to top (-90°)
       velTarget = 0;
       const current = (locked.base + angle) % 360;
       const desired = -90;
@@ -259,21 +244,18 @@
       targetAngle = angle + delta;
       snapStart = performance.now();
 
-      // show card under this node
-      const item = ITEMS[i];
-      showCard(item, locked);
+      showCard(ITEMS[i], locked);
     });
   });
 
-  // Clicking outside -> hide card, unlock, resume
+  // Clicking outside -> hide & resume
   document.addEventListener("click", ()=>{
     if (!locked) return;
     locked.el.classList.remove("locked");
     locked = null;
     hideCard();
-    targetAngle = null;    // drop any remaining snap
-    vel = 0;               // restart slow
+    targetAngle = null;
+    vel = 0;
     velTarget = CONFIG.SPEED_FULL_DPS/1000;
   });
-
 })();
