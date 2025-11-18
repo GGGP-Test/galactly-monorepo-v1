@@ -30,7 +30,6 @@
   function stopOrbit(){  if(!active) return; active=false; if(rafId) cancelAnimationFrame(rafId); rafId=null; mount.style.opacity='0'; }
 
   // Load Lucide once (from CDN, MIT license)
-  // Docs: https://lucide.dev (but you don't need to visit—this just works)
   let lucideReady;
   function loadScriptOnce(src){
     return new Promise((resolve, reject)=>{
@@ -51,36 +50,46 @@
     return lucideReady;
   }
 
-  // Host label
-  const LS = window.localStorage;
-  const host = (()=>{ try { return (JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "" } catch{ return "" } })() || "yourcompany.com";
-
-  // Map our items to Lucide icon names
-  // Picked for clarity + availability.
+  // ---- Icon names (Lucide) ----
   const ICON_NAME = {
-    buyers:      'users',      // Buyers
+    events:      'calendar',   // Events
     competition: 'trophy',     // Competition
     rfp:         'file-text',  // RFPs & Docs
-    market:      'megaphone',  // Market Buzz
-    heat:        'flame'       // Buyer Heat
+    market:      'megaphone',  // Market
+    search:      'search'      // Search
   };
 
-  // Data
+  // ---- Data (labels + SEO-friendly copy) ----
   const ITEMS = [
-    { id:"buyers",      label:"Buyers",       icon: ICON_NAME.buyers,      desc:"Verified companies that match your ICP and are actively exploring suppliers." },
-    { id:"competition", label:"Competition",  icon: ICON_NAME.competition, desc:"Signals where competitors are winning, losing, or being compared." },
-    { id:"rfp",         label:"RFPs & Docs",  icon: ICON_NAME.rfp,         desc:"Recent RFPs, RFQs, specs, and procurement docs pulled from public sources." },
-    { id:"market",      label:"Market Buzz",  icon: ICON_NAME.market,      desc:"Mentions in news, forums, and launches that imply packaging needs." },
-    { id:"heat",        label:"Buyer Heat",   icon: ICON_NAME.heat,        desc:"On-site behavior & third-party intent that spikes for your strengths." }
+    {
+      id:"events", label:"Events", icon: ICON_NAME.events,
+      desc:"Trade shows, product launches, line expansions and retail resets—time-bound moments that trigger immediate packaging demand."
+    },
+    {
+      id:"competition", label:"Competition", icon: ICON_NAME.competition,
+      desc:"Where rivals are shortlisted or win deals, plus public win/loss notes and review chatter—use to target displacement plays."
+    },
+    {
+      id:"rfp", label:"RFPs & Docs", icon: ICON_NAME.rfp,
+      desc:"Fresh RFPs/RFQs, packaging specs and bid results from public portals and enterprise procurement feeds."
+    },
+    {
+      id:"market", label:"Market", icon: ICON_NAME.market,
+      desc:"News, PR and social signals that hint at new SKUs, rebrands or channel moves—early indicators of packaging needs."
+    },
+    {
+      id:"search", label:"Search", icon: ICON_NAME.search,
+      desc:"High-intent queries across Google/LinkedIn (e.g., “custom corrugated boxes”, “eco-friendly packaging supplier”) and repeated brand+packaging lookups."
+    }
   ];
 
-  // ---------- Build DOM ----------
+  // ---------- Build DOM (no domain on sun; packaging-specific subtitle) ----------
   mount.innerHTML = `
-    <section class="orbit-section" aria-label="Where your buyers light up">
+    <section class="orbit-section" aria-label="Where packaging demand lights up">
       <div class="orbit-inner">
         <div class="orbit-hd">
-          <h2>Where your buyers light up</h2>
-          <div class="sub">Simple orbit map of the strongest intent signals for <span style="color:var(--gold-300)">${host}</span></div>
+          <h2>Where packaging demand lights up</h2>
+          <div class="sub">Live signals from search activity, buyer events, RFPs, market buzz and competitor moves—built for packaging sales.</div>
         </div>
         <div class="orbit-panel"><div class="orbit-stage" id="orbitStage"
              style="--icon-color:${ICON_STYLE.color};--icon-stroke:${ICON_STYLE.stroke}px;--icon-size:${ICON_STYLE.sizePct}%">
@@ -88,7 +97,7 @@
 
           <div class="orbit-center">
             <div class="orbit-core" aria-hidden="true"></div>
-            <div class="orbit-domain" id="orbitHost">${host}</div>
+            <!-- Removed orbit-domain: no host/domain label on the sun -->
           </div>
 
           ${ITEMS.map(i=>`<button class="orbit-node" data-id="${i.id}" aria-label="${i.label}">
@@ -144,14 +153,11 @@
     window.lucide.createIcons({
       nameAttr: 'data-lucide',
       attrs: {
-        // Let CSS override size; we still set these so SSR tools are happy
         width: 24, height: 24,
         color: 'currentColor',
         stroke: 'currentColor',
         'stroke-width': ICON_STYLE.stroke
-      },
-      // Optional: pass a root element to limit work
-      icons: undefined
+      }
     }, scope);
   }
   ensureLucide().then(()=> renderIcons(mount));
