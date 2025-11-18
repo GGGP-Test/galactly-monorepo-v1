@@ -1,6 +1,5 @@
 /* Section 4: Orbit — Lucide icons (MIT), smooth snap, perf gating */
 (function(){
-  // One-stop icon appearance controls
   const ICON_STYLE = { color:'#dbe8f2', stroke:1.0, sizePct:38 };
 
   const CONFIG = {
@@ -14,7 +13,7 @@
   const mount = document.getElementById("section-orbit");
   if (!mount) return;
 
-  // Fade lifecycle (not using global reveal)
+  // Fade lifecycle
   mount.style.opacity = '0';
   mount.style.transition = 'opacity 260ms cubic-bezier(.22,.61,.36,1)';
 
@@ -22,7 +21,7 @@
   function startOrbit(){ if(active) return; active=true; mount.style.opacity='1'; rafId=requestAnimationFrame(tick); }
   function stopOrbit(){  if(!active) return; active=false; if(rafId) cancelAnimationFrame(rafId); rafId=null; mount.style.opacity='0'; }
 
-  // Lucide (MIT) loader
+  // Lucide loader (MIT)
   let lucideReady;
   function loadScriptOnce(src){
     return new Promise((resolve, reject)=>{
@@ -41,12 +40,12 @@
     return lucideReady;
   }
 
-  // Icon names
+  // Icons
   const ICON_NAME = {
     events:'calendar', competition:'trophy', rfp:'file-text', market:'megaphone', search:'search'
   };
 
-  // Items + copy (tight, human, packaging-specific)
+  // Items + copy
   const ITEMS = [
     { id:"events",       label:"Events",       icon:ICON_NAME.events,
       desc:"Trade shows, launches and line expansions—time-bound moments that create immediate packaging needs." },
@@ -61,11 +60,11 @@
   ];
 
   // ---------- Build DOM ----------
+  // NOTE: we set --proc-title-pad-x here. Increase/decrease to move the title away from the edge.
   mount.innerHTML = `
     <section class="orbit-section" aria-label="Where your buyers light up"
-             style="--proc-title-pad-x:48px; --proc-title-gap:4px; --proc-title-margin-top:120px;">
-
-      <!-- DIRECT CHILD (matches Section 3 selectors) -->
+             style="--proc-title-pad-x:72px; --proc-title-gap:4px; --proc-title-margin-top:120px;">
+      <!-- Direct child to match Section 3 selectors -->
       <h2 class="proc-title">Where your <span class="accent-gold nowrap">buyers</span> light up</h2>
 
       <div class="orbit-inner">
@@ -76,13 +75,8 @@
         <div class="orbit-panel">
           <div class="orbit-stage" id="orbitStage"
                style="--icon-color:${ICON_STYLE.color};--icon-stroke:${ICON_STYLE.stroke}px;--icon-size:${ICON_STYLE.sizePct}%">
-
             <div class="orbit-ring" id="orbitRing"></div>
-
-            <div class="orbit-center">
-              <div class="orbit-core" aria-hidden="true"></div>
-              <!-- domain label intentionally removed -->
-            </div>
+            <div class="orbit-center"><div class="orbit-core" aria-hidden="true"></div></div>
 
             ${ITEMS.map(i=>`<button class="orbit-node" data-id="${i.id}" aria-label="${i.label}">
                 <span class="ico"><i data-lucide="${i.icon}"></i></span>
@@ -98,27 +92,18 @@
     </section>
   `;
 
-  // ---- Copy Section-3 typography exactly (fallback if CSS is scoped) ----
-  (function syncProcTitleStyles(){
-    const src = document.querySelector('#section-process .proc-title');
-    const dst = mount.querySelector('section.orbit-section > h2.proc-title');
-    if (!src || !dst) return;
-    const cs = getComputedStyle(src);
-    // copy the critical font-related properties
-    const props = [
-      'fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing',
-      'textTransform','textShadow','fontFeatureSettings','fontVariationSettings',
-      'textRendering','-webkitFontSmoothing','-mozOsxFontSmoothing'
-    ];
-    props.forEach(p=>{ dst.style[p] = cs.getPropertyValue(p) || cs[p]; });
-    // keep Section-3 spacing feel if it comes from margins on the title
-    ['marginTop','marginBottom'].forEach(p=>{ dst.style[p] = cs[p]; });
-  })();
-
-  // Inline CSS for Lucide
+  // ---- Enforce same X padding + typography (works even if Section-3 CSS is scoped) ----
   (function injectCSS(){
-    if (document.getElementById("orbitInlineCSS")) return;
+    // include both the title padding rule and Lucide styling
+    const id = "orbitInlineCSS";
+    if (document.getElementById(id)) return;
     const css = `
+      /* Give the Section-4 title the same horizontal inset system as Section 3 */
+      .orbit-section > h2.proc-title{
+        padding-inline: var(--proc-title-pad-x, 48px);
+        margin-top: var(--proc-title-margin-top, 120px);
+      }
+
       .orbit-card{position:absolute;transform:translate(-50%,0);min-width:220px;max-width:280px;
         padding:10px 12px;border-radius:12px;background:rgba(10,16,28,.92);backdrop-filter:blur(6px);
         border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:80}
@@ -145,16 +130,29 @@
       .orbit-card .icon{ color: var(--icon-color); }
     `;
     const s = document.createElement("style");
-    s.id = "orbitInlineCSS"; s.textContent = css; document.head.appendChild(s);
+    s.id = id; s.textContent = css; document.head.appendChild(s);
+  })();
+
+  // Copy exact typography from Section 3 title if available
+  (function syncProcTitleStyles(){
+    const src = document.querySelector('#section-process .proc-title');
+    const dst = mount.querySelector('section.orbit-section > h2.proc-title');
+    if (!src || !dst) return;
+    const cs = getComputedStyle(src);
+    const props = [
+      'fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing',
+      'textTransform','textShadow','fontFeatureSettings','fontVariationSettings',
+      'textRendering','-webkitFontSmoothing','-mozOsxFontSmoothing'
+    ];
+    props.forEach(p=>{ dst.style[p] = cs.getPropertyValue(p) || cs[p]; });
+    ['marginBottom'].forEach(p=>{ dst.style[p] = cs[p]; });
   })();
 
   // Render icons
   function renderIcons(scope){
     if (!window.lucide) return;
-    window.lucide.createIcons({
-      nameAttr:'data-lucide',
-      attrs:{ width:24, height:24, color:'currentColor', stroke:'currentColor', 'stroke-width': ICON_STYLE.stroke }
-    }, scope);
+    window.lucide.createIcons({ nameAttr:'data-lucide',
+      attrs:{ width:24, height:24, color:'currentColor', stroke:'currentColor', 'stroke-width': ICON_STYLE.stroke }}, scope);
   }
   ensureLucide().then(()=> renderIcons(mount));
 
@@ -233,9 +231,7 @@
       const k = easeInOutCubic(t);
       angle = lerp(angle, targetAngle, k);
       if (t >= 1){
-        angle = targetAngle;   // exact landing
-        targetAngle = null;
-        vel = 0; velTarget = 0; // kill residual drift (no nudge)
+        angle = targetAngle; targetAngle = null; vel = 0; velTarget = 0;
       }
     } else if (locked){
       vel = 0; velTarget = 0;
