@@ -114,7 +114,7 @@
       M_MAX_W: 820,
       M_SIDE_PAD: 16,
       M_SECTION_TOP: 40,
-      M_SECTION_BOTTOM: 24,
+      M_SECTION_BOTTOM: 4,
       M_TITLE_PT: 12,
       M_COPY_H_PT: 22,
       M_COPY_BODY_PT: 14,
