@@ -482,6 +482,9 @@
     #section-process .mdiamond > span{ transform:rotate(-45deg); display:flex; align-items:center; justify-content:center; text-align:center; color:#ddeaef; }
     #section-process .mdots{ display:flex; justify-content:center; }
     #section-process .mdots i{ border-radius:50%; background:rgba(99,211,255,.95); display:inline-block; }
+    #section-process{
+      margin-bottom: -80px;  /* tweak: try -60, -80, -100 until it feels right */
+    }
   }
   `;
   document.head.appendChild(style);
@@ -1604,7 +1607,7 @@
             scene({
               ns,
               canvas,
-              bounds: boundsMobile(0, 300),
+              bounds: boundsMobile(0, 700),
               config: deepClone(
                 window.PROCESS_CONFIG["step" + i] || {}
               ),
