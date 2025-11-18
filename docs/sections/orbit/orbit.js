@@ -60,18 +60,17 @@
   ];
 
   // ---------- Build DOM ----------
-  // NOTE: we set --proc-title-pad-x here. Increase/decrease to move the title away from the edge.
+  // NOTE: --proc-title-pad-x now controls BOTH title and subtitle in X.
   mount.innerHTML = `
     <section class="orbit-section" aria-label="Where your buyers light up"
              style="--proc-title-pad-x:72px; --proc-title-gap:4px; --proc-title-margin-top:120px;">
-      <!-- Direct child to match Section 3 selectors -->
+      <!-- Match Section 2/3 title -->
       <h2 class="proc-title">Where your <span class="accent-gold nowrap">buyers</span> light up</h2>
 
-      <div class="orbit-inner">
-        <div class="orbit-hd">
-          <div class="sub">Signals from search, events, RFPs, market news and competitor moves.</div>
-        </div>
+      <!-- Subtitle moved OUTSIDE .orbit-inner so it shares the same padding knob -->
+      <p class="orbit-sub">Signals from search, events, RFPs, market news and competitor moves.</p>
 
+      <div class="orbit-inner">
         <div class="orbit-panel">
           <div class="orbit-stage" id="orbitStage"
                style="--icon-color:${ICON_STYLE.color};--icon-stroke:${ICON_STYLE.stroke}px;--icon-size:${ICON_STYLE.sizePct}%">
@@ -92,16 +91,25 @@
     </section>
   `;
 
-  // ---- Enforce same X padding + typography (works even if Section-3 CSS is scoped) ----
+  // ---- Inline CSS for title/subtitle padding and Lucide styling ----
   (function injectCSS(){
-    // include both the title padding rule and Lucide styling
     const id = "orbitInlineCSS";
     if (document.getElementById(id)) return;
     const css = `
-      /* Give the Section-4 title the same horizontal inset system as Section 3 */
-      .orbit-section > h2.proc-title{
+      /* Title & subtitle share the same X inset */
+      .orbit-section > h2.proc-title,
+      .orbit-section > .orbit-sub{
         padding-inline: var(--proc-title-pad-x, 48px);
+      }
+      .orbit-section > h2.proc-title{
         margin-top: var(--proc-title-margin-top, 120px);
+        margin-bottom: 6px;
+      }
+      .orbit-section > .orbit-sub{
+        margin: 0 0 12px 0;
+        color: var(--muted, #91a6b8);
+        font-size: 12px;
+        line-height: 1.35;
       }
 
       .orbit-card{position:absolute;transform:translate(-50%,0);min-width:220px;max-width:280px;
@@ -133,19 +141,16 @@
     s.id = id; s.textContent = css; document.head.appendChild(s);
   })();
 
-  // Copy exact typography from Section 3 title if available
+  // Copy exact typography from Section 3 title if present
   (function syncProcTitleStyles(){
     const src = document.querySelector('#section-process .proc-title');
     const dst = mount.querySelector('section.orbit-section > h2.proc-title');
     if (!src || !dst) return;
     const cs = getComputedStyle(src);
-    const props = [
-      'fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing',
+    const props = ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing',
       'textTransform','textShadow','fontFeatureSettings','fontVariationSettings',
-      'textRendering','-webkitFontSmoothing','-mozOsxFontSmoothing'
-    ];
+      'textRendering','-webkitFontSmoothing','-mozOsxFontSmoothing'];
     props.forEach(p=>{ dst.style[p] = cs.getPropertyValue(p) || cs[p]; });
-    ['marginBottom'].forEach(p=>{ dst.style[p] = cs[p]; });
   })();
 
   // Render icons
