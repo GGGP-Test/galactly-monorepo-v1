@@ -21,6 +21,12 @@
   margin-top: 6px;
 }
 
+/* Match Section-3 title inset for the subtitle too */
+.orbit-section .orbit-hd{
+  /* cancel the 16px from .orbit-inner, then apply the same var as the title */
+  padding-inline: clamp(0px, calc(var(--proc-title-pad-x, 48px) - 16px), 200px);
+}
+
 /* Stage — transparent, no borders */
 .orbit-panel { position: relative; width: 100%; }
 .orbit-stage {
