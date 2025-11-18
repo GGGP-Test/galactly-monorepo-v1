@@ -1,13 +1,7 @@
-/* Section 4: Orbit — Lucide icons (MIT), smooth snap, perf gating
-   Customize icon look at ICON_STYLE below.
-*/
+/* Section 4: Orbit — Lucide icons (MIT), smooth snap, perf gating */
 (function(){
-  // ---- One-stop controls for icon appearance ----
-  const ICON_STYLE = {
-    color: '#dbe8f2', // stroke color (inherits via CSS currentColor)
-    stroke: 1.0,      // 1.2–1.8 looks best
-    sizePct: 38       // % of circular badge
-  };
+  // One-stop icon appearance controls
+  const ICON_STYLE = { color:'#dbe8f2', stroke:1.0, sizePct:38 };
 
   const CONFIG = {
     SPEED_FULL_DPS: 6,
@@ -20,100 +14,92 @@
   const mount = document.getElementById("section-orbit");
   if (!mount) return;
 
-  // Fade lifecycle not tied to global reveal
+  // Fade lifecycle (not using global reveal)
   mount.style.opacity = '0';
   mount.style.transition = 'opacity 260ms cubic-bezier(.22,.61,.36,1)';
 
-  // RAF lifecycle
   let active = false, rafId = null;
   function startOrbit(){ if(active) return; active=true; mount.style.opacity='1'; rafId=requestAnimationFrame(tick); }
   function stopOrbit(){  if(!active) return; active=false; if(rafId) cancelAnimationFrame(rafId); rafId=null; mount.style.opacity='0'; }
 
-  // Load Lucide once (from CDN, MIT license)
+  // Lucide (MIT) loader
   let lucideReady;
   function loadScriptOnce(src){
     return new Promise((resolve, reject)=>{
       if (document.querySelector(`script[src="${src}"]`)) return resolve();
       const s = document.createElement('script');
       s.src = src; s.async = true;
-      s.onload = ()=> resolve();
-      s.onerror = reject;
+      s.onload = resolve; s.onerror = reject;
       document.head.appendChild(s);
     });
   }
   function ensureLucide(){
     if (!lucideReady){
-      // UMD build exposes window.lucide
       lucideReady = loadScriptOnce('https://unpkg.com/lucide@latest/dist/umd/lucide.min.js')
         .then(()=>{ if(!window.lucide) throw new Error('Lucide failed to load'); });
     }
     return lucideReady;
   }
 
-  // ---- Icon names (Lucide) ----
+  // Icon names
   const ICON_NAME = {
-    events:      'calendar',   // Events
-    competition: 'trophy',     // Competition
-    rfp:         'file-text',  // RFPs & Docs
-    market:      'megaphone',  // Market
-    search:      'search'      // Search
+    events:'calendar', competition:'trophy', rfp:'file-text', market:'megaphone', search:'search'
   };
 
-  // ---- Data (labels + SEO-friendly copy) ----
+  // Items + copy (tight, human, packaging-specific)
   const ITEMS = [
-    {
-      id:"events", label:"Events", icon: ICON_NAME.events,
-      desc:"Trade shows, product launches, line expansions and retail resets—time-bound moments that trigger immediate packaging demand."
-    },
-    {
-      id:"competition", label:"Competition", icon: ICON_NAME.competition,
-      desc:"Where rivals are shortlisted or win deals, plus public win/loss notes and review chatter—use to target displacement plays."
-    },
-    {
-      id:"rfp", label:"RFPs & Docs", icon: ICON_NAME.rfp,
-      desc:"Fresh RFPs/RFQs, packaging specs and bid results from public portals and enterprise procurement feeds."
-    },
-    {
-      id:"market", label:"Market", icon: ICON_NAME.market,
-      desc:"News, PR and social signals that hint at new SKUs, rebrands or channel moves—early indicators of packaging needs."
-    },
-    {
-      id:"search", label:"Search", icon: ICON_NAME.search,
-      desc:"High-intent queries across Google/LinkedIn (e.g., “custom corrugated boxes”, “eco-friendly packaging supplier”) and repeated brand+packaging lookups."
-    }
+    { id:"events",       label:"Events",       icon:ICON_NAME.events,
+      desc:"Trade shows, launches and line expansions—time-bound moments that create immediate packaging needs." },
+    { id:"competition",  label:"Competition",  icon:ICON_NAME.competition,
+      desc:"Where rivals are shortlisted or win deals—perfect for targeted displacement plays." },
+    { id:"rfp",          label:"RFPs & Docs",  icon:ICON_NAME.rfp,
+      desc:"Fresh RFPs/RFQs, packaging specs and bid results from public procurement sources." },
+    { id:"market",       label:"Market",       icon:ICON_NAME.market,
+      desc:"News and social signals that hint at new SKUs, rebrands or channel moves." },
+    { id:"search",       label:"Search",       icon:ICON_NAME.search,
+      desc:"High-intent queries across Google/LinkedIn (e.g., “custom corrugated boxes”, “eco packaging supplier”)." }
   ];
 
-  // ---------- Build DOM (no domain on sun; packaging-specific subtitle) ----------
+  // ---------- Build DOM ----------
   mount.innerHTML = `
-    <section class="orbit-section" aria-label="Where packaging demand lights up">
+    <section class="orbit-section" aria-label="Where your buyers light up">
       <div class="orbit-inner">
+
+        <!-- Match Section 2/3 title font/styles -->
+        <h2 class="proc-title">Where your buyers light up</h2>
+
+        <!-- Keep orbit-hd only for the subcopy; no h2 here so Section-3 font wins -->
         <div class="orbit-hd">
-          <h2>Where packaging demand lights up</h2>
-          <div class="sub">Live signals from search activity, buyer events, RFPs, market buzz and competitor moves—built for packaging sales.</div>
+          <div class="sub">Signals from search, events, RFPs, market news and competitor moves.</div>
         </div>
-        <div class="orbit-panel"><div class="orbit-stage" id="orbitStage"
-             style="--icon-color:${ICON_STYLE.color};--icon-stroke:${ICON_STYLE.stroke}px;--icon-size:${ICON_STYLE.sizePct}%">
-          <div class="orbit-ring" id="orbitRing"></div>
 
-          <div class="orbit-center">
-            <div class="orbit-core" aria-hidden="true"></div>
-            <!-- Removed orbit-domain: no host/domain label on the sun -->
+        <div class="orbit-panel">
+          <div class="orbit-stage" id="orbitStage"
+               style="--icon-color:${ICON_STYLE.color};--icon-stroke:${ICON_STYLE.stroke}px;--icon-size:${ICON_STYLE.sizePct}%">
+
+            <div class="orbit-ring" id="orbitRing"></div>
+
+            <div class="orbit-center">
+              <div class="orbit-core" aria-hidden="true"></div>
+              <!-- domain label removed on purpose -->
+            </div>
+
+            ${ITEMS.map(i=>`<button class="orbit-node" data-id="${i.id}" aria-label="${i.label}">
+                <span class="ico"><i data-lucide="${i.icon}"></i></span>
+              </button>`).join("")}
+
+            <div class="orbit-card" id="orbitCard" hidden>
+              <div class="card-hd"><span class="icon" id="cardIcon"><i data-lucide="${ITEMS[0].icon}"></i></span><span id="cardTitle"></span></div>
+              <div class="card-bd" id="cardBody"></div>
+            </div>
           </div>
+        </div>
 
-          ${ITEMS.map(i=>`<button class="orbit-node" data-id="${i.id}" aria-label="${i.label}">
-              <span class="ico"><i data-lucide="${i.icon}"></i></span>
-            </button>`).join("")}
-
-          <div class="orbit-card" id="orbitCard" hidden>
-            <div class="card-hd"><span class="icon" id="cardIcon"><i data-lucide="${ITEMS[0].icon}"></i></span><span id="cardTitle"></span></div>
-            <div class="card-bd" id="cardBody"></div>
-          </div>
-        </div></div>
       </div>
     </section>
   `;
 
-  // Inline CSS to style Lucide SVGs consistently
+  // Inline CSS for Lucide
   (function injectCSS(){
     if (document.getElementById("orbitInlineCSS")) return;
     const css = `
@@ -125,7 +111,6 @@
       .orbit-card .card-bd{font-size:13px;color:#bcd0e0;line-height:1.4}
       .orbit-node.locked{filter:brightness(1.05)}
 
-      /* Lucide icons use currentColor; size/weight via variables */
       .orbit-node .ico{ display:grid; place-items:center; width:100%; height:100%; color: var(--icon-color); }
       .orbit-node .ico svg,
       .orbit-card .icon svg{
@@ -147,21 +132,14 @@
     s.id = "orbitInlineCSS"; s.textContent = css; document.head.appendChild(s);
   })();
 
-  // After DOM is ready, render Lucide icons
+  // Render icons
   function renderIcons(scope){
     if (!window.lucide) return;
-    window.lucide.createIcons({
-      nameAttr: 'data-lucide',
-      attrs: {
-        width: 24, height: 24,
-        color: 'currentColor',
-        stroke: 'currentColor',
-        'stroke-width': ICON_STYLE.stroke
-      }
-    }, scope);
+    window.lucide.createIcons({ nameAttr:'data-lucide', attrs:{ width:24, height:24, color:'currentColor', stroke:'currentColor', 'stroke-width': ICON_STYLE.stroke }}, scope);
   }
   ensureLucide().then(()=> renderIcons(mount));
 
+  // Refs
   const stage = document.getElementById("orbitStage");
   const ring  = document.getElementById("orbitRing");
   const card  = document.getElementById("orbitCard");
