@@ -1604,7 +1604,7 @@
             scene({
               ns,
               canvas,
-              bounds: boundsMobile(0, 700),
+              bounds: boundsMobile(0, 440),
               config: deepClone(
                 window.PROCESS_CONFIG["step" + i] || {}
               ),
