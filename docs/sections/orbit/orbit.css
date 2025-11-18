@@ -21,10 +21,12 @@
   margin-top: 6px;
 }
 
-/* Match Section-3 title inset for the subtitle too */
+/* === NEW: align the subtitle block with the Section-3 inset ===
+   The title uses --proc-title-pad-x on the section element.
+   Apply the same horizontal inset to the subtitle wrapper so it lines up. */
 .orbit-section .orbit-hd{
-  /* cancel the 16px from .orbit-inner, then apply the same var as the title */
-  padding-inline: clamp(0px, calc(var(--proc-title-pad-x, 48px) - 16px), 200px);
+  padding-inline: var(--proc-title-pad-x, 48px) !important;
+  box-sizing: border-box;
 }
 
 /* Stage — transparent, no borders */
@@ -43,7 +45,7 @@
   --oglow-hover: .60;             /* hover/focus opacity */
   --oglow-locked: .20;            /* selected opacity */
   --oglow-blur: 27px;             /* softness */
-  --oglow-spread: .5px;            /* how far it starts outside the edge */
+  --oglow-spread: .5px;           /* how far it starts outside the edge */
 
   position: relative;
   height: 520px;
@@ -231,25 +233,21 @@
 /* Keep info card above nodes */
 .orbit-card{ z-index:4; }
 
-
 /* Desktop + tablet: orbit title size */
 @media (min-width: 641px) {
   #section-orbit .proc-title{
     font-family: "Newsreader", Georgia, serif;
     font-weight: 600;
-    font-size: clamp(26px, 3vw, 38px); /* tweak these three */
+    font-size: clamp(26px, 3vw, 38px);
     line-height: 1.2;
     margin: 0 0 10px;
   }
 }
 
-
 /* Mobile tweak: tighten vertical spacing around the orbit */
 @media (max-width: 640px) {
   .orbit-section {
-    padding-top: 4px;   /* was 36px */
-    padding-bottom: 80px; /* was 84px – adjust to taste */
+    padding-top: 4px;
+    padding-bottom: 80px;
   }
 }
-
-
