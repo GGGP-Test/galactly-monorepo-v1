@@ -68,7 +68,7 @@
       <h2 class="proc-title">Where your <span class="accent-gold nowrap">buyers</span> light up</h2>
 
       <!-- Subtitle moved OUTSIDE .orbit-inner so it shares the same padding knob -->
-      <p class="orbit-sub">Signals from search, events, RFPs, market news and competitor moves.</p>
+      <p class="orbit-sub">A 24/7 search, events, RFPs & competitor moves that signals your success.</p>
 
       <div class="orbit-inner">
         <div class="orbit-panel">
