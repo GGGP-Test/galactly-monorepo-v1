@@ -1,4 +1,3 @@
-
 /* Section 4: Orbit — Lucide icons (MIT), smooth snap, perf gating */
 (function(){
   const ICON_STYLE = { color:'#dbe8f2', stroke:1.0, sizePct:38 };
