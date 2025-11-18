@@ -483,7 +483,7 @@
     #section-process .mdots{ display:flex; justify-content:center; }
     #section-process .mdots i{ border-radius:50%; background:rgba(99,211,255,.95); display:inline-block; }
     #section-process{
-      margin-bottom: -280px;  /* tweak: try -60, -80, -100 until it feels right */
+      margin-bottom: -400px;  /* tweak: try -60, -80, -100 until it feels right */
     }
   }
   `;
