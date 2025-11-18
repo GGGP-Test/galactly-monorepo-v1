@@ -229,8 +229,8 @@
 /* Mobile tweak: tighten vertical spacing around the orbit */
 @media (max-width: 640px) {
   .orbit-section {
-    padding-top: 20px;   /* was 36px */
-    padding-bottom: 10px; /* was 84px – adjust to taste */
+    padding-top: 4px;   /* was 36px */
+    padding-bottom: 80px; /* was 84px – adjust to taste */
   }
 }
 
