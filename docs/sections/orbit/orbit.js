@@ -64,12 +64,11 @@
   mount.innerHTML = `
     <section class="orbit-section" aria-label="Where your buyers light up"
              style="--proc-title-pad-x:48px; --proc-title-gap:4px; --proc-title-margin-top:120px;">
+
+      <!-- DIRECT CHILD (matches Section 3 selectors) -->
+      <h2 class="proc-title">Where your <span class="accent-gold nowrap">buyers</span> light up</h2>
+
       <div class="orbit-inner">
-
-        <!-- Match Section 2/3 title font/styles -->
-        <h2 class="proc-title">Where your <span class="accent-gold nowrap">buyers</span> light up</h2>
-
-        <!-- Keep orbit-hd only for the subcopy; no h2 here so Section-3 font wins -->
         <div class="orbit-hd">
           <div class="sub">Signals from search, events, RFPs, market news and competitor moves.</div>
         </div>
@@ -82,7 +81,7 @@
 
             <div class="orbit-center">
               <div class="orbit-core" aria-hidden="true"></div>
-              <!-- domain label removed on purpose -->
+              <!-- domain label intentionally removed -->
             </div>
 
             ${ITEMS.map(i=>`<button class="orbit-node" data-id="${i.id}" aria-label="${i.label}">
@@ -95,10 +94,26 @@
             </div>
           </div>
         </div>
-
       </div>
     </section>
   `;
+
+  // ---- Copy Section-3 typography exactly (fallback if CSS is scoped) ----
+  (function syncProcTitleStyles(){
+    const src = document.querySelector('#section-process .proc-title');
+    const dst = mount.querySelector('section.orbit-section > h2.proc-title');
+    if (!src || !dst) return;
+    const cs = getComputedStyle(src);
+    // copy the critical font-related properties
+    const props = [
+      'fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing',
+      'textTransform','textShadow','fontFeatureSettings','fontVariationSettings',
+      'textRendering','-webkitFontSmoothing','-mozOsxFontSmoothing'
+    ];
+    props.forEach(p=>{ dst.style[p] = cs.getPropertyValue(p) || cs[p]; });
+    // keep Section-3 spacing feel if it comes from margins on the title
+    ['marginTop','marginBottom'].forEach(p=>{ dst.style[p] = cs[p]; });
+  })();
 
   // Inline CSS for Lucide
   (function injectCSS(){
@@ -136,7 +151,10 @@
   // Render icons
   function renderIcons(scope){
     if (!window.lucide) return;
-    window.lucide.createIcons({ nameAttr:'data-lucide', attrs:{ width:24, height:24, color:'currentColor', stroke:'currentColor', 'stroke-width': ICON_STYLE.stroke }}, scope);
+    window.lucide.createIcons({
+      nameAttr:'data-lucide',
+      attrs:{ width:24, height:24, color:'currentColor', stroke:'currentColor', 'stroke-width': ICON_STYLE.stroke }
+    }, scope);
   }
   ensureLucide().then(()=> renderIcons(mount));
 
