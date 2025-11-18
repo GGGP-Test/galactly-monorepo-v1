@@ -63,7 +63,7 @@
   // NOTE: we set --proc-title-pad-x here. Increase/decrease to move the title away from the edge.
   mount.innerHTML = `
     <section class="orbit-section" aria-label="Where your buyers light up"
-             style="--proc-title-pad-x:72px; --proc-title-gap:4px; --proc-title-margin-top:120px;">
+             style="--proc-title-pad-x:16px; --proc-title-gap:4px; --proc-title-margin-top:120px;">
       <!-- Direct child to match Section 3 selectors -->
       <h2 class="proc-title">Where your <span class="accent-gold nowrap">buyers</span> light up</h2>
 
