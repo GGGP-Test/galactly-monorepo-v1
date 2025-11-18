@@ -243,9 +243,23 @@
     margin: 0 0 10px;
   }
 }
+  
+/* Phone tweaks for Section 4 (≤ 640px) */
+@media (max-width: 640px){
+  #section-orbit .proc-title{
+    /* smaller, same font family as Section 3 */
+    font: 600 clamp(22px, 7vw, 28px) "Newsreader", Georgia, serif;
+    line-height: 1.16;
+    margin: 12px 0 6px;
+    /* uses the same horizontal inset knob */
+    padding-inline: var(--proc-title-pad-x, 16px);
+  }
 
-/* Mobile tweak: tighten vertical spacing around the orbit */
-@media (max-width: 640px) {
+  /* keep subtitle aligned with the title’s X inset */
+  #section-orbit .orbit-hd{
+    padding-inline: var(--proc-title-pad-x, 16px) !important;
+  }
+  
   .orbit-section {
     padding-top: 4px;
     padding-bottom: 80px;
