@@ -226,6 +226,18 @@
 .orbit-card{ z-index:4; }
 
 
+/* Desktop + tablet: orbit title size */
+@media (min-width: 641px) {
+  #section-orbit .proc-title{
+    font-family: "Newsreader", Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(26px, 3vw, 38px); /* tweak these three */
+    line-height: 1.2;
+    margin: 0 0 10px;
+  }
+}
+
+
 /* Mobile tweak: tighten vertical spacing around the orbit */
 @media (max-width: 640px) {
   .orbit-section {
