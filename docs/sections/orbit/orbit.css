@@ -36,7 +36,7 @@
   --halo-rgb: 200, 224, 255;      /* glow color (RGB) */
 
   /* inner halo (kept) */
-  --halo-base: .18;
+  --halo-base: .13;
   --halo-hover: .50;
   --halo-locked: .70;
 
