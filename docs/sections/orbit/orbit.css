@@ -25,7 +25,7 @@
    The title uses --proc-title-pad-x on the section element.
    Apply the same horizontal inset to the subtitle wrapper so it lines up. */
 .orbit-section .orbit-hd{
-  padding-inline: var(--proc-title-pad-x, 48px) !important;
+  padding-inline: var(--proc-title-pad-x, 12px) !important;
   box-sizing: border-box;
 }
 
