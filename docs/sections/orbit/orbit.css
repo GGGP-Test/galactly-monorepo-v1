@@ -224,3 +224,14 @@
 
 /* Keep info card above nodes */
 .orbit-card{ z-index:4; }
+
+
+/* Mobile tweak: tighten vertical spacing around the orbit */
+@media (max-width: 640px) {
+  .orbit-section {
+    padding-top: 20px;   /* was 36px */
+    padding-bottom: 60px; /* was 84px – adjust to taste */
+  }
+}
+
+
