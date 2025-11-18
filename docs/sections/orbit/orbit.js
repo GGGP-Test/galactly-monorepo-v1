@@ -64,9 +64,12 @@
   mount.innerHTML = `
     <section class="orbit-section" aria-label="Where your buyers light up">
       <div class="orbit-inner">
+      
+        <section class="orbit-section" aria-label="Where your buyers light up"
+                 style="--proc-title-pad-x:48px; --proc-title-gap:4px; --proc-title-margin-top:120px;">
 
         <!-- Match Section 2/3 title font/styles -->
-        <h2 class="proc-title">Where your buyers light up</h2>
+        <h2 class="proc-title">Where your <span class="accent-gold nowrap">buyers</span> light up</h2>
 
         <!-- Keep orbit-hd only for the subcopy; no h2 here so Section-3 font wins -->
         <div class="orbit-hd">
