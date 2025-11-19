@@ -4772,191 +4772,169 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly: Logo preview panel (paste this block just above </body>) ===== -->
+<!-- =================== Galactly — logo options v3 (inline panel) =================== -->
 <style>
-  .brand-eval3{margin:36px auto 64px;max-width:1100px;padding:14px;}
-  .brand-eval3 .wrap{
-    border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:18px;
-    background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
-    backdrop-filter:blur(6px)
-  }
-  .brand-eval3 h4{margin:0 0 12px;font:700 14px/1.2 Inter,system-ui;color:#cfe0ee;letter-spacing:.2px}
-  .brand-eval3 .row{display:grid;grid-template-columns:1fr;gap:14px}
-  @media(min-width:900px){.brand-eval3 .row{grid-template-columns:1fr 1fr 1fr}}
-  .brand-eval3 .card{
-    border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:16px 16px 14px;
-    background:rgba(12,18,28,.66);display:flex;align-items:center;gap:16px;
-    transition:transform .12s ease, filter .15s ease
-  }
-  .brand-eval3 .card:hover{transform:translateY(-1px);filter:brightness(1.05)}
-  .brand-eval3 .icon{flex:0 0 auto;width:52px;height:52px;display:grid;place-items:center}
-  .brand-eval3 svg{display:block}
-  .brand-eval3 .lockup{display:flex;flex-direction:column;gap:3px}
-  .brand-eval3 .brand{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
-  .brand-eval3 .brand b{font:700 20px "Newsreader",Georgia,serif;color:#eaf0f6}
-  .brand-eval3 .brand i{font:700 20px "Newsreader",Georgia,serif;color:#E6C36B;font-style:normal}
-  .brand-eval3 .tag{font:600 10px/1.2 Inter,system-ui;color:#9fb4c7;letter-spacing:.2px}
-  .brand-eval3 .note{margin-top:10px;color:#94a9bc;font:600 11px/1.35 Inter,system-ui}
-  .brand-eval3 .code{margin-top:10px}
-  .brand-eval3 textarea{width:100%;height:64px;background:#0b1117;color:#cfe0ee;border:1px solid rgba(255,255,255,.12);
-    border-radius:10px;padding:10px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace}
-  .brand-eval3 .mini{display:flex;gap:10px;margin-top:8px;align-items:center}
-  .brand-eval3 .mini button{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.14);
-    background:rgba(255,255,255,.05);color:#eaf0f6;font:700 12px Inter,system-ui;cursor:pointer}
-  .brand-eval3 .mini .live{display:flex;gap:8px;align-items:center;color:#9fb4c7;font:600 11px Inter,system-ui}
+  #gg-logo-v3{--bg:rgba(10,14,22,.72);--bd:rgba(255,255,255,.10);--ink:#e9f1f7;--muted:#a9bccb;--gold:#e6c36b}
+  #gg-logo-v3{position:relative;margin:40px auto 26px;max-width:1100px;padding:16px;border:1px solid var(--bd);
+    border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    backdrop-filter:blur(8px);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink)}
+  #gg-logo-v3 .hd{font-weight:700;margin:4px 8px 14px;opacity:.95}
+  #gg-logo-v3 .wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  #gg-logo-v3 .card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:12px;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:transform .08s ease,filter .15s ease}
+  #gg-logo-v3 .card:hover{filter:brightness(1.06)} #gg-logo-v3 .card:active{transform:translateY(1px)}
+  #gg-logo-v3 .icon{flex:0 0 56px;height:56px;display:grid;place-items:center;border-radius:12px;background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.06)}
+  #gg-logo-v3 svg{display:block}
+  #gg-logo-v3 .lockup{display:flex;flex-direction:column;gap:4px}
+  #gg-logo-v3 .brand{font:700 18px "Newsreader",Georgia,serif;letter-spacing:.2px}
+  #gg-logo-v3 .tag{font:600 11px/1.1 Inter,system-ui;letter-spacing:.2px;color:var(--muted)}
+  #gg-logo-v3 .foot{margin-top:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:10px;font:12px/1.5 Inter,system-ui;color:var(--muted)}
+  #gg-logo-v3 .mono{width:100%;min-height:44px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
+    padding:8px 10px;color:var(--ink);font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  @media (max-width:780px){#gg-logo-v3 .wrap{grid-template-columns:1fr}}
 </style>
 
-<section class="brand-eval3" id="brand-eval3">
+<div id="gg-logo-v3" role="region" aria-label="Galactly logo options">
+  <div class="hd">Galactly — three professional logo options (click any card to set a temporary favicon)</div>
   <div class="wrap">
-    <h4>Galactly — three professional logo options (click any card to set a temporary favicon)</h4>
-    <div class="row">
+    <!-- A: Harmonic Aperture (triangle, open tip, fading inner triangles) -->
+    <button class="card" data-key="A">
+      <span class="icon">
+        <svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true">
+          <defs>
+            <radialGradient id="aGlow" cx="50%" cy="44%" r="62%">
+              <stop offset="0%"  stop-color="var(--gold)" stop-opacity=".55"/>
+              <stop offset="55%" stop-color="var(--gold)" stop-opacity=".20"/>
+              <stop offset="100%" stop-color="var(--gold)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- frequency glow -->
+          <polygon points="32,12 56,54 8,54" fill="url(#aGlow)" opacity=".45"/>
+          <!-- outer frame with open apex -->
+          <path d="M 8 54 L 32 14 M 32 14 L 56 54 M 8 54 L 56 54"
+                fill="none" stroke="white" stroke-opacity=".98" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- inner fading triangles -->
+          <polygon points="32,19 50,51 14,51" fill="none" stroke="white" stroke-opacity=".44" stroke-width="1.2"/>
+          <polygon points="32,25 45,48 19,48" fill="none" stroke="white" stroke-opacity=".28" stroke-width="1.0"/>
+          <polygon points="32,30 41,46 23,46" fill="none" stroke="white" stroke-opacity=".16" stroke-width=".9"/>
+        </svg>
+      </span>
+      <span class="lockup">
+        <span class="brand">Galactly</span>
+        <span class="tag">time-sensitive lead intelligence</span>
+      </span>
+    </button>
 
-      <!-- Option A: Delta Resonance (open apex, triple contour) -->
-      <button class="card" data-opt="A" type="button">
-        <div class="icon">
-          <svg id="iconA" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
-            <!-- triangle with open top; two inner offsets = "frequency" -->
-            <g fill="none" stroke="#E6C36B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <!-- outer (open apex) -->
-              <path d="M32 15 L52 50 L12 50 Z" />
-              <path d="M32 11 L31.8 11" /> <!-- tiny no-op; keeps round caps consistent -->
-            </g>
-            <g fill="none" stroke="#eaf0f6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".95">
-              <!-- redraw outer with a small gap at the apex -->
-              <path d="M31.5 16 L12 50 L52 50 L32.5 16" />
-              <!-- inner echoes -->
-              <path d="M32 21 L47 47 L17 47 Z" />
-              <path d="M32 27 L42 44 L22 44 Z" />
-            </g>
-          </svg>
-        </div>
-        <div class="lockup">
-          <div class="brand"><b>Gal</b><i>act</i><b>ly</b></div>
-          <div class="tag">time-sensitive lead intelligence</div>
-        </div>
-      </button>
+    <!-- B: Tri-Wave Orbit (three phase-shifted arcs) -->
+    <button class="card" data-key="B">
+      <span class="icon">
+        <svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true">
+          <defs>
+            <linearGradient id="bStroke" x1="0" x2="1">
+              <stop offset="0%"  stop-color="white" stop-opacity=".95"/>
+              <stop offset="100%" stop-color="white" stop-opacity=".75"/>
+            </linearGradient>
+          </defs>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="url(#bStroke)" stroke-width="1.6" opacity=".9"/>
+          <!-- 3 phase arcs (120° apart) -->
+          <path d="M12,32a20,20 0 0 0 20,20" fill="none" stroke="url(#bStroke)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M32,12a20,20 0 0 0 20,20" fill="none" stroke="url(#bStroke)" stroke-width="2" stroke-linecap="round" transform="rotate(120 32 32)"/>
+          <path d="M32,12a20,20 0 0 0 20,20" fill="none" stroke="url(#bStroke)" stroke-width="2" stroke-linecap="round" transform="rotate(240 32 32)"/>
+          <!-- subtle notch (implies ‘G’ without reading as a letter) -->
+          <path d="M43,32 h7" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity=".85"/>
+        </svg>
+      </span>
+      <span class="lockup">
+        <span class="brand">Galactly</span>
+        <span class="tag">signal &gt; noise • time beats price</span>
+      </span>
+    </button>
 
-      <!-- Option B: Triaxial Delta (three crisp edges, apex softened & broken; subtle dashed rhythm) -->
-      <button class="card" data-opt="B" type="button">
-        <div class="icon">
-          <svg id="iconB" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
-            <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <!-- main triangle with softened apex (gap) -->
-              <path d="M32 16 L52 50 L12 50 Z" stroke="#eaf0f6" stroke-width="2"/>
-              <!-- erase a clean gap at the tip using a mask-like stroke -->
-              <path d="M31.8 16 L32.2 16" stroke="#0b1117" stroke-width="4" />
-              <!-- rhythmic dashes along edges (frequency motif) -->
-              <path d="M12 50 L52 50" stroke="#E6C36B" stroke-width="1.6" stroke-dasharray="6 7" />
-              <path d="M32 16 L12 50" stroke="#E6C36B" stroke-width="1.6" stroke-dasharray="6 7" />
-              <path d="M32 16 L52 50" stroke="#E6C36B" stroke-width="1.6" stroke-dasharray="6 7" />
-            </g>
-          </svg>
-        </div>
-        <div class="lockup">
-          <div class="brand"><b>Gal</b><i>act</i><b>ly</b></div>
-          <div class="tag">signal > noise • time beats price</div>
-        </div>
-      </button>
-
-      <!-- Option C: Tri-Orbit (circle = orchestration; inside open-apex delta) -->
-      <button class="card" data-opt="C" type="button">
-        <div class="icon">
-          <svg id="iconC" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
-            <!-- orbit -->
-            <circle cx="32" cy="32" r="22" fill="none" stroke="#eaf0f6" stroke-width="1.6" opacity=".95"/>
-            <!-- three small ticks at 0/120/240 for the triad (no “eye”, nothing centered) -->
-            <g stroke="#E6C36B" stroke-linecap="round" stroke-width="1.8">
-              <path d="M54 32 L51 32" />
-              <path d="M22 12 L20.4 14.8" />
-              <path d="M22 52 L20.4 49.2" />
-            </g>
-            <!-- open-apex delta inside the orbit -->
-            <path d="M32 18 L47 44 L17 44 Z" fill="none" stroke="#eaf0f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M31.9 18 L32.2 18" stroke="#0b1117" stroke-width="4"/>
-          </svg>
-        </div>
-        <div class="lockup">
-          <div class="brand"><b>Gal</b><i>act</i><b>ly</b></div>
-          <div class="tag">orchestrated lead intelligence</div>
-        </div>
-      </button>
-
-    </div>
-
-    <div class="note">Click any card to set a temporary favicon and generate the exact permanent snippet:</div>
-    <div class="code">
-      <textarea id="favOut" readonly placeholder="Permanent favicon snippet will appear here after you click a card."></textarea>
-      <div class="mini">
-        <button id="copyFav" type="button">Copy snippet</button>
-        <div class="live">Temporary favicon set: <span id="favName">—</span></div>
-      </div>
-    </div>
+    <!-- C: Mirror Diamond (rounded rhombus + opposing waves) -->
+    <button class="card" data-key="C">
+      <span class="icon">
+        <svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true">
+          <defs>
+            <radialGradient id="cHalo" cx="50%" cy="50%" r="60%">
+              <stop offset="0%"  stop-color="var(--gold)" stop-opacity=".35"/>
+              <stop offset="100%" stop-color="var(--gold)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect x="14" y="14" width="36" height="36" rx="10" ry="10"
+                transform="rotate(45 32 32)"
+                fill="url(#cHalo)" opacity=".4"/>
+          <rect x="14" y="14" width="36" height="36" rx="10" ry="10"
+                transform="rotate(45 32 32)"
+                fill="none" stroke="white" stroke-width="1.8" opacity=".95"/>
+          <!-- mirrored waves -->
+          <path d="M22,40 C24,30 30,34 32,24" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" opacity=".9"/>
+          <path d="M42,24 C40,34 34,30 32,40" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" opacity=".9"/>
+          <!-- three subtle ticks (0/120/240) as ‘system’ motif -->
+          <circle cx="32" cy="12" r="1.3" fill="white" opacity=".85"/>
+          <circle cx="10.6" cy="40.5" r="1.3" fill="white" opacity=".7"/>
+          <circle cx="53.4" cy="40.5" r="1.3" fill="white" opacity=".7"/>
+        </svg>
+      </span>
+      <span class="lockup">
+        <span class="brand">Galactly</span>
+        <span class="tag">orchestrated lead intelligence</span>
+      </span>
+    </button>
   </div>
-</section>
+
+  <div class="foot">
+    Click any card to set a temporary favicon and generate the exact permanent snippet:
+    <div id="gg-favi-snippet" class="mono" contenteditable="false" spellcheck="false"></div>
+    <button id="gg-copy" class="btn" style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e9f1f7;font-weight:700;cursor:pointer;">Copy snippet</button>
+    <span id="gg-status" style="margin-left:10px;color:#a9bccb;"></span>
+  </div>
+</div>
 
 <script>
 (function(){
-  const gold = "#E6C36B";
-  const fg   = "#eaf0f6";
+  const root = document.getElementById('gg-logo-v3');
+  if(!root) return;
 
-  // Create (or reuse) a <link rel="icon"> for temporary preview
-  function ensureIconLink(){
-    let link = document.querySelector('link[rel="icon"]#tmp-favicon');
-    if(!link){
-      link = document.createElement('link');
-      link.rel = 'icon'; link.id = 'tmp-favicon'; link.type = 'image/svg+xml';
-      document.head.appendChild(link);
-    }
-    return link;
+  function svgToDataURI(svg){
+    // clone to ensure clean serialization
+    const s = new XMLSerializer().serializeToString(svg);
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
+  }
+  function setTempFaviconFrom(svg){
+    const href = svgToDataURI(svg);
+    // remove existing temp link if any
+    const old = document.querySelector('link[data-gg-temp-favicon]');
+    if (old) old.remove();
+    const l = document.createElement('link');
+    l.rel = 'icon'; l.type = 'image/svg+xml'; l.href = href; l.setAttribute('data-gg-temp-favicon','1');
+    document.head.appendChild(l);
+    // show permanent snippet
+    const snippet = `<link rel="icon" type="image/svg+xml" href="${href}">`;
+    document.getElementById('gg-favi-snippet').textContent = snippet;
+    document.getElementById('gg-status').textContent = 'Temporary favicon set.';
   }
 
-  // Turn an inline SVG element into a compact data URI
-  function svgToDataURI(svgEl, size=64){
-    const clone = svgEl.cloneNode(true);
-    clone.setAttribute("width", String(size));
-    clone.setAttribute("height", String(size));
-    // enforce crisp palette
-    const xml = new XMLSerializer().serializeToString(clone)
-      .replaceAll('\n','')
-      .replaceAll('\t','')
-      .replace(/>\\s+</g,'><');
-    const encoded = encodeURIComponent(xml)
-      .replace(/'/g, '%27').replace(/"/g, '%22');
-    return `data:image/svg+xml,${encoded}`;
-  }
-
-  // Build a permanent <link rel="icon"> string users can paste into <head>
-  function buildHeadSnippet(uri){
-    return `<link rel="icon" type="image/svg+xml" href="${uri}">`;
-  }
-
-  // Panel wiring
-  const panel = document.getElementById('brand-eval3');
-  const out   = document.getElementById('favOut');
-  const name  = document.getElementById('favName');
-  const copy  = document.getElementById('copyFav');
-
-  panel.querySelectorAll('.card').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const opt = btn.dataset.opt;
-      const svg = btn.querySelector('svg');
-      const uri = svgToDataURI(svg, 64);
-
-      // set temp favicon
-      ensureIconLink().href = uri;
-
-      // show permanent code
-      out.value = buildHeadSnippet(uri);
-      name.textContent = `Option ${opt}`;
+  root.querySelectorAll('.card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      const svg = card.querySelector('svg').cloneNode(true);
+      // scale to a square 64 for favicon clarity
+      svg.setAttribute('width','64'); svg.setAttribute('height','64');
+      setTempFaviconFrom(svg);
     });
   });
 
-  copy.addEventListener('click', ()=>{
-    out.select(); document.execCommand('copy');
+  document.getElementById('gg-copy').addEventListener('click', ()=>{
+    const t = document.getElementById('gg-favi-snippet').textContent.trim();
+    if(!t) return;
+    navigator.clipboard.writeText(t).then(()=>{
+      document.getElementById('gg-status').textContent = 'Snippet copied.';
+    });
   });
 })();
 </script>
-<!-- ===== End logo preview panel ===== -->
+<!-- =================== /logo options v3 =================== -->
 
 
 </body>
