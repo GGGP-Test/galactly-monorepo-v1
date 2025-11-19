@@ -4772,168 +4772,191 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- LOGO TRYOUT: START (v2) -->
+<!-- ===== Galactly: Logo preview panel (paste this block just above </body>) ===== -->
 <style>
-  .logo-try-v2{max-width:1200px;margin:36px auto 72px;padding:14px 16px 20px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(11,17,23,.55);backdrop-filter:blur(6px);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-  .logo-try-v2 h4{margin:0 0 14px;color:#cfe0ee;font:700 13px/1 Inter}
-  .logo-try-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-  .logo-card{border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(255,255,255,.03);padding:14px 16px;display:flex;align-items:center;gap:16px;transition:transform .12s ease,box-shadow .18s ease, border-color .18s}
-  .logo-card:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(0,0,0,.35);border-color:rgba(255,255,255,.16)}
-  .logo-mark{flex:0 0 auto;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.10)}
-  .logo-mark svg{display:block;width:34px;height:34px}
-  .lockup{min-width:0}
-  .lockup .brand{display:block;color:#eaf0f6;font:700 18px/1 "Newsreader", Georgia, serif;letter-spacing:.1px;margin:-2px 0 4px}
-  .lockup .tag{display:block;color:#91a6b8;font:600 11px/1.1 Inter;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .logo-note{margin:10px 2px 0;color:#91a6b8;font:600 11px/1.3 Inter}
-  @media (max-width:880px){ .logo-try-grid{grid-template-columns:1fr} }
+  .brand-eval3{margin:36px auto 64px;max-width:1100px;padding:14px;}
+  .brand-eval3 .wrap{
+    border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:18px;
+    background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+    backdrop-filter:blur(6px)
+  }
+  .brand-eval3 h4{margin:0 0 12px;font:700 14px/1.2 Inter,system-ui;color:#cfe0ee;letter-spacing:.2px}
+  .brand-eval3 .row{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:900px){.brand-eval3 .row{grid-template-columns:1fr 1fr 1fr}}
+  .brand-eval3 .card{
+    border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:16px 16px 14px;
+    background:rgba(12,18,28,.66);display:flex;align-items:center;gap:16px;
+    transition:transform .12s ease, filter .15s ease
+  }
+  .brand-eval3 .card:hover{transform:translateY(-1px);filter:brightness(1.05)}
+  .brand-eval3 .icon{flex:0 0 auto;width:52px;height:52px;display:grid;place-items:center}
+  .brand-eval3 svg{display:block}
+  .brand-eval3 .lockup{display:flex;flex-direction:column;gap:3px}
+  .brand-eval3 .brand{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+  .brand-eval3 .brand b{font:700 20px "Newsreader",Georgia,serif;color:#eaf0f6}
+  .brand-eval3 .brand i{font:700 20px "Newsreader",Georgia,serif;color:#E6C36B;font-style:normal}
+  .brand-eval3 .tag{font:600 10px/1.2 Inter,system-ui;color:#9fb4c7;letter-spacing:.2px}
+  .brand-eval3 .note{margin-top:10px;color:#94a9bc;font:600 11px/1.35 Inter,system-ui}
+  .brand-eval3 .code{margin-top:10px}
+  .brand-eval3 textarea{width:100%;height:64px;background:#0b1117;color:#cfe0ee;border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;padding:10px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace}
+  .brand-eval3 .mini{display:flex;gap:10px;margin-top:8px;align-items:center}
+  .brand-eval3 .mini button{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.05);color:#eaf0f6;font:700 12px Inter,system-ui;cursor:pointer}
+  .brand-eval3 .mini .live{display:flex;gap:8px;align-items:center;color:#9fb4c7;font:600 11px Inter,system-ui}
 </style>
 
-<div class="logo-try-v2" id="logoTryV2">
-  <h4>Galactly—three professional logo options (click any card to set a temporary favicon)</h4>
+<section class="brand-eval3" id="brand-eval3">
+  <div class="wrap">
+    <h4>Galactly — three professional logo options (click any card to set a temporary favicon)</h4>
+    <div class="row">
 
-  <!-- Hidden sprites: icons + lockups as <symbol> so we can reuse -->
-  <svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
-    <defs>
-      <!-- shared gradient -->
-      <linearGradient id="gradAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%"  stop-color="#E6C36B"/>
-        <stop offset="100%" stop-color="#63D3FF"/>
-      </linearGradient>
-    </defs>
+      <!-- Option A: Delta Resonance (open apex, triple contour) -->
+      <button class="card" data-opt="A" type="button">
+        <div class="icon">
+          <svg id="iconA" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
+            <!-- triangle with open top; two inner offsets = "frequency" -->
+            <g fill="none" stroke="#E6C36B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <!-- outer (open apex) -->
+              <path d="M32 15 L52 50 L12 50 Z" />
+              <path d="M32 11 L31.8 11" /> <!-- tiny no-op; keeps round caps consistent -->
+            </g>
+            <g fill="none" stroke="#eaf0f6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".95">
+              <!-- redraw outer with a small gap at the apex -->
+              <path d="M31.5 16 L12 50 L52 50 L32.5 16" />
+              <!-- inner echoes -->
+              <path d="M32 21 L47 47 L17 47 Z" />
+              <path d="M32 27 L42 44 L22 44 Z" />
+            </g>
+          </svg>
+        </div>
+        <div class="lockup">
+          <div class="brand"><b>Gal</b><i>act</i><b>ly</b></div>
+          <div class="tag">time-sensitive lead intelligence</div>
+        </div>
+      </button>
 
-    <!-- A) ORBIT FREQUENCY -->
-    <symbol id="iconA" viewBox="0 0 48 48">
-      <g fill="none" stroke="url(#gradAccent)" stroke-linecap="round">
-        <circle cx="24" cy="24" r="16" stroke-width="2"
-                stroke-dasharray="88 44" transform="rotate(-25 24 24)"/>
-        <circle cx="24" cy="24" r="12" stroke-width="2"
-                stroke-dasharray="64 32" transform="rotate(8 24 24)"/>
-        <circle cx="24" cy="24" r="8"  stroke-width="2"
-                stroke-dasharray="40 22" transform="rotate(35 24 24)"/>
-      </g>
-    </symbol>
-    <symbol id="lockupA" viewBox="0 0 420 48">
-      <g fill="none">
-        <use href="#iconA" x="0" y="6" width="36" height="36"></use>
-        <text x="52" y="24" dominant-baseline="central"
-              font-family="Newsreader, Georgia, serif" font-size="24" font-weight="700" fill="#EAF0F6">Galactly</text>
-        <text x="52" y="38" font-family="Inter, system-ui" font-size="11" font-weight="600" fill="#91A6B8">
-          lead intelligence • time-sensitive
-        </text>
-      </g>
-    </symbol>
+      <!-- Option B: Triaxial Delta (three crisp edges, apex softened & broken; subtle dashed rhythm) -->
+      <button class="card" data-opt="B" type="button">
+        <div class="icon">
+          <svg id="iconB" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
+            <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <!-- main triangle with softened apex (gap) -->
+              <path d="M32 16 L52 50 L12 50 Z" stroke="#eaf0f6" stroke-width="2"/>
+              <!-- erase a clean gap at the tip using a mask-like stroke -->
+              <path d="M31.8 16 L32.2 16" stroke="#0b1117" stroke-width="4" />
+              <!-- rhythmic dashes along edges (frequency motif) -->
+              <path d="M12 50 L52 50" stroke="#E6C36B" stroke-width="1.6" stroke-dasharray="6 7" />
+              <path d="M32 16 L12 50" stroke="#E6C36B" stroke-width="1.6" stroke-dasharray="6 7" />
+              <path d="M32 16 L52 50" stroke="#E6C36B" stroke-width="1.6" stroke-dasharray="6 7" />
+            </g>
+          </svg>
+        </div>
+        <div class="lockup">
+          <div class="brand"><b>Gal</b><i>act</i><b>ly</b></div>
+          <div class="tag">signal > noise • time beats price</div>
+        </div>
+      </button>
 
-    <!-- B) DELTA-WAVE (rounded tri-edge + three slanted bars) -->
-    <symbol id="iconB" viewBox="0 0 48 48">
-      <g fill="none" stroke="url(#gradAccent)" stroke-linecap="round" stroke-linejoin="round">
-        <!-- rounded triangle -->
-        <path d="M24 8 L39 35 L9 35 Z" stroke-width="2.4"/>
-        <!-- three frequency bars -->
-        <path d="M20 27 l6 -10" stroke-width="2.4"/>
-        <path d="M24 29 l6 -10" stroke-width="2.4"/>
-        <path d="M28 31 l6 -10" stroke-width="2.4"/>
-      </g>
-    </symbol>
-    <symbol id="lockupB" viewBox="0 0 460 48">
-      <g fill="none">
-        <use href="#iconB" x="0" y="6" width="36" height="36"></use>
-        <text x="52" y="24" dominant-baseline="central"
-              font-family="Newsreader, Georgia, serif" font-size="24" font-weight="700" fill="#EAF0F6">Galactly</text>
-        <text x="52" y="38" font-family="Inter, system-ui" font-size="11" font-weight="600" fill="#91A6B8">
-          time beats price • signal over noise
-        </text>
-      </g>
-    </symbol>
+      <!-- Option C: Tri-Orbit (circle = orchestration; inside open-apex delta) -->
+      <button class="card" data-opt="C" type="button">
+        <div class="icon">
+          <svg id="iconC" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
+            <!-- orbit -->
+            <circle cx="32" cy="32" r="22" fill="none" stroke="#eaf0f6" stroke-width="1.6" opacity=".95"/>
+            <!-- three small ticks at 0/120/240 for the triad (no “eye”, nothing centered) -->
+            <g stroke="#E6C36B" stroke-linecap="round" stroke-width="1.8">
+              <path d="M54 32 L51 32" />
+              <path d="M22 12 L20.4 14.8" />
+              <path d="M22 52 L20.4 49.2" />
+            </g>
+            <!-- open-apex delta inside the orbit -->
+            <path d="M32 18 L47 44 L17 44 Z" fill="none" stroke="#eaf0f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M31.9 18 L32.2 18" stroke="#0b1117" stroke-width="4"/>
+          </svg>
+        </div>
+        <div class="lockup">
+          <div class="brand"><b>Gal</b><i>act</i><b>ly</b></div>
+          <div class="tag">orchestrated lead intelligence</div>
+        </div>
+      </button>
 
-    <!-- C) CHRONO-TRIDENT (dial + three ticks) -->
-    <symbol id="iconC" viewBox="0 0 48 48">
-      <g fill="none" stroke="url(#gradAccent)" stroke-linecap="round">
-        <circle cx="24" cy="24" r="15" stroke-width="2.2"/>
-        <!-- ticks at 0°, 120°, 240° -->
-        <path d="M24 10 v6"  stroke-width="2.6"/>
-        <path d="M35.99 30.5 l-5.2 -3" stroke-width="2.6"/>
-        <path d="M12.01 30.5 l5.2 -3"  stroke-width="2.6"/>
-      </g>
-    </symbol>
-    <symbol id="lockupC" viewBox="0 0 460 48">
-      <g fill="none">
-        <use href="#iconC" x="0" y="6" width="36" height="36"></use>
-        <text x="52" y="24" dominant-baseline="central"
-              font-family="Newsreader, Georgia, serif" font-size="24" font-weight="700" fill="#EAF0F6">Galactly</text>
-        <text x="52" y="38" font-family="Inter, system-ui" font-size="11" font-weight="600" fill="#91A6B8">
-          orchestrated lead intelligence
-        </text>
-      </g>
-    </symbol>
-  </svg>
+    </div>
 
-  <div class="logo-try-grid">
-    <!-- Card A -->
-    <button class="logo-card" data-fav="A" type="button" aria-label="Use Option A favicon">
-      <div class="logo-mark">
-        <svg viewBox="0 0 48 48"><use href="#iconA"/></svg>
+    <div class="note">Click any card to set a temporary favicon and generate the exact permanent snippet:</div>
+    <div class="code">
+      <textarea id="favOut" readonly placeholder="Permanent favicon snippet will appear here after you click a card."></textarea>
+      <div class="mini">
+        <button id="copyFav" type="button">Copy snippet</button>
+        <div class="live">Temporary favicon set: <span id="favName">—</span></div>
       </div>
-      <div class="lockup"><svg viewBox="0 0 420 48" style="width:260px;height:28px"><use href="#lockupA"/></svg></div>
-    </button>
-
-    <!-- Card B -->
-    <button class="logo-card" data-fav="B" type="button" aria-label="Use Option B favicon">
-      <div class="logo-mark">
-        <svg viewBox="0 0 48 48"><use href="#iconB"/></svg>
-      </div>
-      <div class="lockup"><svg viewBox="0 0 460 48" style="width:280px;height:28px"><use href="#lockupB"/></svg></div>
-    </button>
-
-    <!-- Card C -->
-    <button class="logo-card" data-fav="C" type="button" aria-label="Use Option C favicon">
-      <div class="logo-mark">
-        <svg viewBox="0 0 48 48"><use href="#iconC"/></svg>
-      </div>
-      <div class="lockup"><svg viewBox="0 0 460 48" style="width:280px;height:28px"><use href="#lockupC"/></svg></div>
-    </button>
+    </div>
   </div>
-
-  <div class="logo-note">Click a card to set a temporary favicon. When you choose one, I’ll hand you a minified standalone SVG and the permanent <code>&lt;link rel="icon"&gt;</code> snippet.</div>
-</div>
+</section>
 
 <script>
 (function(){
-  const root = document.getElementById('logoTryV2');
-  if(!root) return;
+  const gold = "#E6C36B";
+  const fg   = "#eaf0f6";
 
-  // Create (or update) the page favicon with an SVG string
-  function setFaviconFromSymbol(symbolId){
-    // Build a standalone SVG string from the <symbol>
-    const sym = document.getElementById(symbolId);
-    if(!sym) return;
-    const vb = sym.getAttribute('viewBox') || '0 0 48 48';
-    const content = sym.innerHTML;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${content}</svg>`;
-    const dataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-
-    // apply as favicon (remove previous)
-    let link = document.querySelector('link[rel="icon"]');
+  // Create (or reuse) a <link rel="icon"> for temporary preview
+  function ensureIconLink(){
+    let link = document.querySelector('link[rel="icon"]#tmp-favicon');
     if(!link){
       link = document.createElement('link');
-      link.rel = 'icon';
+      link.rel = 'icon'; link.id = 'tmp-favicon'; link.type = 'image/svg+xml';
       document.head.appendChild(link);
     }
-    link.href = dataUrl;
-
-    // also expose in console for copy
-    try{ console.log('FavIcon data URL for', symbolId, '\\n', dataUrl); }catch(e){}
+    return link;
   }
 
-  root.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.logo-card');
-    if(!btn) return;
-    const which = btn.getAttribute('data-fav'); // A/B/C
-    const sym = which==='A' ? 'iconA' : which==='B' ? 'iconB' : 'iconC';
-    setFaviconFromSymbol(sym);
+  // Turn an inline SVG element into a compact data URI
+  function svgToDataURI(svgEl, size=64){
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute("width", String(size));
+    clone.setAttribute("height", String(size));
+    // enforce crisp palette
+    const xml = new XMLSerializer().serializeToString(clone)
+      .replaceAll('\n','')
+      .replaceAll('\t','')
+      .replace(/>\\s+</g,'><');
+    const encoded = encodeURIComponent(xml)
+      .replace(/'/g, '%27').replace(/"/g, '%22');
+    return `data:image/svg+xml,${encoded}`;
+  }
+
+  // Build a permanent <link rel="icon"> string users can paste into <head>
+  function buildHeadSnippet(uri){
+    return `<link rel="icon" type="image/svg+xml" href="${uri}">`;
+  }
+
+  // Panel wiring
+  const panel = document.getElementById('brand-eval3');
+  const out   = document.getElementById('favOut');
+  const name  = document.getElementById('favName');
+  const copy  = document.getElementById('copyFav');
+
+  panel.querySelectorAll('.card').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const opt = btn.dataset.opt;
+      const svg = btn.querySelector('svg');
+      const uri = svgToDataURI(svg, 64);
+
+      // set temp favicon
+      ensureIconLink().href = uri;
+
+      // show permanent code
+      out.value = buildHeadSnippet(uri);
+      name.textContent = `Option ${opt}`;
+    });
+  });
+
+  copy.addEventListener('click', ()=>{
+    out.select(); document.execCommand('copy');
   });
 })();
 </script>
-<!-- LOGO TRYOUT: END (v2) -->
+<!-- ===== End logo preview panel ===== -->
 
 
 </body>
