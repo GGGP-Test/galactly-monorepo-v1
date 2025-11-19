@@ -4772,221 +4772,168 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly logo options (inline preview) ===== -->
+<!-- LOGO TRYOUT: START (v2) -->
 <style>
-  :root{
-    --gold:#F2DCA0; /* brand gold */
-    --cyan:#63D3FF; /* electric cyan */
-    --ink:#0B1117;  /* page bg */
-  }
-  #logo-sandbox{
-    max-width:1200px; margin:64px auto 40px; padding:20px 18px;
-    border:1px solid rgba(255,255,255,.08); border-radius:14px;
-    background:rgba(10,16,28,.45); backdrop-filter:blur(8px);
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  }
-  #logo-sandbox h3{
-    margin:0 0 12px; color:#e9f1f7; font:700 14px/1 Inter, system-ui; letter-spacing:.2px;
-  }
-  .logo-grid{
-    display:grid; gap:18px;
-    grid-template-columns: repeat(3, minmax(0,1fr));
-  }
-  .opt{
-    display:flex; align-items:center; gap:16px; padding:14px 16px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.02);
-  }
-  .opt:hover{ border-color:rgba(255,255,255,.12); }
-  .ico{ width:64px; height:64px; flex:0 0 auto; }
-  .lock{ display:flex; align-items:center; gap:12px; }
-  .wordmark{
-    font:600 24px/1.05 "Newsreader", Georgia, serif; color:#eaf0f6; letter-spacing:.2px;
-  }
-  .tag{
-    display:block; margin-top:6px; font:600 10.5px/1.15 Inter, system-ui; color:#9fb3c4; letter-spacing:.25px;
-  }
-  .accent{ color:var(--gold); white-space:nowrap; }
-  .divider{ height:1px; background:rgba(255,255,255,.06); margin:16px 0; }
-  .tiny-note{ color:#9fb3c4; font-size:11px; margin-top:10px }
-  .pick{ cursor:pointer; }
-  @media (max-width:860px){ .logo-grid{ grid-template-columns: 1fr; } }
+  .logo-try-v2{max-width:1200px;margin:36px auto 72px;padding:14px 16px 20px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(11,17,23,.55);backdrop-filter:blur(6px);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  .logo-try-v2 h4{margin:0 0 14px;color:#cfe0ee;font:700 13px/1 Inter}
+  .logo-try-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+  .logo-card{border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(255,255,255,.03);padding:14px 16px;display:flex;align-items:center;gap:16px;transition:transform .12s ease,box-shadow .18s ease, border-color .18s}
+  .logo-card:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(0,0,0,.35);border-color:rgba(255,255,255,.16)}
+  .logo-mark{flex:0 0 auto;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.10)}
+  .logo-mark svg{display:block;width:34px;height:34px}
+  .lockup{min-width:0}
+  .lockup .brand{display:block;color:#eaf0f6;font:700 18px/1 "Newsreader", Georgia, serif;letter-spacing:.1px;margin:-2px 0 4px}
+  .lockup .tag{display:block;color:#91a6b8;font:600 11px/1.1 Inter;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .logo-note{margin:10px 2px 0;color:#91a6b8;font:600 11px/1.3 Inter}
+  @media (max-width:880px){ .logo-try-grid{grid-template-columns:1fr} }
 </style>
 
-<section id="logo-sandbox" aria-label="Galactly — logo options">
-  <h3>Galactly — three professional logo options (click any option to set it as the favicon temporarily)</h3>
+<div class="logo-try-v2" id="logoTryV2">
+  <h4>Galactly—three professional logo options (click any card to set a temporary favicon)</h4>
 
-  <div class="logo-grid">
+  <!-- Hidden sprites: icons + lockups as <symbol> so we can reuse -->
+  <svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+    <defs>
+      <!-- shared gradient -->
+      <linearGradient id="gradAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%"  stop-color="#E6C36B"/>
+        <stop offset="100%" stop-color="#63D3FF"/>
+      </linearGradient>
+    </defs>
 
-    <!-- ========== OPTION A: Trisphere G (three arcs + time notch) ========== -->
-    <div class="opt pick" data-favicon="A">
-      <svg class="ico" viewBox="0 0 128 128" aria-label="Option A icon">
-        <defs>
-          <linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
-          </linearGradient>
-        </defs>
-        <!-- Outer guiding circle (very faint) -->
-        <circle cx="64" cy="64" r="44" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="2"/>
-        <!-- Three frequency arcs (120° apart) -->
-        <g stroke="url(#lgA)" stroke-width="5" stroke-linecap="round" fill="none">
-          <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(0 64 64)"/>
-          <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(120 64 64)"/>
-          <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(240 64 64)"/>
-        </g>
-        <!-- 'G' time-notch (open ring + tick) -->
-        <path d="M88 64h-18" stroke="url(#lgA)" stroke-width="5" stroke-linecap="round"/>
-        <path d="M104 64a40 40 0 1 1-14-30" fill="none" stroke="rgba(255,255,255,.20)" stroke-width="3"
-              stroke-dasharray="180 60" stroke-linecap="round" transform="rotate(8 64 64)"/>
-        <!-- Now-dot -->
-        <circle cx="104" cy="64" r="4.2" fill="var(--cyan)" opacity=".85"/>
-      </svg>
+    <!-- A) ORBIT FREQUENCY -->
+    <symbol id="iconA" viewBox="0 0 48 48">
+      <g fill="none" stroke="url(#gradAccent)" stroke-linecap="round">
+        <circle cx="24" cy="24" r="16" stroke-width="2"
+                stroke-dasharray="88 44" transform="rotate(-25 24 24)"/>
+        <circle cx="24" cy="24" r="12" stroke-width="2"
+                stroke-dasharray="64 32" transform="rotate(8 24 24)"/>
+        <circle cx="24" cy="24" r="8"  stroke-width="2"
+                stroke-dasharray="40 22" transform="rotate(35 24 24)"/>
+      </g>
+    </symbol>
+    <symbol id="lockupA" viewBox="0 0 420 48">
+      <g fill="none">
+        <use href="#iconA" x="0" y="6" width="36" height="36"></use>
+        <text x="52" y="24" dominant-baseline="central"
+              font-family="Newsreader, Georgia, serif" font-size="24" font-weight="700" fill="#EAF0F6">Galactly</text>
+        <text x="52" y="38" font-family="Inter, system-ui" font-size="11" font-weight="600" fill="#91A6B8">
+          lead intelligence • time-sensitive
+        </text>
+      </g>
+    </symbol>
 
-      <div class="lock">
-        <svg viewBox="0 0 420 80" width="280" height="54" aria-label="Option A lockup">
-          <defs>
-            <linearGradient id="lgAw" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
-            </linearGradient>
-          </defs>
-          <!-- mini icon -->
-          <g transform="translate(0,8) scale(.8)">
-            <circle cx="64" cy="64" r="44" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="2"/>
-            <g stroke="url(#lgAw)" stroke-width="5" stroke-linecap="round" fill="none">
-              <path d="M96 55a32 32 0 0 0-18-18"/>
-              <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(120 64 64)"/>
-              <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(240 64 64)"/>
-            </g>
-            <path d="M88 64h-18" stroke="url(#lgAw)" stroke-width="5" stroke-linecap="round"/>
-          </g>
-          <!-- wordmark -->
-          <g font-family="Newsreader, Georgia, serif" font-weight="600" font-size="38" fill="#eaf0f6" transform="translate(112,48)">
-            <text>Galact</text><text class="accent" fill="var(--gold)">ly</text>
-          </g>
-          <g font-family="Inter, system-ui" font-size="14" font-weight="600" fill="#9fb3c4" transform="translate(112,66)">
-            <text>lead intelligence • time-sensitive</text>
-          </g>
-        </svg>
+    <!-- B) DELTA-WAVE (rounded tri-edge + three slanted bars) -->
+    <symbol id="iconB" viewBox="0 0 48 48">
+      <g fill="none" stroke="url(#gradAccent)" stroke-linecap="round" stroke-linejoin="round">
+        <!-- rounded triangle -->
+        <path d="M24 8 L39 35 L9 35 Z" stroke-width="2.4"/>
+        <!-- three frequency bars -->
+        <path d="M20 27 l6 -10" stroke-width="2.4"/>
+        <path d="M24 29 l6 -10" stroke-width="2.4"/>
+        <path d="M28 31 l6 -10" stroke-width="2.4"/>
+      </g>
+    </symbol>
+    <symbol id="lockupB" viewBox="0 0 460 48">
+      <g fill="none">
+        <use href="#iconB" x="0" y="6" width="36" height="36"></use>
+        <text x="52" y="24" dominant-baseline="central"
+              font-family="Newsreader, Georgia, serif" font-size="24" font-weight="700" fill="#EAF0F6">Galactly</text>
+        <text x="52" y="38" font-family="Inter, system-ui" font-size="11" font-weight="600" fill="#91A6B8">
+          time beats price • signal over noise
+        </text>
+      </g>
+    </symbol>
+
+    <!-- C) CHRONO-TRIDENT (dial + three ticks) -->
+    <symbol id="iconC" viewBox="0 0 48 48">
+      <g fill="none" stroke="url(#gradAccent)" stroke-linecap="round">
+        <circle cx="24" cy="24" r="15" stroke-width="2.2"/>
+        <!-- ticks at 0°, 120°, 240° -->
+        <path d="M24 10 v6"  stroke-width="2.6"/>
+        <path d="M35.99 30.5 l-5.2 -3" stroke-width="2.6"/>
+        <path d="M12.01 30.5 l5.2 -3"  stroke-width="2.6"/>
+      </g>
+    </symbol>
+    <symbol id="lockupC" viewBox="0 0 460 48">
+      <g fill="none">
+        <use href="#iconC" x="0" y="6" width="36" height="36"></use>
+        <text x="52" y="24" dominant-baseline="central"
+              font-family="Newsreader, Georgia, serif" font-size="24" font-weight="700" fill="#EAF0F6">Galactly</text>
+        <text x="52" y="38" font-family="Inter, system-ui" font-size="11" font-weight="600" fill="#91A6B8">
+          orchestrated lead intelligence
+        </text>
+      </g>
+    </symbol>
+  </svg>
+
+  <div class="logo-try-grid">
+    <!-- Card A -->
+    <button class="logo-card" data-fav="A" type="button" aria-label="Use Option A favicon">
+      <div class="logo-mark">
+        <svg viewBox="0 0 48 48"><use href="#iconA"/></svg>
       </div>
-    </div>
+      <div class="lockup"><svg viewBox="0 0 420 48" style="width:260px;height:28px"><use href="#lockupA"/></svg></div>
+    </button>
 
-    <!-- ========== OPTION B: Rounded Delta (three-sided, no pyramid vibe) ========== -->
-    <div class="opt pick" data-favicon="B">
-      <svg class="ico" viewBox="0 0 128 128" aria-label="Option B icon">
-        <defs>
-          <linearGradient id="lgB" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="var(--cyan)"/><stop offset="100%" stop-color="var(--gold)"/>
-          </linearGradient>
-        </defs>
-        <!-- Rounded delta outline (corner joints rounded, rotated so it’s clearly not a pyramid) -->
-        <g fill="none" stroke="url(#lgB)" stroke-width="6" stroke-linejoin="round" transform="rotate(18 64 64)">
-          <path d="M64 18 L111 98 L17 98 Z"/>
-        </g>
-        <!-- frequency trims on each side -->
-        <g fill="none" stroke="rgba(255,255,255,.25)" stroke-linecap="round" stroke-width="3" transform="rotate(18 64 64)">
-          <path d="M64 30 L99 92"/>
-          <path d="M56 42 L36 78"/>
-          <path d="M92 78 L36 78"/>
-        </g>
-        <!-- time dot at a vertex -->
-        <circle cx="111" cy="98" r="5" fill="var(--cyan)" opacity=".9"/>
-      </svg>
-
-      <div class="lock">
-        <svg viewBox="0 0 420 80" width="280" height="54" aria-label="Option B lockup">
-          <defs><linearGradient id="lgBw" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="var(--cyan)"/><stop offset="100%" stop-color="var(--gold)"/>
-          </linearGradient></defs>
-          <g transform="translate(10,6) scale(.85)" fill="none" stroke="url(#lgBw)" stroke-width="6" stroke-linejoin="round">
-            <path d="M64 18 L111 98 L17 98 Z" transform="rotate(18 64 64)"/>
-          </g>
-          <g font-family="Newsreader, Georgia, serif" font-weight="600" font-size="38" fill="#eaf0f6" transform="translate(112,48)">
-            <text>Galac</text><text class="accent" fill="var(--gold)">tly</text>
-          </g>
-          <g font-family="Inter, system-ui" font-size="14" font-weight="600" fill="#9fb3c4" transform="translate(112,66)">
-            <text>time beats price • signal over noise</text>
-          </g>
-        </svg>
+    <!-- Card B -->
+    <button class="logo-card" data-fav="B" type="button" aria-label="Use Option B favicon">
+      <div class="logo-mark">
+        <svg viewBox="0 0 48 48"><use href="#iconB"/></svg>
       </div>
-    </div>
+      <div class="lockup"><svg viewBox="0 0 460 48" style="width:280px;height:28px"><use href="#lockupB"/></svg></div>
+    </button>
 
-    <!-- ========== OPTION C: Triwave Orbit (three band waves + orbit tick) ========== -->
-    <div class="opt pick" data-favicon="C">
-      <svg class="ico" viewBox="0 0 128 128" aria-label="Option C icon">
-        <defs>
-          <linearGradient id="lgC" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
-          </linearGradient>
-        </defs>
-        <circle cx="64" cy="64" r="44" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
-        <!-- three stacked waves -->
-        <g fill="none" stroke="url(#lgC)" stroke-width="4" stroke-linecap="round">
-          <path d="M28 48c10-8 24-12 36-12s26 4 36 12"/>
-          <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(120 64 64)"/>
-          <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(240 64 64)"/>
-        </g>
-        <!-- orbit tick (time pointer) -->
-        <circle cx="98" cy="34" r="5" fill="var(--gold)"/>
-      </svg>
-
-      <div class="lock">
-        <svg viewBox="0 0 420 80" width="280" height="54" aria-label="Option C lockup">
-          <defs><linearGradient id="lgCw" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
-          </linearGradient></defs>
-          <g transform="translate(0,10) scale(.78)" fill="none" stroke="url(#lgCw)" stroke-width="4" stroke-linecap="round">
-            <circle cx="64" cy="64" r="44" stroke="rgba(255,255,255,.18)"/>
-            <path d="M28 48c10-8 24-12 36-12s26 4 36 12"/>
-            <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(120 64 64)"/>
-            <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(240 64 64)"/>
-          </g>
-          <g font-family="Newsreader, Georgia, serif" font-weight="600" font-size="38" fill="#eaf0f6" transform="translate(112,48)">
-            <text>Galact</text><text class="accent" fill="var(--gold)">ly</text>
-          </g>
-          <g font-family="Inter, system-ui" font-size="14" font-weight="600" fill="#9fb3c4" transform="translate(112,66)">
-            <text>orchestrated lead intelligence</text>
-          </g>
-        </svg>
+    <!-- Card C -->
+    <button class="logo-card" data-fav="C" type="button" aria-label="Use Option C favicon">
+      <div class="logo-mark">
+        <svg viewBox="0 0 48 48"><use href="#iconC"/></svg>
       </div>
-    </div>
-
+      <div class="lockup"><svg viewBox="0 0 460 48" style="width:280px;height:28px"><use href="#lockupC"/></svg></div>
+    </button>
   </div>
 
-  <div class="divider"></div>
-  <div class="tiny-note">
-    Click any option to set its icon as the page favicon temporarily. When you decide, I’ll give you a minified SVG + a permanent favicon snippet.
-  </div>
-</section>
+  <div class="logo-note">Click a card to set a temporary favicon. When you choose one, I’ll hand you a minified standalone SVG and the permanent <code>&lt;link rel="icon"&gt;</code> snippet.</div>
+</div>
 
 <script>
-  // Temporary favicon setter for previews
-  (function(){
-    const toDataURI = (svgEl) => {
-      const svg = svgEl.outerHTML
-        .replaceAll('\n','')
-        .replaceAll('#','%23')
-        .replaceAll('"','\'');
-      return 'data:image/svg+xml;utf8,' + svg;
-    };
-    const setFav = (svgEl) => {
-      const linkId = 'fav-temp';
-      let link = document.getElementById(linkId);
-      if (!link){
-        link = document.createElement('link');
-        link.id = linkId; link.rel = 'icon';
-        document.head.appendChild(link);
-      }
-      link.href = toDataURI(svgEl);
-    };
-    document.querySelectorAll('#logo-sandbox .opt.pick').forEach(opt=>{
-      opt.addEventListener('click', ()=>{
-        const icon = opt.querySelector('svg.ico').cloneNode(true);
-        setFav(icon);
-      });
-    });
-  })();
-</script>
-<!-- ===== end Galactly logo options ===== -->
+(function(){
+  const root = document.getElementById('logoTryV2');
+  if(!root) return;
 
+  // Create (or update) the page favicon with an SVG string
+  function setFaviconFromSymbol(symbolId){
+    // Build a standalone SVG string from the <symbol>
+    const sym = document.getElementById(symbolId);
+    if(!sym) return;
+    const vb = sym.getAttribute('viewBox') || '0 0 48 48';
+    const content = sym.innerHTML;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${content}</svg>`;
+    const dataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+
+    // apply as favicon (remove previous)
+    let link = document.querySelector('link[rel="icon"]');
+    if(!link){
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = dataUrl;
+
+    // also expose in console for copy
+    try{ console.log('FavIcon data URL for', symbolId, '\\n', dataUrl); }catch(e){}
+  }
+
+  root.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.logo-card');
+    if(!btn) return;
+    const which = btn.getAttribute('data-fav'); // A/B/C
+    const sym = which==='A' ? 'iconA' : which==='B' ? 'iconB' : 'iconC';
+    setFaviconFromSymbol(sym);
+  });
+})();
+</script>
+<!-- LOGO TRYOUT: END (v2) -->
 
 
 </body>
