@@ -3045,6 +3045,116 @@
 
 
 </style>
+
+
+<!-- === Galactly Logo Pack (inline symbols + favicon) === -->
+<!-- Favicon = Option B (Pulsar/Time) as data-URI so you don't need a file -->
+<link rel="icon" type="image/svg+xml"
+      href='data:image/svg+xml;utf8,
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="fg" cx="50%" cy="50%" r="60%">
+      <stop offset="0" stop-color="%23F2DCA0"/>
+      <stop offset="1" stop-color="%23F2DCA0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="26" fill="none" stroke="%239BD7FF" stroke-width="3"/>
+  <line x1="32" y1="6" x2="32" y2="14" stroke="%239BD7FF" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="8" fill="url(%23fg)"/>
+</svg>'>
+
+<style>
+  /* optional: consistent sizing when you <use> the symbols */
+  .logo-icon   { width:40px; height:40px; display:inline-block; }
+  .logo-lockup { height:32px; display:inline-block; }
+  .logo-light  { filter: drop-shadow(0 0 10px rgba(242,220,160,.25)); }
+</style>
+
+<!-- Sprite with 6 symbols: A/B/C (icon + lockup each) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F2DCA0"/>
+      <stop offset="1" stop-color="#E0B95C"/>
+    </linearGradient>
+    <linearGradient id="g-ice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9BD7FF"/>
+      <stop offset="1" stop-color="#63C3FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ========== OPTION A: Tri-frequency "G" (no triangle/eye; arcs only) ========== -->
+  <symbol id="logoA_icon" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="26" fill="none" stroke="url(#g-ice)" stroke-width="3"/>
+    <!-- three phase arcs hint 3/6/9 and form a G-notch -->
+    <path d="M18,32a14,14 0 0 1 14-14" fill="none" stroke="url(#g-gold)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M18,32a22,22 0 0 1 22-22" fill="none" stroke="url(#g-ice)"  stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
+    <path d="M18,32a18,18 0 0 1 18-18" fill="none" stroke="url(#g-ice)"  stroke-width="2.5" stroke-linecap="round" opacity=".65"/>
+    <!-- G notch -->
+    <path d="M32,46h14" stroke="url(#g-ice)" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="logoA_lockup" viewBox="0 0 340 48">
+    <!-- icon -->
+    <g transform="translate(0,4) scale(.8)">
+      <use href="#logoA_icon"/>
+    </g>
+    <!-- wordmark -->
+    <g transform="translate(64,0)">
+      <text x="0" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">Galact</text>
+      <text x="115" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="url(#g-gold)">ly</text>
+      <text x="0" y="46" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#9FB9CC" letter-spacing=".2">lead intelligence • time-sensitive</text>
+    </g>
+  </symbol>
+
+  <!-- ========== OPTION B: Pulsar/Time Ring (my pick for favicon + default) ========== -->
+  <symbol id="logoB_icon" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="26" fill="none" stroke="url(#g-ice)" stroke-width="3"/>
+    <line x1="32" y1="6" x2="32" y2="14" stroke="url(#g-ice)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="32" cy="32" r="8" fill="url(#g-gold)"/>
+    <g stroke="url(#g-gold)" stroke-width="2" stroke-linecap="round" opacity=".85">
+      <line x1="32" y1="20" x2="32" y2="16"/>
+      <line x1="44" y1="32" x2="48" y2="32"/>
+      <line x1="32" y1="48" x2="32" y2="44"/>
+      <line x1="16" y1="32" x2="20" y2="32"/>
+    </g>
+  </symbol>
+  <symbol id="logoB_lockup" viewBox="0 0 340 48">
+    <g transform="translate(0,4) scale(.8)">
+      <use href="#logoB_icon"/>
+    </g>
+    <g transform="translate(64,0)">
+      <text x="0" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">Galac</text>
+      <text x="92" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="url(#g-ice)">tly</text>
+      <text x="0" y="46" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#9FB9CC" letter-spacing=".2">time beats price • signal over noise</text>
+    </g>
+  </symbol>
+
+  <!-- ========== OPTION C: Three Orbits + Star (orchestration; Sphere 1-2-3) ========== -->
+  <symbol id="logoC_icon" viewBox="0 0 64 64">
+    <g fill="none">
+      <circle cx="32" cy="32" r="24" stroke="url(#g-ice)" stroke-width="2.5" opacity=".85"/>
+      <circle cx="32" cy="32" r="18" stroke="url(#g-ice)" stroke-width="2" opacity=".65"/>
+      <path d="M8,32a24,24 0 0 1 48,0" stroke="url(#g-ice)" stroke-width="2.5" opacity=".85"/>
+      <!-- notch makes a subtle 'G' and avoids closed triangle shapes -->
+      <path d="M34,44h12" stroke="url(#g-ice)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M32 26 l2 -5 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 z" fill="url(#g-gold)" opacity=".95"/>
+    </g>
+  </symbol>
+  <symbol id="logoC_lockup" viewBox="0 0 360 48">
+    <g transform="translate(0,4) scale(.8)">
+      <use href="#logoC_icon"/>
+    </g>
+    <g transform="translate(64,0)">
+      <text x="0" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">Go</text>
+      <text x="40" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="url(#g-gold)">Galact</text>
+      <text x="148" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">ly</text>
+      <text x="0" y="46" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#9FB9CC" letter-spacing=".2">orchestrated lead intelligence</text>
+    </g>
+  </symbol>
+</svg>
+<!-- === /Galactly Logo Pack === -->
+
+
 </head>
 <body>
   
