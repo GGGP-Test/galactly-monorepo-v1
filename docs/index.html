@@ -3045,208 +3045,9 @@
 
 
 </style>
-
-
-<!-- === Galactly Logo Pack (inline symbols + favicon) === -->
-<!-- Favicon = Option B (Pulsar/Time) as data-URI so you don't need a file -->
-<link rel="icon" type="image/svg+xml"
-      href='data:image/svg+xml;utf8,
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <radialGradient id="fg" cx="50%" cy="50%" r="60%">
-      <stop offset="0" stop-color="%23F2DCA0"/>
-      <stop offset="1" stop-color="%23F2DCA0" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <circle cx="32" cy="32" r="26" fill="none" stroke="%239BD7FF" stroke-width="3"/>
-  <line x1="32" y1="6" x2="32" y2="14" stroke="%239BD7FF" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="32" cy="32" r="8" fill="url(%23fg)"/>
-</svg>'>
-
-<style>
-  /* optional: consistent sizing when you <use> the symbols */
-  .logo-icon   { width:40px; height:40px; display:inline-block; }
-  .logo-lockup { height:32px; display:inline-block; }
-  .logo-light  { filter: drop-shadow(0 0 10px rgba(242,220,160,.25)); }
-</style>
-
-<!-- Sprite with 6 symbols: A/B/C (icon + lockup each) -->
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-  <defs>
-    <linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F2DCA0"/>
-      <stop offset="1" stop-color="#E0B95C"/>
-    </linearGradient>
-    <linearGradient id="g-ice" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#9BD7FF"/>
-      <stop offset="1" stop-color="#63C3FF"/>
-    </linearGradient>
-  </defs>
-
-  <!-- ========== OPTION A: Tri-frequency "G" (no triangle/eye; arcs only) ========== -->
-  <symbol id="logoA_icon" viewBox="0 0 64 64">
-    <circle cx="32" cy="32" r="26" fill="none" stroke="url(#g-ice)" stroke-width="3"/>
-    <!-- three phase arcs hint 3/6/9 and form a G-notch -->
-    <path d="M18,32a14,14 0 0 1 14-14" fill="none" stroke="url(#g-gold)" stroke-width="4" stroke-linecap="round"/>
-    <path d="M18,32a22,22 0 0 1 22-22" fill="none" stroke="url(#g-ice)"  stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
-    <path d="M18,32a18,18 0 0 1 18-18" fill="none" stroke="url(#g-ice)"  stroke-width="2.5" stroke-linecap="round" opacity=".65"/>
-    <!-- G notch -->
-    <path d="M32,46h14" stroke="url(#g-ice)" stroke-width="4" stroke-linecap="round"/>
-  </symbol>
-  <symbol id="logoA_lockup" viewBox="0 0 340 48">
-    <!-- icon -->
-    <g transform="translate(0,4) scale(.8)">
-      <use href="#logoA_icon"/>
-    </g>
-    <!-- wordmark -->
-    <g transform="translate(64,0)">
-      <text x="0" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">Galact</text>
-      <text x="115" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="url(#g-gold)">ly</text>
-      <text x="0" y="46" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#9FB9CC" letter-spacing=".2">lead intelligence • time-sensitive</text>
-    </g>
-  </symbol>
-
-  <!-- ========== OPTION B: Pulsar/Time Ring (my pick for favicon + default) ========== -->
-  <symbol id="logoB_icon" viewBox="0 0 64 64">
-    <circle cx="32" cy="32" r="26" fill="none" stroke="url(#g-ice)" stroke-width="3"/>
-    <line x1="32" y1="6" x2="32" y2="14" stroke="url(#g-ice)" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="32" cy="32" r="8" fill="url(#g-gold)"/>
-    <g stroke="url(#g-gold)" stroke-width="2" stroke-linecap="round" opacity=".85">
-      <line x1="32" y1="20" x2="32" y2="16"/>
-      <line x1="44" y1="32" x2="48" y2="32"/>
-      <line x1="32" y1="48" x2="32" y2="44"/>
-      <line x1="16" y1="32" x2="20" y2="32"/>
-    </g>
-  </symbol>
-  <symbol id="logoB_lockup" viewBox="0 0 340 48">
-    <g transform="translate(0,4) scale(.8)">
-      <use href="#logoB_icon"/>
-    </g>
-    <g transform="translate(64,0)">
-      <text x="0" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">Galac</text>
-      <text x="92" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="url(#g-ice)">tly</text>
-      <text x="0" y="46" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#9FB9CC" letter-spacing=".2">time beats price • signal over noise</text>
-    </g>
-  </symbol>
-
-  <!-- ========== OPTION C: Three Orbits + Star (orchestration; Sphere 1-2-3) ========== -->
-  <symbol id="logoC_icon" viewBox="0 0 64 64">
-    <g fill="none">
-      <circle cx="32" cy="32" r="24" stroke="url(#g-ice)" stroke-width="2.5" opacity=".85"/>
-      <circle cx="32" cy="32" r="18" stroke="url(#g-ice)" stroke-width="2" opacity=".65"/>
-      <path d="M8,32a24,24 0 0 1 48,0" stroke="url(#g-ice)" stroke-width="2.5" opacity=".85"/>
-      <!-- notch makes a subtle 'G' and avoids closed triangle shapes -->
-      <path d="M34,44h12" stroke="url(#g-ice)" stroke-width="4" stroke-linecap="round"/>
-      <path d="M32 26 l2 -5 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 z" fill="url(#g-gold)" opacity=".95"/>
-    </g>
-  </symbol>
-  <symbol id="logoC_lockup" viewBox="0 0 360 48">
-    <g transform="translate(0,4) scale(.8)">
-      <use href="#logoC_icon"/>
-    </g>
-    <g transform="translate(64,0)">
-      <text x="0" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">Go</text>
-      <text x="40" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="url(#g-gold)">Galact</text>
-      <text x="148" y="34" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="28" fill="white">ly</text>
-      <text x="0" y="46" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#9FB9CC" letter-spacing=".2">orchestrated lead intelligence</text>
-    </g>
-  </symbol>
-</svg>
-<!-- === /Galactly Logo Pack === -->
-
 </head>
+
 <body>
-  
-  
-<!-- BEGIN: Galactly logo sprite + styles -->
-<style>
-  /* You can change these two to retheme globally */
-  :root{
-    --logo-ink: #e9f1f7;      /* base */
-    --logo-accent: #e6c36b;   /* gold */
-  }
-  .brand-logo{ display:inline-block; vertical-align:middle; color:var(--logo-ink); }
-  .brand-logo .accent{ color: var(--logo-accent); }
-  .brand-logo svg{ display:block }
-  /* header sizing example – tweak to fit your header */
-  .site-brand svg{ height:28px }
-  @media (max-width:640px){ .site-brand svg{ height:22px } }
-</style>
-
-<svg aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute;left:-9999px;top:-9999px">
-  <defs>
-    <!-- Shared strokes/fills -->
-    <style type="text/css"><![CDATA[
-      .s{ fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round }
-      .f{ fill:currentColor }
-    ]]></style>
-  </defs>
-
-  <!-- ========== OPTION A: Tri-Orbit G (3 dots on an orbital ring) ========== -->
-  <symbol id="gg-logoA-icon" viewBox="0 0 64 64">
-    <!-- ring -->
-    <circle class="s" cx="32" cy="32" r="23"/>
-    <!-- 'G' bar -->
-    <path class="s" d="M32 32h13"/>
-    <!-- 3 frequency markers (not a triangle; evenly spaced on the ring) -->
-    <circle class="f accent" cx="48" cy="32" r="2.4"/>
-    <circle class="f accent" cx="22" cy="16" r="2.4"/>
-    <circle class="f accent" cx="22" cy="48" r="2.4"/>
-  </symbol>
-  <symbol id="gg-logoA-lockup" viewBox="0 0 260 40">
-    <g transform="translate(0,2)">
-      <use href="#gg-logoA-icon" x="0" y="0" width="36" height="36"></use>
-      <g transform="translate(46,7)">
-        <text class="f" x="0" y="16" font-family="Inter, system-ui" font-size="18" font-weight="800" letter-spacing=".2">Galact</text>
-        <text class="f accent" x="73" y="16" font-family="Inter, system-ui" font-size="18" font-weight="800" letter-spacing=".2">ly</text>
-        <text class="f" x="0" y="33" font-family="Inter, system-ui" font-size="9" opacity=".75">orchestrated lead intelligence</text>
-      </g>
-    </g>
-  </symbol>
-
-  <!-- ========== OPTION B: Chrono Pulse (time ring + pulse) ========== -->
-  <symbol id="gg-logoB-icon" viewBox="0 0 64 64">
-    <!-- outer time ring + four ticks -->
-    <circle class="s" cx="32" cy="32" r="23"/>
-    <path class="s" d="M32 9v4M55 32h-4M32 55v-4M13 32H9"/>
-    <!-- pulse (time-sensitive) -->
-    <polyline class="s accent" points="12,38 20,34 26,40 32,28 38,36 44,24 52,30"/>
-  </symbol>
-  <symbol id="gg-logoB-lockup" viewBox="0 0 300 40">
-    <g transform="translate(0,2)">
-      <use href="#gg-logoB-icon" x="0" y="0" width="36" height="36"></use>
-      <g transform="translate(46,7)">
-        <text class="f" x="0" y="16" font-family="Inter, system-ui" font-size="18" font-weight="800" letter-spacing=".2">Galact</text>
-        <text class="f accent" x="73" y="16" font-family="Inter, system-ui" font-size="18" font-weight="800" letter-spacing=".2">ly</text>
-        <text class="f" x="0" y="33" font-family="Inter, system-ui" font-size="9" opacity=".75">time beats price • signal over noise</text>
-      </g>
-    </g>
-  </symbol>
-
-  <!-- ========== OPTION C: Signal Weave (three sine waves → intelligence) ========== -->
-  <symbol id="gg-logoC-icon" viewBox="0 0 64 64">
-    <circle class="s" cx="32" cy="32" r="23"/>
-    <!-- three subtle waves; middle is accent -->
-    <path class="s" d="M10 26c6 8 12 8 18 0s12-8 18 0 12 8 18 0" opacity=".7"/>
-    <path class="s accent" d="M10 32c6 8 12 8 18 0s12-8 18 0 12 8 18 0"/>
-    <path class="s" d="M10 38c6 8 12 8 18 0s12-8 18 0 12 8 18 0" opacity=".7"/>
-  </symbol>
-  <symbol id="gg-logoC-lockup" viewBox="0 0 280 40">
-    <g transform="translate(0,2)">
-      <use href="#gg-logoC-icon" x="0" y="0" width="36" height="36"></use>
-      <g transform="translate(46,7)">
-        <text class="f" x="0" y="16" font-family="Inter, system-ui" font-size="18" font-weight="800" letter-spacing=".2">Galact</text>
-        <text class="f accent" x="73" y="16" font-family="Inter, system-ui" font-size="18" font-weight="800" letter-spacing=".2">ly</text>
-        <text class="f" x="0" y="33" font-family="Inter, system-ui" font-size="9" opacity=".75">lead intelligence • time-sensitive</text>
-      </g>
-    </g>
-  </symbol>
-</svg>
-<!-- END: Galactly logo sprite + styles -->
-  
-  
-  
-  
   
 <!-- === RTS SPRITE (one-time defs) === -->
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"
@@ -4966,40 +4767,226 @@ window.SCOREBOARD_KNOBS = {
   <div><svg height="28"><use href="#gg-logoB-icon"/></svg></div>
   <div><svg height="28"><use href="#gg-logoC-icon"/></svg></div>
 </div>
-        
-        
-        
-        
-        
-        
-<!-- === TEMP preview: compare the 3 logo options on-page (remove later) === -->
-<div id="logo-preview" style="
-  position:fixed; right:16px; bottom:16px; z-index:9999;
-  padding:12px; border:1px solid rgba(255,255,255,.14);
-  border-radius:12px; background:rgba(10,16,28,.85); backdrop-filter:blur(8px);
-  box-shadow:0 10px 28px rgba(0,0,0,.35); color:#cfe0ee; font:500 12px/1.3 Inter, system-ui;">
-  <div style="font-weight:700; margin-bottom:8px;">Galactly — logo options</div>
-  <div style="display:grid; grid-template-columns:auto auto; gap:8px 14px; align-items:center;">
-    <div>Option A icon</div>
-    <svg class="logo-icon logo-light"><use href="#logoA_icon"/></svg>
 
-    <div>Option A lockup</div>
-    <svg class="logo-lockup logo-light" width="220"><use href="#logoA_lockup"/></svg>
 
-    <div>Option B icon</div>
-    <svg class="logo-icon logo-light"><use href="#logoB_icon"/></svg>
 
-    <div>Option B lockup</div>
-    <svg class="logo-lockup logo-light" width="220"><use href="#logoB_lockup"/></svg>
 
-    <div>Option C icon</div>
-    <svg class="logo-icon logo-light"><use href="#logoC_icon"/></svg>
 
-    <div>Option C lockup</div>
-    <svg class="logo-lockup logo-light" width="240"><use href="#logoC_lockup"/></svg>
+<!-- ===== Galactly logo options (inline preview) ===== -->
+<style>
+  :root{
+    --gold:#F2DCA0; /* brand gold */
+    --cyan:#63D3FF; /* electric cyan */
+    --ink:#0B1117;  /* page bg */
+  }
+  #logo-sandbox{
+    max-width:1200px; margin:64px auto 40px; padding:20px 18px;
+    border:1px solid rgba(255,255,255,.08); border-radius:14px;
+    background:rgba(10,16,28,.45); backdrop-filter:blur(8px);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  #logo-sandbox h3{
+    margin:0 0 12px; color:#e9f1f7; font:700 14px/1 Inter, system-ui; letter-spacing:.2px;
+  }
+  .logo-grid{
+    display:grid; gap:18px;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+  .opt{
+    display:flex; align-items:center; gap:16px; padding:14px 16px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.02);
+  }
+  .opt:hover{ border-color:rgba(255,255,255,.12); }
+  .ico{ width:64px; height:64px; flex:0 0 auto; }
+  .lock{ display:flex; align-items:center; gap:12px; }
+  .wordmark{
+    font:600 24px/1.05 "Newsreader", Georgia, serif; color:#eaf0f6; letter-spacing:.2px;
+  }
+  .tag{
+    display:block; margin-top:6px; font:600 10.5px/1.15 Inter, system-ui; color:#9fb3c4; letter-spacing:.25px;
+  }
+  .accent{ color:var(--gold); white-space:nowrap; }
+  .divider{ height:1px; background:rgba(255,255,255,.06); margin:16px 0; }
+  .tiny-note{ color:#9fb3c4; font-size:11px; margin-top:10px }
+  .pick{ cursor:pointer; }
+  @media (max-width:860px){ .logo-grid{ grid-template-columns: 1fr; } }
+</style>
+
+<section id="logo-sandbox" aria-label="Galactly — logo options">
+  <h3>Galactly — three professional logo options (click any option to set it as the favicon temporarily)</h3>
+
+  <div class="logo-grid">
+
+    <!-- ========== OPTION A: Trisphere G (three arcs + time notch) ========== -->
+    <div class="opt pick" data-favicon="A">
+      <svg class="ico" viewBox="0 0 128 128" aria-label="Option A icon">
+        <defs>
+          <linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
+          </linearGradient>
+        </defs>
+        <!-- Outer guiding circle (very faint) -->
+        <circle cx="64" cy="64" r="44" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="2"/>
+        <!-- Three frequency arcs (120° apart) -->
+        <g stroke="url(#lgA)" stroke-width="5" stroke-linecap="round" fill="none">
+          <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(0 64 64)"/>
+          <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(120 64 64)"/>
+          <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(240 64 64)"/>
+        </g>
+        <!-- 'G' time-notch (open ring + tick) -->
+        <path d="M88 64h-18" stroke="url(#lgA)" stroke-width="5" stroke-linecap="round"/>
+        <path d="M104 64a40 40 0 1 1-14-30" fill="none" stroke="rgba(255,255,255,.20)" stroke-width="3"
+              stroke-dasharray="180 60" stroke-linecap="round" transform="rotate(8 64 64)"/>
+        <!-- Now-dot -->
+        <circle cx="104" cy="64" r="4.2" fill="var(--cyan)" opacity=".85"/>
+      </svg>
+
+      <div class="lock">
+        <svg viewBox="0 0 420 80" width="280" height="54" aria-label="Option A lockup">
+          <defs>
+            <linearGradient id="lgAw" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
+            </linearGradient>
+          </defs>
+          <!-- mini icon -->
+          <g transform="translate(0,8) scale(.8)">
+            <circle cx="64" cy="64" r="44" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="2"/>
+            <g stroke="url(#lgAw)" stroke-width="5" stroke-linecap="round" fill="none">
+              <path d="M96 55a32 32 0 0 0-18-18"/>
+              <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(120 64 64)"/>
+              <path d="M96 55a32 32 0 0 0-18-18" transform="rotate(240 64 64)"/>
+            </g>
+            <path d="M88 64h-18" stroke="url(#lgAw)" stroke-width="5" stroke-linecap="round"/>
+          </g>
+          <!-- wordmark -->
+          <g font-family="Newsreader, Georgia, serif" font-weight="600" font-size="38" fill="#eaf0f6" transform="translate(112,48)">
+            <text>Galact</text><text class="accent" fill="var(--gold)">ly</text>
+          </g>
+          <g font-family="Inter, system-ui" font-size="14" font-weight="600" fill="#9fb3c4" transform="translate(112,66)">
+            <text>lead intelligence • time-sensitive</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ========== OPTION B: Rounded Delta (three-sided, no pyramid vibe) ========== -->
+    <div class="opt pick" data-favicon="B">
+      <svg class="ico" viewBox="0 0 128 128" aria-label="Option B icon">
+        <defs>
+          <linearGradient id="lgB" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--cyan)"/><stop offset="100%" stop-color="var(--gold)"/>
+          </linearGradient>
+        </defs>
+        <!-- Rounded delta outline (corner joints rounded, rotated so it’s clearly not a pyramid) -->
+        <g fill="none" stroke="url(#lgB)" stroke-width="6" stroke-linejoin="round" transform="rotate(18 64 64)">
+          <path d="M64 18 L111 98 L17 98 Z"/>
+        </g>
+        <!-- frequency trims on each side -->
+        <g fill="none" stroke="rgba(255,255,255,.25)" stroke-linecap="round" stroke-width="3" transform="rotate(18 64 64)">
+          <path d="M64 30 L99 92"/>
+          <path d="M56 42 L36 78"/>
+          <path d="M92 78 L36 78"/>
+        </g>
+        <!-- time dot at a vertex -->
+        <circle cx="111" cy="98" r="5" fill="var(--cyan)" opacity=".9"/>
+      </svg>
+
+      <div class="lock">
+        <svg viewBox="0 0 420 80" width="280" height="54" aria-label="Option B lockup">
+          <defs><linearGradient id="lgBw" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--cyan)"/><stop offset="100%" stop-color="var(--gold)"/>
+          </linearGradient></defs>
+          <g transform="translate(10,6) scale(.85)" fill="none" stroke="url(#lgBw)" stroke-width="6" stroke-linejoin="round">
+            <path d="M64 18 L111 98 L17 98 Z" transform="rotate(18 64 64)"/>
+          </g>
+          <g font-family="Newsreader, Georgia, serif" font-weight="600" font-size="38" fill="#eaf0f6" transform="translate(112,48)">
+            <text>Galac</text><text class="accent" fill="var(--gold)">tly</text>
+          </g>
+          <g font-family="Inter, system-ui" font-size="14" font-weight="600" fill="#9fb3c4" transform="translate(112,66)">
+            <text>time beats price • signal over noise</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ========== OPTION C: Triwave Orbit (three band waves + orbit tick) ========== -->
+    <div class="opt pick" data-favicon="C">
+      <svg class="ico" viewBox="0 0 128 128" aria-label="Option C icon">
+        <defs>
+          <linearGradient id="lgC" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
+          </linearGradient>
+        </defs>
+        <circle cx="64" cy="64" r="44" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
+        <!-- three stacked waves -->
+        <g fill="none" stroke="url(#lgC)" stroke-width="4" stroke-linecap="round">
+          <path d="M28 48c10-8 24-12 36-12s26 4 36 12"/>
+          <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(120 64 64)"/>
+          <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(240 64 64)"/>
+        </g>
+        <!-- orbit tick (time pointer) -->
+        <circle cx="98" cy="34" r="5" fill="var(--gold)"/>
+      </svg>
+
+      <div class="lock">
+        <svg viewBox="0 0 420 80" width="280" height="54" aria-label="Option C lockup">
+          <defs><linearGradient id="lgCw" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--cyan)"/>
+          </linearGradient></defs>
+          <g transform="translate(0,10) scale(.78)" fill="none" stroke="url(#lgCw)" stroke-width="4" stroke-linecap="round">
+            <circle cx="64" cy="64" r="44" stroke="rgba(255,255,255,.18)"/>
+            <path d="M28 48c10-8 24-12 36-12s26 4 36 12"/>
+            <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(120 64 64)"/>
+            <path d="M28 64c10-8 24-12 36-12s26 4 36 12" transform="rotate(240 64 64)"/>
+          </g>
+          <g font-family="Newsreader, Georgia, serif" font-weight="600" font-size="38" fill="#eaf0f6" transform="translate(112,48)">
+            <text>Galact</text><text class="accent" fill="var(--gold)">ly</text>
+          </g>
+          <g font-family="Inter, system-ui" font-size="14" font-weight="600" fill="#9fb3c4" transform="translate(112,66)">
+            <text>orchestrated lead intelligence</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
   </div>
-</div>
-<!-- === /TEMP preview === -->
+
+  <div class="divider"></div>
+  <div class="tiny-note">
+    Click any option to set its icon as the page favicon temporarily. When you decide, I’ll give you a minified SVG + a permanent favicon snippet.
+  </div>
+</section>
+
+<script>
+  // Temporary favicon setter for previews
+  (function(){
+    const toDataURI = (svgEl) => {
+      const svg = svgEl.outerHTML
+        .replaceAll('\n','')
+        .replaceAll('#','%23')
+        .replaceAll('"','\'');
+      return 'data:image/svg+xml;utf8,' + svg;
+    };
+    const setFav = (svgEl) => {
+      const linkId = 'fav-temp';
+      let link = document.getElementById(linkId);
+      if (!link){
+        link = document.createElement('link');
+        link.id = linkId; link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = toDataURI(svgEl);
+    };
+    document.querySelectorAll('#logo-sandbox .opt.pick').forEach(opt=>{
+      opt.addEventListener('click', ()=>{
+        const icon = opt.querySelector('svg.ico').cloneNode(true);
+        setFav(icon);
+      });
+    });
+  })();
+</script>
+<!-- ===== end Galactly logo options ===== -->
+
 
 
 </body>
