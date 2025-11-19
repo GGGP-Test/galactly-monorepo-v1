@@ -4772,20 +4772,26 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- GALACTLY — LOGO OPTIONS (Triangle + Diamond, large preview) -->
+<!-- GALACTLY — LOGO OPTIONS v2 (Triangle thick, Base chevrons, Circle carve) -->
 <script>
 (function(){
+  /* --- subtle palette --- */
+  const P = { plat:'#E6EEF7', gold:'#F2DCA0' };
+
   const css = `
   .logoTry{font:600 14px/1.2 Inter,system-ui;color:#cfe0ee;max-width:1160px;margin:36px auto;padding:0 16px}
-  .logoTry .wrap{background:rgba(8,12,20,.78);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:18px 18px 16px}
-  .logoTry h4{margin:0 0 12px;font:700 15px/1 Inter,system-ui;color:#e6eef7}
+  .logoTry .wrap{background:rgba(8,12,20,.78);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:18px}
+  .logoTry h4{margin:0 0 10px;font:700 15px/1 Inter,system-ui;color:#e6eef7}
+  .controls{display:flex;gap:10px;align-items:center;margin:8px 0 14px}
+  .controls label{font:12px/1.2 Inter,system-ui;color:#9db0c3}
+  .controls input[type="range"]{width:240px}
   .logoRow{display:flex;gap:16px;align-items:stretch}
   .card{flex:1;display:flex;align-items:center;gap:16px;padding:16px;border-radius:12px;background:rgba(255,255,255,.03);
         border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:transform .08s ease,background .15s ease}
   .card:hover{background:rgba(255,255,255,.05);transform:translateY(-1px)}
-  .iconWrap{width:64px;height:64px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.02);
+  .iconWrap{width:80px;height:80px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.02);
             border:1px solid rgba(255,255,255,.05)}
-  .card svg{width:56px;height:56px;display:block}
+  .card svg{width:72px;height:72px;display:block}
   .meta b{display:block;color:#eaf0f6;font-weight:800}
   .meta small{display:block;font:600 11px/1.25 Inter,system-ui;color:#9db0c3;margin-top:4px}
   .note{margin-top:12px;font:12px/1.45 Inter,system-ui;color:#98acc0}
@@ -4794,135 +4800,131 @@ window.SCOREBOARD_KNOBS = {
   .btnCopy{margin-top:10px;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
            background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));color:#eaf0f6;font-weight:700;cursor:pointer}
   `;
+
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
 
-  // Palette (kept sophisticated, no candy colors)
-  // platinum + soft gold
-  const P = { plat:'#E6EEF7', gold:'#F2DCA0' };
-
-  /* ————— Option T1: TRI-FADE (apex-only inner strokes) ————— */
-  const triApex = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+  /* ===== SVG builders ===== */
+  function grad(id){ return `
     <defs>
-      <linearGradient id="gt" x1="0" y1="0" x2="0" y2="1">
+      <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="${P.gold}"/><stop offset="0.6" stop-color="${P.plat}"/>
       </linearGradient>
-    </defs>
-    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <!-- outer -->
-      <path d="M32 8 L54 52 L10 52 Z" stroke="url(#gt)" stroke-width="2.6"/>
-      <!-- three tiny apex chevrons (fade + shrink) -->
-      <path d="M32 16 L40 30" stroke="url(#gt)" stroke-opacity=".68" stroke-width="1.8"/>
-      <path d="M32 16 L24 30" stroke="url(#gt)" stroke-opacity=".68" stroke-width="1.8"/>
-      <path d="M32 19 L38 30.5" stroke="url(#gt)" stroke-opacity=".48" stroke-width="1.5"/>
-      <path d="M32 19 L26 30.5" stroke="url(#gt)" stroke-opacity=".48" stroke-width="1.5"/>
-      <path d="M32 22 L36 31.5" stroke="url(#gt)" stroke-opacity=".30" stroke-width="1.2"/>
-      <path d="M32 22 L28 31.5" stroke="url(#gt)" stroke-opacity=".30" stroke-width="1.2"/>
-    </g>
-  </svg>`.trim();
+    </defs>`; }
 
-  /* ————— Option T2: TRI-BASE (ratio test + base-only strokes) ————— */
-  const triBase = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
-    <defs>
-      <linearGradient id="gb" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${P.gold}"/><stop offset="0.6" stop-color="${P.plat}"/>
-      </linearGradient>
-    </defs>
-    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <!-- slightly taller, tighter triangle -->
-      <path d="M32 6 L56 54 L8 54 Z" stroke="url(#gb)" stroke-width="2.6"/>
-      <!-- three base strokes only (fade toward center) -->
-      <path d="M16 50 L48 50" stroke="url(#gb)" stroke-opacity=".70" stroke-width="2.0"/>
-      <path d="M20 47 L44 47" stroke="url(#gb)" stroke-opacity=".50" stroke-width="1.6"/>
-      <path d="M24 44 L40 44" stroke="url(#gb)" stroke-opacity=".30" stroke-width="1.3"/>
-    </g>
-  </svg>`.trim();
+  // T1 — thicker outer triangle + apex chevrons
+  function svgTriApex(thick=4.0){
+    return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+      ${grad('gt')}
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 8 L54 52 L10 52 Z" stroke="url(#gt)" stroke-width="${thick}"/>
+        <!-- apex chevrons (fade & shrink) -->
+        <path d="M32 16 L40 30" stroke="url(#gt)" stroke-opacity=".68" stroke-width="${thick*0.6}"/>
+        <path d="M32 16 L24 30" stroke="url(#gt)" stroke-opacity=".68" stroke-width="${thick*0.6}"/>
+        <path d="M32 19 L38 30.5" stroke="url(#gt)" stroke-opacity=".48" stroke-width="${thick*0.48}"/>
+        <path d="M32 19 L26 30.5" stroke="url(#gt)" stroke-opacity=".48" stroke-width="${thick*0.48}"/>
+        <path d="M32 22 L36 31.5" stroke="url(#gt)" stroke-opacity=".30" stroke-width="${thick*0.36}"/>
+        <path d="M32 22 L28 31.5" stroke="url(#gt)" stroke-opacity=".30" stroke-width="${thick*0.36}"/>
+      </g>
+    </svg>`.trim();
+  }
 
-  /* ————— Option D1: DIAMOND-EMPHASIS (edges stronger, mid-sides softer) ————— */
-  const diamondEdges = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
-    <defs>
-      <radialGradient id="gdSoft" cx="50%" cy="50%" r="70%">
-        <!-- stronger near edges (outer ring overlays) -->
-        <stop offset="45%" stop-color="${P.plat}" stop-opacity=".25"/>
-        <stop offset="100%" stop-color="${P.plat}" stop-opacity=".75"/>
-      </radialGradient>
-      <linearGradient id="gdStroke" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${P.gold}"/><stop offset="0.6" stop-color="${P.plat}"/>
-      </linearGradient>
-    </defs>
-    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <!-- base diamonds (low opacity so mids feel lighter) -->
-      <path d="M32 10 L54 32 L32 54 L10 32 Z" stroke="url(#gdStroke)" stroke-opacity=".55" stroke-width="2.6"/>
-      <path d="M32 16 L48 32 L32 48 L16 32 Z" stroke="url(#gdStroke)" stroke-opacity=".40" stroke-width="2.0"/>
-      <path d="M32 22 L42 32 L32 42 L22 32 Z" stroke="url(#gdStroke)" stroke-opacity=".28" stroke-width="1.6"/>
+  // T2 — same thickness, chevrons from the base corners upward
+  function svgTriBase(thick=4.0){
+    return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+      ${grad('gb')}
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 6 L56 54 L8 54 Z" stroke="url(#gb)" stroke-width="${thick}"/>
+        <!-- base chevrons: three levels from left/right base into the body -->
+        <path d="M12 54 L32 42" stroke="url(#gb)" stroke-opacity=".70" stroke-width="${thick*0.6}"/>
+        <path d="M52 54 L32 42" stroke="url(#gb)" stroke-opacity=".70" stroke-width="${thick*0.6}"/>
 
-      <!-- edge emphasis: short overlays near each corner on outer & middle diamonds -->
-      <!-- outer near TOP corner -->
-      <path d="M32 10 L37.3 15.3" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
-      <path d="M32 10 L26.7 15.3" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
-      <!-- outer near RIGHT corner -->
-      <path d="M54 32 L48.7 37.3" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
-      <path d="M54 32 L48.7 26.7" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
-      <!-- outer near BOTTOM corner -->
-      <path d="M32 54 L26.7 48.7" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
-      <path d="M32 54 L37.3 48.7" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
-      <!-- outer near LEFT corner -->
-      <path d="M10 32 L15.3 26.7" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
-      <path d="M10 32 L15.3 37.3" stroke="url(#gdStroke)" stroke-width="2.6" stroke-opacity=".85"/>
+        <path d="M16 54 L32 44.5" stroke="url(#gb)" stroke-opacity=".50" stroke-width="${thick*0.48}"/>
+        <path d="M48 54 L32 44.5" stroke="url(#gb)" stroke-opacity=".50" stroke-width="${thick*0.48}"/>
 
-      <!-- subtle global edge lift -->
-      <path d="M32 10 L54 32 L32 54 L10 32 Z" stroke="url(#gdSoft)" stroke-width="2.0"/>
-    </g>
-  </svg>`.trim();
+        <path d="M20 54 L32 47" stroke="url(#gb)" stroke-opacity=".32" stroke-width="${thick*0.36}"/>
+        <path d="M44 54 L32 47" stroke="url(#gb)" stroke-opacity=".32" stroke-width="${thick*0.36}"/>
+      </g>
+    </svg>`.trim();
+  }
 
-  const options = [
-    { key:'T1', name:'Tri-Fade (apex lines)', svg:triApex,  tag:'time-sensitive lead intelligence' },
-    { key:'T2', name:'Tri-Base (ratio test)', svg:triBase,  tag:'signal > noise · base priority' },
-    { key:'D1', name:'Diamond-Emphasis',      svg:diamondEdges, tag:'edges carry the weight' }
-  ];
+  // D2 — circle with negative "carved" diamonds (mask)
+  function svgCircleCarve(){
+    return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+      <defs>
+        <radialGradient id="cgFill" cx="50%" cy="50%" r="60%">
+          <stop offset="0%"  stop-color="${P.plat}" stop-opacity=".18"/>
+          <stop offset="100%" stop-color="${P.gold}" stop-opacity=".65"/>
+        </radialGradient>
+        <mask id="cut">
+          <rect width="100%" height="100%" fill="white"/>
+          <!-- carve three nested diamonds (thick to thin) -->
+          <path d="M32 10 L54 32 L32 54 L10 32 Z" stroke="black" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+          <path d="M32 16 L48 32 L32 48 L16 32 Z" stroke="black" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+          <path d="M32 22 L42 32 L32 42 L22 32 Z" stroke="black" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+        </mask>
+      </defs>
+      <!-- outer ring -->
+      <circle cx="32" cy="32" r="26" fill="none" stroke="${P.plat}" stroke-width="2.2" opacity=".85"/>
+      <!-- filled circle with carved lines -->
+      <circle cx="32" cy="32" r="23" fill="url(#cgFill)" mask="url(#cut)"/>
+    </svg>`.trim();
+  }
 
-  function toDataUri(svg){ return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg); }
-
-  // panel
+  /* ===== UI ===== */
   const host = document.createElement('div'); host.className='logoTry';
   host.innerHTML = `
     <div class="wrap">
-      <h4>Galactly — three refined logo options (click any card to set a temporary favicon)</h4>
-      <div class="logoRow"></div>
-      <div class="note">Click a card to set a temporary favicon. The exact permanent snippet appears below — copy it into <code>&lt;head&gt;</code> when you decide.</div>
+      <h4>Galactly — choose a mark (click any card to set a temporary favicon)</h4>
+      <div class="controls">
+        <label>Triangle stroke thickness:&nbsp;<span id="thv">4.0</span>px</label>
+        <input id="thick" type="range" min="3.0" max="6.0" step="0.2" value="4.0" />
+      </div>
+      <div class="logoRow" id="row"></div>
+      <div class="note">Click a card to set a temporary favicon. The exact permanent snippet appears below.</div>
       <div class="out" id="favOut">Permanent favicon snippet will appear here after you click a card.</div>
       <button class="btnCopy" id="copyFav">Copy snippet</button>
     </div>`;
   document.body.appendChild(host);
 
-  const row = host.querySelector('.logoRow');
-  options.forEach(opt=>{
-    const card = document.createElement('div'); card.className='card';
-    card.innerHTML = `
-      <div class="iconWrap">${opt.svg}</div>
-      <div class="meta"><b>Galactly</b><small>${opt.tag}</small></div>`;
-    card.addEventListener('click', ()=>{
-      // temp favicon
+  const row = host.querySelector('#row');
+  const thickInput = host.querySelector('#thick');
+  const thv = host.querySelector('#thv');
+
+  function toDataUri(svg){ return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg); }
+  function card(name, tag, svg){
+    const el = document.createElement('div'); el.className='card';
+    el.innerHTML = `<div class="iconWrap">${svg}</div><div class="meta"><b>Galactly</b><small>${tag}</small></div>`;
+    el.addEventListener('click', ()=>{
       const old = document.querySelector('link[rel="icon"]'); if (old) old.remove();
-      const link = document.createElement('link');
-      link.rel = 'icon'; link.type = 'image/svg+xml'; link.href = toDataUri(opt.svg);
+      const link = document.createElement('link'); link.rel='icon'; link.type='image/svg+xml'; link.href = toDataUri(svg);
       document.head.appendChild(link);
-      // permanent snippet
-      const snippet = `<link rel="icon" type="image/svg+xml" href="${toDataUri(opt.svg)}">`;
+      const snippet = `<link rel="icon" type="image/svg+xml" href="${toDataUri(svg)}">`;
       host.querySelector('#favOut').textContent = snippet;
     });
-    row.appendChild(card);
-  });
+    return el;
+  }
+
+  function render(){
+    const t = parseFloat(thickInput.value || '4.0'); thv.textContent = t.toFixed(1);
+    row.innerHTML = '';
+    row.appendChild(card('T1','tri-fade apex', svgTriApex(t)));         // your thick triangle (apex chevrons)
+    row.appendChild(card('T2','tri-base chevrons', svgTriBase(t)));     // base-chevron version
+    row.appendChild(card('D2','circle (negative carve)', svgCircleCarve())); // circle carve
+  }
+
+  thickInput.addEventListener('input', render);
+  render();
 
   host.querySelector('#copyFav').addEventListener('click',()=>{
-    const t = host.querySelector('#favOut').textContent || '';
-    if (!t) return; navigator.clipboard.writeText(t).catch(()=>{});
+    const s = host.querySelector('#favOut').textContent || '';
+    if (!s) return; navigator.clipboard.writeText(s).catch(()=>{});
   });
 })();
 </script>
-<!-- /GALACTLY — LOGO OPTIONS -->
+<!-- /GALACTLY — LOGO OPTIONS v2 -->
 
 
 </body>
