@@ -4757,95 +4757,90 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header mark v3 (base-only triad + balanced sizing) ===== -->
-<style id="gg-header-v3">
-  /* kill any old badge */
+<!-- ===== Galactly — header logo (triad, base-emphasis, white shimmer) ===== -->
+<style>
+  /* Tighter lockup + size balance (overrides earlier rules) */
   .brand-badge{ display:none !important; }
-
-  /* lockup */
   .site-header .brand{
-    display:flex; align-items:center; gap:12px; text-decoration:none;
+    display:flex; align-items:center; gap:8px !important; text-decoration:none;
   }
-  /* prefer our inline icon over any old .brand-mark svg sizing */
-  .site-header .brand > .brand-icon svg{ display:block; width:38px; height:38px; }
-  @media (min-width: 901px){ .site-header .brand > .brand-icon svg{ width:42px; height:42px; } }
-
-  /* word mark: a hair larger so the pair reads balanced */
-  .site-header .brand > .brand-word{
-    font: 800 24px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  .site-header .brand svg{ display:block }
+  .brand-word{
+    font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
-    background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
+    background: linear-gradient(180deg,#FFF,#E6EEF7);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
   }
-  @media (max-width: 900px){ .site-header .brand > .brand-word{ font-size:21px; } }
-
-  /* safety: if any global css applied dash effects, kill for our paths */
-  .site-header .brand path{ stroke-dasharray:none !important; stroke-dashoffset:0 !important; }
+  /* Icon size (desktop bumps a touch) */
+  .brand-icon svg{ width:40px; height:40px; }
+  @media (min-width: 901px){ .brand-icon svg{ width:44px; height:44px; } }
 </style>
 
 <script>
 (function(){
-  if (window.__GG_BRAND_V3_APPLIED) return;
-  window.__GG_BRAND_V3_APPLIED = true;
-
   const brand = document.querySelector('.site-header .brand');
-  if(!brand) return;
+  if (!brand) return;
 
-  /* inline SVG (no <use>) so masks/filters are rock solid everywhere */
+  // SVG with: outer triangle + 3 inner triangles that mostly show at the base.
+  // Mask hides top portions; slight blur adds “field” glow; inner steps dim as they recede.
   const icon = `
   <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
     <defs>
-      <!-- shimmer for lines -->
+      <!-- white shimmer stroke -->
       <linearGradient id="ggWhiteShimmer3" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
+        <stop offset="0" stop-color="#FFFFFF"/>
+        <stop offset="1" stop-color="#E6EEF7"/>
       </linearGradient>
 
-      <!-- soft base glow (not a circle, sits just above the base) -->
-      <radialGradient id="ggBaseGlow" cx="0.5" cy="0.88" r="0.36">
-        <stop offset="0"   stop-color="#FFFFFF" stop-opacity=".18"/>
-        <stop offset=".55" stop-color="#E6EEF7" stop-opacity=".10"/>
-        <stop offset="1"   stop-color="#E6EEF7" stop-opacity="0"/>
-      </radialGradient>
-
-      <!-- reveal only the bottom band (so frequency lives at the base) -->
-      <linearGradient id="ggBaseBand" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0.00" stop-color="#000"/>
-        <stop offset="0.72" stop-color="#000"/>
-        <stop offset="0.86" stop-color="#fff"/>
-        <stop offset="1.00" stop-color="#fff"/>
+      <!-- mask = show bottom, fade out toward top (so bases read, apex soft) -->
+      <linearGradient id="ggBaseMaskGrad" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0"   stop-color="#fff"/>
+        <stop offset=".55" stop-color="#fff"/>
+        <stop offset=".70" stop-color="#888"/>
+        <stop offset=".86" stop-color="#222"/>
+        <stop offset="1"   stop-color="#000"/>
       </linearGradient>
-      <mask id="ggMaskBase"><rect width="48" height="48" fill="url(#ggBaseBand)"/></mask>
+      <mask id="ggBaseMask">
+        <rect x="0" y="0" width="48" height="48" fill="url(#ggBaseMaskGrad)"/>
+      </mask>
 
-      <!-- soft glow for the frequency lines -->
-      <filter id="ggSoft" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="0.65"/>
+      <!-- soft energy field -->
+      <filter id="ggSoftGlow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="0.6" result="b"/>
+        <feMerge>
+          <feMergeNode in="b"/><feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <!-- tiny blur for inner lines only -->
+      <filter id="ggInnerBlur" x="-10%" y="-10%" width="120%" height="120%">
+        <feGaussianBlur stdDeviation="0.45"/>
       </filter>
     </defs>
 
-    <!-- base ambient glow (subtle) -->
-    <rect x="0" y="0" width="48" height="48" fill="url(#ggBaseGlow)"/>
+    <g fill="none" stroke="url(#ggWhiteShimmer3)" stroke-linecap="round" stroke-linejoin="round" filter="url(#ggSoftGlow)">
+      <!-- Outer frame (slightly wide base to avoid “pyramid/eye”) -->
+      <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="3"/>
 
-    <!-- outer frame: slightly wider base so it doesn't read like a pyramid/cult -->
-    <g fill="none" stroke="url(#ggWhiteShimmer3)" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M24 7.6 L39.8 38 H8.2 Z" stroke-width="3.2"/>
-    </g>
-
-    <!-- base-only frequency (3 steps, slight lateral/vertical offsets, dimming) -->
-    <g fill="none" stroke="url(#ggWhiteShimmer3)" stroke-linecap="round" stroke-linejoin="round" mask="url(#ggMaskBase)">
-      <!-- blurred ghost for soft light -->
-      <g filter="url(#ggSoft)">
-        <path d="M24 13.6 L35.4 34 H12.6 Z" stroke-width="2.2" opacity=".35" transform="translate(0,-0.6)"/>
-        <path d="M24 19.0 L31.6 29.6 H16.4 Z" stroke-width="1.8" opacity=".28" transform="translate(0.4,-0.2)"/>
-        <path d="M24 23.2 L28.8 26.8 H19.2 Z" stroke-width="1.5" opacity=".22" transform="translate(-0.35,0.3)"/>
+      <!-- Inner triads: base-emphasis via mask + subtle upward offsets (not perfectly concentric) -->
+      <g mask="url(#ggBaseMask)" filter="url(#ggInnerBlur)">
+        <!-- Step 1 (closest) -->
+        <g transform="translate(0,-0.6) scale(.83, .83) translate(4.08, 8.6)">
+          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="2.2" opacity=".86"/>
+        </g>
+        <!-- Step 2 -->
+        <g transform="translate(0,-1.2) scale(.68, .68) translate(7.68, 15.3)">
+          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="1.7" opacity=".66"/>
+        </g>
+        <!-- Step 3 (deepest) -->
+        <g transform="translate(0,-1.9) scale(.54, .54) translate(11.04, 21.2)">
+          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="1.3" opacity=".48"/>
+        </g>
       </g>
-      <!-- crisp cores -->
-      <path d="M24 13.6 L35.4 34 H12.6 Z" stroke-width="2.0" opacity=".82" transform="translate(0,-0.6)"/>
-      <path d="M24 19.0 L31.6 29.6 H16.4 Z" stroke-width="1.6" opacity=".66" transform="translate(0.4,-0.2)"/>
-      <path d="M24 23.2 L28.8 26.8 H19.2 Z" stroke-width="1.2" opacity=".54" transform="translate(-0.35,0.3)"/>
     </g>
   </svg>`;
 
+  // Apply: [icon] [word]
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
@@ -4853,7 +4848,7 @@ window.SCOREBOARD_KNOBS = {
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /Galactly — header mark v3 ===== -->
+<!-- ===== /Galactly — header logo ===== -->
 
 
 
