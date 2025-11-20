@@ -4785,67 +4785,35 @@ window.SCOREBOARD_KNOBS = {
   if(!brand) return;
 
   const icon = `
-  <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
-    <defs>
-      <!-- Shimmer for strokes -->
-      <linearGradient id="ggWhiteShimmer5" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#FFFFFF"/>
-        <stop offset="1" stop-color="#E6EEF7"/>
-      </linearGradient>
-
-      <!-- Gentle blur for the inner steps (frequency feel) -->
-      <filter id="ggInnerBlur" x="-10%" y="-10%" width="120%" height="120%">
-        <feGaussianBlur stdDeviation="0.4"/>
-      </filter>
-
-      <!-- Top→bottom glow that lives INSIDE the main triangle only -->
-      <linearGradient id="ggTopDownGlow" x1="0" y1="0" x2="0" y2="1">
-        <!-- brightest at top, subtle overall -->
-        <stop offset="0"   stop-color="#E6EEF7" stop-opacity=".22"/>
-        <stop offset=".55" stop-color="#E6EEF7" stop-opacity=".10"/>
-        <stop offset="1"   stop-color="#E6EEF7" stop-opacity=".04"/>
-      </linearGradient>
-
-      <!-- Clip for the main triangle interior -->
-      <clipPath id="triClip">
-        <path d="M24 8 L40 38 H8 Z"/>
-      </clipPath>
-    </defs>
-
-    <!-- Thin OUTER rim (slightly larger than main) -->
-    <g transform="translate(24 24) scale(1.10) translate(-24 -24)">
-      <path d="M24 8 L40 38 H8 Z"
-            fill="none" stroke="url(#ggWhiteShimmer5)"
-            stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>
-
-    <!-- MAIN thick triangle -->
-    <path d="M24 8 L40 38 H8 Z"
-          fill="none" stroke="url(#ggWhiteShimmer5)"
-          stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"/>
-
-    <!-- Top→bottom glow INSIDE main triangle (no badge/halo outside) -->
-    <g clip-path="url(#triClip)">
-      <rect x="0" y="0" width="48" height="48" fill="url(#ggTopDownGlow)"/>
-    </g>
-
-    <!-- Three inner steps: smaller, dimmer, lightly blurred -->
-    <g filter="url(#ggInnerBlur)" fill="none" stroke="url(#ggWhiteShimmer5)"
-       stroke-linecap="round" stroke-linejoin="round">
-      <!-- step 1 -->
-      <g transform="translate(24 24) scale(.86) translate(-24 -24)">
-        <path d="M24 8 L40 38 H8 Z" stroke-width="2.0" opacity=".80"/>
+    <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
+      <defs>
+        <linearGradient id="ggWhiteShimmer2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/>
+          <stop offset="1" stop-color="#E6EEF7"/>
+        </linearGradient>
+        <!-- faint top→bottom inner glow so it reads as “lit”, not an eye -->
+        <linearGradient id="triGlow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#E6EEF7" stop-opacity=".16"/>
+          <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+  
+      <!-- soft interior glow field (behind the lines) -->
+      <path d="M24 12.2 L35.0 32.4 H13.0 Z" fill="url(#triGlow)"/>
+  
+      <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round">
+        <!-- OUTER THIN TRIANGLE — moved farther out so it’s clearly distinct -->
+        <path d="M24 5.4 L41.8 39.2 H6.2 Z" stroke-width="1.2" opacity=".70"/>
+  
+        <!-- CORE HEAVY FRAME -->
+        <path d="M24 8.6 L38.8 38 H9.2 Z" stroke-width="3.0"/>
+  
+        <!-- THREE INNER STEPS (base-biased, slightly rising toward apex) -->
+        <path d="M24 13.4 L34.2 33.0 H13.8 Z" stroke-width="2.0" opacity=".85"/>
+        <path d="M24 18.2 L30.4 29.2 H17.6 Z" stroke-width="1.6" opacity=".72"/>
+        <path d="M24 22.6 L27.6 26.6 H20.4 Z" stroke-width="1.2" opacity=".58"/>
       </g>
-      <!-- step 2 -->
-      <g transform="translate(24 23.2) scale(.70) translate(-24 -24)">
-        <path d="M24 8 L40 38 H8 Z" stroke-width="1.6" opacity=".56"/>
-      </g>
-      <!-- step 3 -->
-      <g transform="translate(24 22.4) scale(.56) translate(-24 -24)">
-        <path d="M24 8 L40 38 H8 Z" stroke-width="1.2" opacity=".40"/>
-      </g>
-    </g>
-  </svg>`;
+    </svg>`;
 
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
