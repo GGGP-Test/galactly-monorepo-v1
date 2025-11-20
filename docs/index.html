@@ -4756,104 +4756,62 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header lockup + favicon + real footer (append-only) ===== -->
-<!-- Clean white mark (no background circle) + 3-step frequency lines -->
-<svg aria-hidden="true" width="0" height="0" style="position:absolute;left:-9999px;overflow:hidden">
-  <defs>
-    <linearGradient id="ggWhiteShimmer" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E6EEF7"/>
-    </linearGradient>
-  </defs>
-  <symbol id="gg-triad-clean" viewBox="-24 -24 48 48">
-    <g fill="none" stroke="url(#ggWhiteShimmer)" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M0 -12 L12 10 L-12 10 Z" stroke-width="2.8"/>
-      <path d="M0 -7.4 L7.4 5.7 L-7.4 5.7 Z" stroke-width="1.9" opacity=".86"/>
-      <path d="M0 -3.8 L3.8 3.2 L-3.8 3.2 Z" stroke-width="1.2" opacity=".72"/>
-    </g>
-  </symbol>
-</svg>
 
+<!-- ===== Galactly — header mark + word (clean white) ===== -->
 <style>
-  /* Header lockup: bigger, shimmering white, no badge */
+  /* Header lockup: big, inside the flow, no badge, no weird dashes */
   .brand-badge{ display:none !important; }
-  .site-header .brand{ display:flex; align-items:center; gap:10px; }
-  .brand-icon svg{ width:36px; height:36px; display:block; }
-  @media (min-width:901px){ .brand-icon svg{ width:40px; height:40px; } }
+  .site-header .brand{
+    display:flex; align-items:center; gap:12px; text-decoration:none;
+  }
+  .site-header .brand svg{ display:block }
+  .site-header .brand path{
+    stroke-dasharray:none !important; stroke-dashoffset:0 !important;
+  }
   .brand-word{
-    font: 800 21px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
     background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
   }
+  /* Icon size (desktop bumps up a bit) */
+  .brand-icon svg{ width:44px; height:44px; }
+  @media (min-width: 901px){ .brand-icon svg{ width:48px; height:48px; } }
 </style>
 
 <script>
-  // 1) Replace header brand with: [icon] [word]
   (function(){
     const brand = document.querySelector('.site-header .brand');
-    if(brand){
-      brand.innerHTML = `
-        <span class="brand-icon" aria-hidden="true">
-          <svg viewBox="-24 -24 48 48" role="img" focusable="false" aria-label="Galactly mark">
-            <use href="#gg-triad-clean"></use>
-          </svg>
-        </span>
-        <span class="brand-word">Galactly</span>
-      `;
-      brand.setAttribute('aria-label','Galactly');
-    }
-  })();
+    if(!brand) return;
 
-  // 2) Crisp favicon (rounded square plate so it reads on any tab; no circle/eye)
-  (function(){
-    const favSVG =
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48">
-         <defs>
-           <linearGradient id="w" x1="0" y1="0" x2="0" y2="1">
-             <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
-           </linearGradient>
-         </defs>
-         <rect x="-22" y="-22" width="44" height="44" rx="10" fill="#0b121a"/>
-         <g fill="none" stroke="url(#w)" stroke-linecap="round" stroke-linejoin="round">
-           <path d="M0 -11 L11 9 L-11 9 Z" stroke-width="2.4"/>
-           <path d="M0 -7 L7 5.6 L-7 5.6 Z" stroke-width="1.7" opacity=".86"/>
-           <path d="M0 -3.6 L3.6 3.0 L-3.6 3.0 Z" stroke-width="1.2" opacity=".72"/>
-         </g>
-       </svg>`;
-    let link = document.querySelector('link[rel="icon"]');
-    if(!link){ link = document.createElement('link'); link.rel='icon'; link.type='image/svg+xml'; document.head.appendChild(link); }
-    link.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(favSVG);
-  })();
+    // Inline SVG (no <use>) to avoid symbol/clip issues; 3-step dimness; white shimmer
+    const icon = `
+      <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
+        <defs>
+          <linearGradient id="ggWhiteShimmer2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFFFFF"/>
+            <stop offset="1" stop-color="#E6EEF7"/>
+          </linearGradient>
+        </defs>
+        <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round">
+          <!-- not a perfect pyramid: slightly wider base so it reads modern, not “cult” -->
+          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="3.2" />
+          <path d="M24 13.2 L35.2 33.6 H12.8 Z" stroke-width="2.2" opacity=".82"/>
+          <path d="M24 19   L31.2 29.2 H16.8 Z" stroke-width="1.6" opacity=".64"/>
+        </g>
+      </svg>`;
 
-  // 3) Real footer: fetch fragments/docs/footer.html into a slot at page end
-  (function(){
-    let slot = document.getElementById('footer-slot');
-    if(!slot){
-      slot = document.createElement('div');
-      slot.id = 'footer-slot';
-      document.body.appendChild(slot);
-    }
-    fetch('./fragments/docs/footer.html')
-      .then(r => r.ok ? r.text() : Promise.reject(r.status))
-      .then(html => { slot.innerHTML = html; })
-      .catch(() => { slot.innerHTML = ''; }); // silent if not found
+    brand.innerHTML = `
+      <span class="brand-icon" aria-hidden="true">${icon}</span>
+      <span class="brand-word">Galactly</span>
+    `;
+    brand.setAttribute('aria-label','Galactly');
   })();
 </script>
-<!-- ===== /Galactly append-only block ===== -->
+<!-- ===== /Galactly — header mark + word ===== -->
 
 
-
-<style>
-  /* retire the old yellow badge visuals */
-  .brand-badge{ display:none !important; }
-  /* size the new mark and give it breathing room next to the wordmark */
-  .site-header .brand .brand-mark svg{ width:40px; height:40px; display:block; }
-  @media (min-width: 1000px){
-    .site-header .brand .brand-mark svg{ width:44px; height:44px; }
-  }
-</style>
 
 
 <div id="site-footer"></div>
