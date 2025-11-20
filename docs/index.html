@@ -4757,90 +4757,95 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header logo (triad, base-emphasis, white shimmer) ===== -->
+<!-- ===== Galactly — header logo (outer thin rim + main thick + 3 inner steps, glow) ===== -->
 <style>
-  /* Tighter lockup + size balance (overrides earlier rules) */
+  /* Kill any old badge */
   .brand-badge{ display:none !important; }
+
+  /* Tighter lockup; icon slightly smaller vs text; closer spacing */
   .site-header .brand{
-    display:flex; align-items:center; gap:8px !important; text-decoration:none;
+    display:flex; align-items:center; gap:6px !important; text-decoration:none;
   }
   .site-header .brand svg{ display:block }
+
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
-    background: linear-gradient(180deg,#FFF,#E6EEF7);
+    background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
   }
-  /* Icon size (desktop bumps a touch) */
-  .brand-icon svg{ width:40px; height:40px; }
-  @media (min-width: 901px){ .brand-icon svg{ width:44px; height:44px; } }
+
+  /* Icon size (balanced to the word) */
+  .brand-icon svg{ width:42px; height:42px; }              /* mobile/tablet */
+  @media (min-width: 901px){ .brand-icon svg{ width:46px; height:46px; } } /* desktop */
 </style>
 
 <script>
 (function(){
   const brand = document.querySelector('.site-header .brand');
-  if (!brand) return;
+  if(!brand) return;
 
-  // SVG with: outer triangle + 3 inner triangles that mostly show at the base.
-  // Mask hides top portions; slight blur adds “field” glow; inner steps dim as they recede.
+  // Four triangles:
+  // 1) Thin OUTER rim (slightly larger than main), 2) MAIN thick triangle,
+  // 3–5) Three inner steps (smaller, dimmer, lightly blurred).
+  // Plus a very faint inner glow field. No circles; nothing “eye-like”.
   const icon = `
   <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
     <defs>
       <!-- white shimmer stroke -->
-      <linearGradient id="ggWhiteShimmer3" x1="0" y1="0" x2="0" y2="1">
+      <linearGradient id="ggWhiteShimmer4" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#FFFFFF"/>
         <stop offset="1" stop-color="#E6EEF7"/>
       </linearGradient>
 
-      <!-- mask = show bottom, fade out toward top (so bases read, apex soft) -->
-      <linearGradient id="ggBaseMaskGrad" x1="0" y1="1" x2="0" y2="0">
-        <stop offset="0"   stop-color="#fff"/>
-        <stop offset=".55" stop-color="#fff"/>
-        <stop offset=".70" stop-color="#888"/>
-        <stop offset=".86" stop-color="#222"/>
-        <stop offset="1"   stop-color="#000"/>
-      </linearGradient>
-      <mask id="ggBaseMask">
-        <rect x="0" y="0" width="48" height="48" fill="url(#ggBaseMaskGrad)"/>
-      </mask>
-
-      <!-- soft energy field -->
-      <filter id="ggSoftGlow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="0.6" result="b"/>
-        <feMerge>
-          <feMergeNode in="b"/><feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
-      <!-- tiny blur for inner lines only -->
+      <!-- tiny blur for inner steps to feel airy/frequency-like -->
       <filter id="ggInnerBlur" x="-10%" y="-10%" width="120%" height="120%">
         <feGaussianBlur stdDeviation="0.45"/>
       </filter>
+
+      <!-- faint inner field (very subtle) -->
+      <radialGradient id="ggCoreGlow" cx=".5" cy=".5" r=".6">
+        <stop offset="0" stop-color="#E6EEF7" stop-opacity=".12"/>
+        <stop offset=".72" stop-color="#E6EEF7" stop-opacity=".04"/>
+        <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
+      </radialGradient>
     </defs>
 
-    <g fill="none" stroke="url(#ggWhiteShimmer3)" stroke-linecap="round" stroke-linejoin="round" filter="url(#ggSoftGlow)">
-      <!-- Outer frame (slightly wide base to avoid “pyramid/eye”) -->
-      <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="3"/>
+    <!-- faint field, kept subtle to avoid “badge”/eye -->
+    <circle cx="24" cy="24" r="10" fill="url(#ggCoreGlow)"/>
 
-      <!-- Inner triads: base-emphasis via mask + subtle upward offsets (not perfectly concentric) -->
-      <g mask="url(#ggBaseMask)" filter="url(#ggInnerBlur)">
-        <!-- Step 1 (closest) -->
-        <g transform="translate(0,-0.6) scale(.83, .83) translate(4.08, 8.6)">
-          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="2.2" opacity=".86"/>
-        </g>
-        <!-- Step 2 -->
-        <g transform="translate(0,-1.2) scale(.68, .68) translate(7.68, 15.3)">
-          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="1.7" opacity=".66"/>
-        </g>
-        <!-- Step 3 (deepest) -->
-        <g transform="translate(0,-1.9) scale(.54, .54) translate(11.04, 21.2)">
-          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="1.3" opacity=".48"/>
-        </g>
+    <!-- Thin outer rim (slightly larger than main) -->
+    <g transform="translate(24 24) scale(1.08) translate(-24 -24)">
+      <path d="M24 8 L40 38 H8 Z"
+            fill="none" stroke="url(#ggWhiteShimmer4)"
+            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Main triangle (the “thick” readable frame) -->
+    <path d="M24 8 L40 38 H8 Z"
+          fill="none" stroke="url(#ggWhiteShimmer4)"
+          stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Three inner steps: smaller, dimmer, slightly offset upward; gentle blur -->
+    <g filter="url(#ggInnerBlur)" fill="none" stroke="url(#ggWhiteShimmer4)"
+       stroke-linecap="round" stroke-linejoin="round">
+      <!-- step 1 -->
+      <g transform="translate(24 24) scale(.84) translate(-24 -24)">
+        <path d="M24 8 L40 38 H8 Z" stroke-width="2.0" opacity=".82"/>
+      </g>
+      <!-- step 2 -->
+      <g transform="translate(24 22.8) scale(.68) translate(-24 -24)">
+        <path d="M24 8 L40 38 H8 Z" stroke-width="1.6" opacity=".60"/>
+      </g>
+      <!-- step 3 -->
+      <g transform="translate(24 21.6) scale(.54) translate(-24 -24)">
+        <path d="M24 8 L40 38 H8 Z" stroke-width="1.2" opacity=".44"/>
       </g>
     </g>
   </svg>`;
 
-  // Apply: [icon] [word]
+  // Apply the lockup
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
