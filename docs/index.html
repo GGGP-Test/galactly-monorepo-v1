@@ -4757,7 +4757,7 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header mark + word (clean white) ===== -->
+<!-- ===== Galactly — header mark + word (clean white, refined) ===== -->
 <style>
   /* Header lockup: big, inside the flow, no badge, no weird dashes */
   .brand-badge{ display:none !important; }
@@ -4785,7 +4785,7 @@ window.SCOREBOARD_KNOBS = {
     const brand = document.querySelector('.site-header .brand');
     if(!brand) return;
 
-    // Inline SVG (no <use>) to avoid symbol/clip issues; 3-step dimness; white shimmer
+    // Concentric (same path), dimmer + softly blurred inner steps. No circle.
     const icon = `
       <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
         <defs>
@@ -4793,12 +4793,51 @@ window.SCOREBOARD_KNOBS = {
             <stop offset="0" stop-color="#FFFFFF"/>
             <stop offset="1" stop-color="#E6EEF7"/>
           </linearGradient>
+
+          <!-- One base triangle path; all steps scale from this so alignment is perfect -->
+          <path id="ggTriBase" d="M24 8 L40 40 H8 Z"/>
+
+          <!-- Subtle softeners for inner steps -->
+          <filter id="ggSoft1" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="0.35"/>
+          </filter>
+          <filter id="ggSoft2" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="0.65"/>
+          </filter>
+
+          <!-- Whisper edge glow that hugs inner edges (no badge, avoids “eye”) -->
+          <filter id="ggEdge" x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="1.1" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
         </defs>
+
+        <!-- OUTER (crisp) -->
         <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round">
-          <!-- not a perfect pyramid: slightly wider base so it reads modern, not “cult” -->
-          <path d="M24 7.6 L39.6 38 H8.4 Z" stroke-width="3.2" />
-          <path d="M24 13.2 L35.2 33.6 H12.8 Z" stroke-width="2.2" opacity=".82"/>
-          <path d="M24 19   L31.2 29.2 H16.8 Z" stroke-width="1.6" opacity=".64"/>
+          <use href="#ggTriBase" stroke-width="3.2"/>
+        </g>
+
+        <!-- MID (dimmer + softened) -->
+        <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round"
+           opacity="0.66" filter="url(#ggSoft1)">
+          <use href="#ggTriBase"
+               transform="translate(24 24) scale(.78) translate(-24 -24)"
+               stroke-width="2.0"/>
+        </g>
+
+        <!-- INNER (smallest, more dim, slightly blurrier) -->
+        <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round"
+           opacity="0.45" filter="url(#ggSoft2)">
+          <use href="#ggTriBase"
+               transform="translate(24 24) scale(.62) translate(-24 -24)"
+               stroke-width="1.4"/>
+        </g>
+
+        <!-- Edge-only glow to sell “energy/frequency” without a halo -->
+        <g fill="none" stroke="#FFFFFF" opacity="0.10" filter="url(#ggEdge)">
+          <use href="#ggTriBase"
+               transform="translate(24 24) scale(.70) translate(-24 -24)"
+               stroke-width="2.0"/>
         </g>
       </svg>`;
 
@@ -4809,8 +4848,7 @@ window.SCOREBOARD_KNOBS = {
     brand.setAttribute('aria-label','Galactly');
   })();
 </script>
-<!-- ===== /Galactly — header mark + word ===== -->
-
+<!-- ===== /Galactly — header mark + word (clean white, refined) ===== -->
 
 
 
