@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
-<link rel="icon" href="data:,">
+<link id="favicon" rel="icon" type="image/svg+xml" href="data:,">
   
 <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
@@ -3211,7 +3211,13 @@
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="index.html" class="brand" aria-label="Home" data-track-id="brand"><span class="brand-badge" aria-hidden="true">G</span></a>
+      <a href="index.html" class="brand" aria-label="Home" data-track-id="brand">
+        <span class="brand-badge" aria-hidden="true">
+          <svg viewBox="0 0 96 96" width="24" height="24" aria-hidden="true">
+            <use href="#gg-triad-nest"/>
+          </svg>
+        </span>
+      </a>
       <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="#get-started" data-track-id="nav-how">How it works</a>
         <a class="nav-link" href="sectors.html" data-track-id="nav-sectors">Sectors</a>
@@ -4744,254 +4750,90 @@ window.SCOREBOARD_KNOBS = {
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
 
+
+
+
+
+
 <div id="site-footer"></div>
 <script defer src="/galactly-monorepo-v1/fragments/layout.js?v=4"
         data-root="/galactly-monorepo-v1/fragments/"></script>
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-<div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin:24px 0;color:#e9f1f7">
-  <div><svg height="34"><use href="#gg-logoA-lockup"/></svg></div>
-  <div><svg height="34"><use href="#gg-logoB-lockup"/></svg></div>
-  <div><svg height="34"><use href="#gg-logoC-lockup"/></svg></div>
-  <div style="width:1px;height:28px;background:rgba(255,255,255,.15)"></div>
-  <div><svg height="28"><use href="#gg-logoA-icon"/></svg></div>
-  <div><svg height="28"><use href="#gg-logoB-icon"/></svg></div>
-  <div><svg height="28"><use href="#gg-logoC-icon"/></svg></div>
-</div>
+        <svg width="160" height="28" role="img" aria-label="Galactly">
+  <use href="#gg-lockup"/>
+</svg>
 
 
+<!-- === Galactly: Triad Nest brand sprite (permanent) === -->
+<svg aria-hidden="true" width="0" height="0" style="position:absolute;left:-9999px;overflow:hidden">
+  <defs>
+    <!-- palette: platinum + faint gold -->
+    <linearGradient id="gg-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F2DCA0"/><stop offset=".75" stop-color="#E6EEF7"/>
+    </linearGradient>
+  </defs>
 
+  <!-- MARK: Triad Nest (beveled apex + 3-step dimness) -->
+  <symbol id="gg-triad-nest" viewBox="0 0 96 96">
+    <!-- subtle center glow (frequency field) -->
+    <radialGradient id="gg-energy" cx=".5" cy=".5" r=".7">
+      <stop offset="0" stop-color="#F2DCA0" stop-opacity=".36"/>
+      <stop offset=".56" stop-color="#E6EEF7" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
+    </radialGradient>
+    <circle cx="48" cy="48" r="44" fill="url(#gg-energy)"/>
 
+    <!-- outer triangle (not a perfect pyramid; reads modern, not “cult”) -->
+    <path d="M48,16 L84,80 L12,80 Z" fill="none"
+          stroke="#E6EEF7" stroke-width="6" stroke-linejoin="round"/>
+    <!-- micro bevel at apex -->
+    <path d="M48,16 L52,24 L44,24 Z" fill="#0b1117"/>
 
-<!-- === Galactly Logo Lab v2 (three fresh options with 3-step dimness) === -->
-<div id="galactly-logo-lab-v2" style="margin:36px 0 44px;">
-  <style>
-    #galactly-logo-lab-v2{
-      --size:184px; --glass:rgba(12,18,28,.82);
-      --platinum:#E6EEF7; --gold:#F2DCA0;
+    <!-- nested 3-step dimness -->
+    <g fill="none" stroke="url(#gg-rim)" stroke-linejoin="round">
+      <g opacity="1.0" transform="translate(48 48) scale(.82) translate(-48 -48)">
+        <path d="M48,16 L84,80 L12,80 Z" stroke-width="3.4"/>
+      </g>
+      <g opacity=".62" transform="translate(48 48) scale(.66) translate(-48 -48)">
+        <path d="M48,16 L84,80 L12,80 Z" stroke-width="2.8"/>
+      </g>
+      <g opacity=".34" transform="translate(48 48) scale(.52) translate(-48 -48)">
+        <path d="M48,16 L84,80 L12,80 Z" stroke-width="2.4"/>
+      </g>
+    </g>
+  </symbol>
+
+  <!-- (optional) 1-line wordmark lockup -->
+  <symbol id="gg-lockup" viewBox="0 0 320 28">
+    <g fill="#E6EEF7">
+      <text x="0"  y="20" font-family="Newsreader, Georgia, serif" font-size="20" font-weight="600">Galact</text>
+      <text x="86" y="20" font-family="Newsreader, Georgia, serif" font-size="20" font-weight="600">ly</text>
+    </g>
+    <use href="#gg-triad-nest" x="64" y="2" width="24" height="24"/>
+  </symbol>
+</svg>
+
+<!-- (hidden) source used to generate the favicon -->
+<svg id="gg-favicon-src" viewBox="0 0 96 96" width="0" height="0" style="position:absolute;left:-9999px">
+  <use href="#gg-triad-nest"/>
+</svg>
+
+<script>
+  // Minimal, permanent favicon setter (no big data URL pasted by hand)
+  (function(){
+    var fav = document.querySelector('#favicon');
+    if(!fav){
+      fav = document.createElement('link');
+      fav.id = 'favicon'; fav.rel = 'icon'; fav.type = 'image/svg+xml';
+      document.head.appendChild(fav);
     }
-    #galactly-logo-lab-v2 .wrap{
-      max-width:1160px;margin:0 auto;padding:14px 16px;background:var(--glass);
-      border:1px solid rgba(255,255,255,.12);border-radius:14px
-    }
-    #galactly-logo-lab-v2 .head{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px;
-      color:#cfe0ee;font:600 13px/1.2 Inter,system-ui}
-    #galactly-logo-lab-v2 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    #galactly-logo-lab-v2 .card{
-      display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;
-      padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.02);
-      transition:transform .08s ease,filter .15s ease,border-color .15s ease
-    }
-    #galactly-logo-lab-v2 .card:hover{filter:brightness(1.05)}
-    #galactly-logo-lab-v2 .card.is-sel{border-color:rgba(242,220,160,.6);box-shadow:0 0 0 1px rgba(242,220,160,.18) inset}
-    #galactly-logo-lab-v2 .art{display:grid;place-items:center;width:var(--size);height:var(--size)}
-    #galactly-logo-lab-v2 .art svg{display:block;width:100%;height:100%}
-    #galactly-logo-lab-v2 .meta{color:#cfe0ee;font:600 12px/1.2 Inter,system-ui}
-    @media (max-width:780px){
-      #galactly-logo-lab-v2{--size:164px}
-      #galactly-logo-lab-v2 .grid{grid-template-columns:1fr}
-    }
-  </style>
-
-  <div class="wrap">
-    <div class="head">
-      <div>Galactly — logo options v2 (click any to set favicon)</div>
-      <div style="opacity:.7">Palette: platinum #E6EEF7 · faint gold #F2DCA0</div>
-    </div>
-
-    <div class="grid">
-
-      <!-- D — TriStep Apex: widened base + clipped apex + step dimness at top -->
-      <div class="card" data-key="D" title="Set favicon: Option D — TriStep Apex">
-        <div class="art">
-          <svg id="galD" viewBox="0 0 96 96" aria-label="Galactly TriStep Apex">
-            <defs>
-              <linearGradient id="rimD" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#F2DCA0"/><stop offset=".7" stop-color="#E6EEF7"/>
-              </linearGradient>
-              <radialGradient id="energyD" cx=".5" cy=".18" r=".7">
-                <stop offset="0" stop-color="#F2DCA0" stop-opacity=".42"/>
-                <stop offset=".55" stop-color="#E6EEF7" stop-opacity=".22"/>
-                <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
-              </radialGradient>
-              <!-- Clip to a non-perfect triangle: wide base + tiny clipped apex -->
-              <clipPath id="clipD">
-                <path d="M48,14 L82,80 Q48,76 14,80 Z"/>
-              </clipPath>
-            </defs>
-
-            <!-- Breathing energy (apex-biased) -->
-            <rect width="96" height="96" fill="url(#energyD)" clip-path="url(#clipD)">
-              <animate attributeName="opacity" values=".85;.95;.85" dur="3.4s" repeatCount="indefinite"/>
-            </rect>
-
-            <!-- Outer ring: two-pass (platinum + gold whisper) -->
-            <path d="M48,14 L82,80 Q48,76 14,80 Z"
-              fill="none" stroke="#E6EEF7" stroke-width="6" stroke-linejoin="round"/>
-            <path d="M48,14 L82,80 Q48,76 14,80 Z"
-              fill="none" stroke="url(#rimD)" stroke-width="2" opacity=".95"/>
-
-            <!-- 3-step chevrons at apex (discrete dimness) -->
-            <g stroke="url(#rimD)" stroke-linecap="round">
-              <g stroke-width="3.2" opacity="1.0">
-                <path d="M48,20 L56,36"/><path d="M48,20 L40,36"/>
-              </g>
-              <g stroke-width="2.6" opacity=".62">
-                <path d="M48,24 L54,36"/><path d="M48,24 L42,36"/>
-              </g>
-              <g stroke-width="2.2" opacity=".34">
-                <path d="M48,28 L52,36"/><path d="M48,28 L44,36"/>
-              </g>
-            </g>
-          </svg>
-        </div>
-        <div class="meta">D — TriStep Apex</div>
-      </div>
-
-      <!-- E — BaseStep Low: lower apex ratio + three-step base convergence -->
-      <div class="card" data-key="E" title="Set favicon: Option E — BaseStep Low">
-        <div class="art">
-          <svg id="galE" viewBox="0 0 96 96" aria-label="Galactly BaseStep Low">
-            <defs>
-              <linearGradient id="rimE" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#F2DCA0"/><stop offset=".85" stop-color="#E6EEF7"/>
-              </linearGradient>
-              <radialGradient id="energyE" cx=".5" cy=".78" r=".7">
-                <stop offset="0" stop-color="#F2DCA0" stop-opacity=".40"/>
-                <stop offset=".55" stop-color="#E6EEF7" stop-opacity=".22"/>
-                <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
-              </radialGradient>
-              <!-- “low” triangle (shorter height), subtly bowed base -->
-              <clipPath id="clipE">
-                <path d="M48,18 L86,76 Q48,82 10,76 Z"/>
-              </clipPath>
-            </defs>
-
-            <rect width="96" height="96" fill="url(#energyE)" clip-path="url(#clipE)">
-              <animate attributeName="opacity" values=".85;.95;.85" dur="3.6s" repeatCount="indefinite"/>
-            </rect>
-
-            <path d="M48,18 L86,76 Q48,82 10,76 Z"
-              fill="none" stroke="#E6EEF7" stroke-width="6" stroke-linejoin="round"/>
-            <path d="M48,18 L86,76 Q48,82 10,76 Z"
-              fill="none" stroke="url(#rimE)" stroke-width="2" opacity=".95"/>
-
-            <!-- 3-step base chevrons meeting at a higher point (discrete) -->
-            <g stroke="url(#rimE)" stroke-linecap="round">
-              <g stroke-width="3.2" opacity="1.0">
-                <path d="M18,76 L48,66"/><path d="M78,76 L48,66"/>
-              </g>
-              <g stroke-width="2.6" opacity=".62">
-                <path d="M26,76 L48,69"/><path d="M70,76 L48,69"/>
-              </g>
-              <g stroke-width="2.2" opacity=".34">
-                <path d="M34,76 L48,72"/><path d="M62,76 L48,72"/>
-              </g>
-            </g>
-          </svg>
-        </div>
-        <div class="meta">E — BaseStep Low</div>
-      </div>
-
-      <!-- F — Triad Nest: three nested triangles (step dimness), beveled apex to avoid “pyramid” -->
-      <div class="card" data-key="F" title="Set favicon: Option F — Triad Nest">
-        <div class="art">
-          <svg id="galF" viewBox="0 0 96 96" aria-label="Galactly Triad Nest">
-            <defs>
-              <linearGradient id="rimF" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#F2DCA0"/><stop offset=".75" stop-color="#E6EEF7"/>
-              </linearGradient>
-              <radialGradient id="energyF" cx=".5" cy=".5" r=".7">
-                <stop offset="0" stop-color="#F2DCA0" stop-opacity=".36"/>
-                <stop offset=".55" stop-color="#E6EEF7" stop-opacity=".2"/>
-                <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-
-            <!-- subtle center glow -->
-            <circle cx="48" cy="48" r="42" fill="url(#energyF)">
-              <animate attributeName="opacity" values=".82;.92;.82" dur="3.2s" repeatCount="indefinite"/>
-            </circle>
-
-            <!-- Outer, beveled-apex triangle -->
-            <path d="M48,16 L84,80 L12,80 Z"
-              fill="none" stroke="#E6EEF7" stroke-width="6" stroke-linejoin="round"/>
-            <!-- micro bevel at apex (tiny cut) -->
-            <path d="M48,16 L52,24 L44,24 Z" fill="#0b1117"/>
-
-            <!-- 3 nested triangles with step dimness (center-scaled) -->
-            <g fill="none" stroke-linejoin="round" stroke="url(#rimF)">
-              <g opacity="1.0" transform="translate(48 48) scale(.82) translate(-48 -48)">
-                <path d="M48,16 L84,80 L12,80 Z" stroke-width="3.4"/>
-              </g>
-              <g opacity=".62" transform="translate(48 48) scale(.66) translate(-48 -48)">
-                <path d="M48,16 L84,80 L12,80 Z" stroke-width="2.8"/>
-              </g>
-              <g opacity=".34" transform="translate(48 48) scale(.52) translate(-48 -48)">
-                <path d="M48,16 L84,80 L12,80 Z" stroke-width="2.4"/>
-              </g>
-            </g>
-          </svg>
-        </div>
-        <div class="meta">F — Triad Nest</div>
-      </div>
-
-    </div>
-  </div>
-
-  <script>
-    (function(){
-      const lab = document.getElementById('galactly-logo-lab-v2');
-      if(!lab) return;
-
-      // favicon plumbing
-      function ensureFaviconLink(){
-        let link = document.querySelector('link[rel="icon"]');
-        if(!link){
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.type = 'image/svg+xml';
-          document.head.appendChild(link);
-        }
-        return link;
-      }
-      function svgToDataUrl(svgEl){
-        const clone = svgEl.cloneNode(true);
-        clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
-        const svgTxt = clone.outerHTML.replace(/\s+/g,' ').trim();
-        return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgTxt);
-      }
-      function setFaviconFrom(card){
-        const svg = card.querySelector('svg');
-        const href = svgToDataUrl(svg);
-        const link = ensureFaviconLink();
-        link.href = href;
-        lab.querySelectorAll('.card').forEach(c=>c.classList.remove('is-sel'));
-        card.classList.add('is-sel');
-      }
-
-      lab.querySelectorAll('.card').forEach(card=>{
-        card.addEventListener('click', ()=> setFaviconFrom(card), {passive:true});
-      });
-
-      // default: pick D
-      const first = lab.querySelector('.card[data-key="D"]');
-      if(first) setFaviconFrom(first);
-    })();
-  </script>
-</div>
-<!-- === /Galactly Logo Lab v2 === -->
-
-
+    var svg = document.getElementById('gg-favicon-src');
+    var s = svg.outerHTML.replace(/\s+/g,' ')
+                         .replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ');
+    fav.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
+  })();
+</script>
+<!-- === /Galactly: Triad Nest brand sprite === -->
 
 </body>
 </html>
