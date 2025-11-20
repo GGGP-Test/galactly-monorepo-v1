@@ -4757,100 +4757,103 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header mark + word (clean white, base-frequency variant) ===== -->
-<style>
-  /* Header lockup */
+<!-- ===== Galactly — header mark v3 (base-only triad + balanced sizing) ===== -->
+<style id="gg-header-v3">
+  /* kill any old badge */
   .brand-badge{ display:none !important; }
+
+  /* lockup */
   .site-header .brand{
     display:flex; align-items:center; gap:12px; text-decoration:none;
   }
-  .site-header .brand svg{ display:block }
-  .site-header .brand path, .site-header .brand line{
-    stroke-dasharray:none !important; stroke-dashoffset:0 !important;
-  }
-  .brand-word{
-    font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  /* prefer our inline icon over any old .brand-mark svg sizing */
+  .site-header .brand > .brand-icon svg{ display:block; width:38px; height:38px; }
+  @media (min-width: 901px){ .site-header .brand > .brand-icon svg{ width:42px; height:42px; } }
+
+  /* word mark: a hair larger so the pair reads balanced */
+  .site-header .brand > .brand-word{
+    font: 800 24px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
     background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
   }
-  .brand-icon svg{ width:46px; height:46px; }
-  @media (min-width:901px){ .brand-icon svg{ width:50px; height:50px; } }
+  @media (max-width: 900px){ .site-header .brand > .brand-word{ font-size:21px; } }
 
-  /* Subtle motion to sell “frequency”, not a spinner or eye */
-  @keyframes ggDash { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-36} }
-  @keyframes ggJitter { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-0.4px) } }
+  /* safety: if any global css applied dash effects, kill for our paths */
+  .site-header .brand path{ stroke-dasharray:none !important; stroke-dashoffset:0 !important; }
 </style>
 
 <script>
-  (function(){
-    const brand = document.querySelector('.site-header .brand');
-    if(!brand) return;
+(function(){
+  if (window.__GG_BRAND_V3_APPLIED) return;
+  window.__GG_BRAND_V3_APPLIED = true;
 
-    const icon = `
-      <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
-        <defs>
-          <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
-          </linearGradient>
+  const brand = document.querySelector('.site-header .brand');
+  if(!brand) return;
 
-          <!-- Base triangle path; every layer derives from this for perfect alignment -->
-          <path id="tri" d="M24 8 L40 40 H8 Z"/>
+  /* inline SVG (no <use>) so masks/filters are rock solid everywhere */
+  const icon = `
+  <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
+    <defs>
+      <!-- shimmer for lines -->
+      <linearGradient id="ggWhiteShimmer3" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
+      </linearGradient>
 
-          <!-- softeners for inner strokes + base lines -->
-          <filter id="soft1" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="0.35"/>
-          </filter>
-          <filter id="soft2" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="0.7"/>
-          </filter>
-        </defs>
+      <!-- soft base glow (not a circle, sits just above the base) -->
+      <radialGradient id="ggBaseGlow" cx="0.5" cy="0.88" r="0.36">
+        <stop offset="0"   stop-color="#FFFFFF" stop-opacity=".18"/>
+        <stop offset=".55" stop-color="#E6EEF7" stop-opacity=".10"/>
+        <stop offset="1"   stop-color="#E6EEF7" stop-opacity="0"/>
+      </radialGradient>
 
-        <!-- OUTER: crisp -->
-        <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round">
-          <use href="#tri" stroke-width="3.2"/>
-        </g>
+      <!-- reveal only the bottom band (so frequency lives at the base) -->
+      <linearGradient id="ggBaseBand" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0.00" stop-color="#000"/>
+        <stop offset="0.72" stop-color="#000"/>
+        <stop offset="0.86" stop-color="#fff"/>
+        <stop offset="1.00" stop-color="#fff"/>
+      </linearGradient>
+      <mask id="ggMaskBase"><rect width="48" height="48" fill="url(#ggBaseBand)"/></mask>
 
-        <!-- MID: a touch dimmer, slightly raised (not perfectly concentric) -->
-        <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round"
-           opacity="0.70" filter="url(#soft1)">
-          <use href="#tri"
-               transform="translate(24 23) scale(.80) translate(-24 -23)"
-               stroke-width="2.0"/>
-        </g>
+      <!-- soft glow for the frequency lines -->
+      <filter id="ggSoft" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0.65"/>
+      </filter>
+    </defs>
 
-        <!-- INNER: smallest, dimmest, a bit blurrier, raised a hair more -->
-        <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round"
-           opacity="0.45" filter="url(#soft2)">
-          <use href="#tri"
-               transform="translate(24 22.2) scale(.62) translate(-24 -22.2)"
-               stroke-width="1.4"/>
-        </g>
+    <!-- base ambient glow (subtle) -->
+    <rect x="0" y="0" width="48" height="48" fill="url(#ggBaseGlow)"/>
 
-        <!-- BASE-ONLY frequency lines (three stripes that live just along the base) -->
-        <g class="base-lines" fill="none" stroke="url(#ggShimmer)" stroke-linecap="round">
-          <!-- lengths chosen so they sit cleanly inside the triangle’s base -->
-          <line x1="12" y1="40" x2="36" y2="40"
-                stroke-width="2.0" opacity="0.95"
-                style="filter:url(#soft1); stroke-dasharray:16 20; animation:ggDash 2.6s linear infinite, ggJitter 2.8s ease-in-out infinite;" />
-          <line x1="14" y1="36.4" x2="34" y2="36.4"
-                stroke-width="1.6" opacity="0.70"
-                style="filter:url(#soft1); stroke-dasharray:14 18; animation:ggDash 2.4s linear infinite reverse, ggJitter 3.1s ease-in-out infinite;" />
-          <line x1="16" y1="33.2" x2="32" y2="33.2"
-                stroke-width="1.2" opacity="0.55"
-                style="filter:url(#soft2); stroke-dasharray:12 16; animation:ggDash 2.2s linear infinite, ggJitter 2.6s ease-in-out infinite reverse;" />
-        </g>
-      </svg>`;
+    <!-- outer frame: slightly wider base so it doesn't read like a pyramid/cult -->
+    <g fill="none" stroke="url(#ggWhiteShimmer3)" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M24 7.6 L39.8 38 H8.2 Z" stroke-width="3.2"/>
+    </g>
 
-    brand.innerHTML = `
-      <span class="brand-icon" aria-hidden="true">${icon}</span>
-      <span class="brand-word">Galactly</span>
-    `;
-    brand.setAttribute('aria-label','Galactly');
-  })();
+    <!-- base-only frequency (3 steps, slight lateral/vertical offsets, dimming) -->
+    <g fill="none" stroke="url(#ggWhiteShimmer3)" stroke-linecap="round" stroke-linejoin="round" mask="url(#ggMaskBase)">
+      <!-- blurred ghost for soft light -->
+      <g filter="url(#ggSoft)">
+        <path d="M24 13.6 L35.4 34 H12.6 Z" stroke-width="2.2" opacity=".35" transform="translate(0,-0.6)"/>
+        <path d="M24 19.0 L31.6 29.6 H16.4 Z" stroke-width="1.8" opacity=".28" transform="translate(0.4,-0.2)"/>
+        <path d="M24 23.2 L28.8 26.8 H19.2 Z" stroke-width="1.5" opacity=".22" transform="translate(-0.35,0.3)"/>
+      </g>
+      <!-- crisp cores -->
+      <path d="M24 13.6 L35.4 34 H12.6 Z" stroke-width="2.0" opacity=".82" transform="translate(0,-0.6)"/>
+      <path d="M24 19.0 L31.6 29.6 H16.4 Z" stroke-width="1.6" opacity=".66" transform="translate(0.4,-0.2)"/>
+      <path d="M24 23.2 L28.8 26.8 H19.2 Z" stroke-width="1.2" opacity=".54" transform="translate(-0.35,0.3)"/>
+    </g>
+  </svg>`;
+
+  brand.innerHTML = `
+    <span class="brand-icon" aria-hidden="true">${icon}</span>
+    <span class="brand-word">Galactly</span>
+  `;
+  brand.setAttribute('aria-label','Galactly');
+})();
 </script>
-<!-- ===== /Galactly — header mark + word (base-frequency variant) ===== -->
+<!-- ===== /Galactly — header mark v3 ===== -->
 
 
 
