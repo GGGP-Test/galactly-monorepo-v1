@@ -4757,15 +4757,18 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header logo v2 (outer thin rim + main thick + 3 inner steps + top→bottom glow) ===== -->
+<!-- ===== Galactly — header logo v3 (outer thin rim + main thick + 3 inner steps + top→bottom glow) ===== -->
 <style>
   /* Remove any old badge */
   .brand-badge{ display:none !important; }
 
-  /* Header lockup spacing + text look */
+  /* Header lockup spacing + vertical nudge knob */
   .site-header .brand{
-    display:flex; align-items:center; gap:3px !important; text-decoration:none;
+    display:flex; align-items:center; gap:6px; text-decoration:none;
+    --brand-y: 2px; /* increase to move icon DOWN */
   }
+  .brand-icon{ transform: translateY(var(--brand-y)); }
+
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
@@ -4775,8 +4778,8 @@ window.SCOREBOARD_KNOBS = {
   }
 
   /* Icon size balanced to word */
-  .brand-icon svg{ width:30px; height:30px; }
-  @media (min-width:901px){ .brand-icon svg{ width:40px; height:40px; } }
+  .brand-icon svg{ width:34px; height:34px; display:block; }
+  @media (min-width:901px){ .brand-icon svg{ width:38px; height:38px; } }
 </style>
 
 <script>
@@ -4797,17 +4800,17 @@ window.SCOREBOARD_KNOBS = {
           <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
         </linearGradient>
       </defs>
-  
+
       <!-- soft interior glow field (behind the lines) -->
       <path d="M24 12.2 L35.0 32.4 H13.0 Z" fill="url(#triGlow)"/>
-  
+
       <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round">
-        <!-- OUTER THIN TRIANGLE — moved farther out so it’s clearly distinct -->
+        <!-- OUTER THIN TRIANGLE — farther out so it’s clearly distinct -->
         <path d="M24 5.4 L41.8 39.2 H6.2 Z" stroke-width="1.2" opacity=".70"/>
-  
+
         <!-- CORE HEAVY FRAME -->
         <path d="M24 8.6 L38.8 38 H9.2 Z" stroke-width="3.0"/>
-  
+
         <!-- THREE INNER STEPS (base-biased, slightly rising toward apex) -->
         <path d="M24 13.4 L34.2 33.0 H13.8 Z" stroke-width="2.0" opacity=".85"/>
         <path d="M24 18.2 L30.4 29.2 H17.6 Z" stroke-width="1.6" opacity=".72"/>
@@ -4822,8 +4825,7 @@ window.SCOREBOARD_KNOBS = {
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /Galactly — header logo v2 ===== -->
-
+<!-- ===== /Galactly — header logo v3 ===== -->
 
 
 <div id="site-footer"></div>
