@@ -4757,17 +4757,15 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header logo (outer thin rim + main thick + 3 inner steps, glow) ===== -->
+<!-- ===== Galactly — header logo v2 (outer thin rim + main thick + 3 inner steps + top→bottom glow) ===== -->
 <style>
-  /* Kill any old badge */
+  /* Remove any old badge */
   .brand-badge{ display:none !important; }
 
-  /* Tighter lockup; icon slightly smaller vs text; closer spacing */
+  /* Header lockup spacing + text look */
   .site-header .brand{
     display:flex; align-items:center; gap:6px !important; text-decoration:none;
   }
-  .site-header .brand svg{ display:block }
-
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
@@ -4776,9 +4774,9 @@ window.SCOREBOARD_KNOBS = {
     white-space:nowrap;
   }
 
-  /* Icon size (balanced to the word) */
-  .brand-icon svg{ width:42px; height:42px; }              /* mobile/tablet */
-  @media (min-width: 901px){ .brand-icon svg{ width:46px; height:46px; } } /* desktop */
+  /* Icon size balanced to word */
+  .brand-icon svg{ width:42px; height:42px; }
+  @media (min-width:901px){ .brand-icon svg{ width:46px; height:46px; } }
 </style>
 
 <script>
@@ -4786,66 +4784,69 @@ window.SCOREBOARD_KNOBS = {
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
 
-  // Four triangles:
-  // 1) Thin OUTER rim (slightly larger than main), 2) MAIN thick triangle,
-  // 3–5) Three inner steps (smaller, dimmer, lightly blurred).
-  // Plus a very faint inner glow field. No circles; nothing “eye-like”.
   const icon = `
   <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
     <defs>
-      <!-- white shimmer stroke -->
-      <linearGradient id="ggWhiteShimmer4" x1="0" y1="0" x2="0" y2="1">
+      <!-- Shimmer for strokes -->
+      <linearGradient id="ggWhiteShimmer5" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#FFFFFF"/>
         <stop offset="1" stop-color="#E6EEF7"/>
       </linearGradient>
 
-      <!-- tiny blur for inner steps to feel airy/frequency-like -->
+      <!-- Gentle blur for the inner steps (frequency feel) -->
       <filter id="ggInnerBlur" x="-10%" y="-10%" width="120%" height="120%">
-        <feGaussianBlur stdDeviation="0.45"/>
+        <feGaussianBlur stdDeviation="0.4"/>
       </filter>
 
-      <!-- faint inner field (very subtle) -->
-      <radialGradient id="ggCoreGlow" cx=".5" cy=".5" r=".6">
-        <stop offset="0" stop-color="#E6EEF7" stop-opacity=".12"/>
-        <stop offset=".72" stop-color="#E6EEF7" stop-opacity=".04"/>
-        <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
-      </radialGradient>
+      <!-- Top→bottom glow that lives INSIDE the main triangle only -->
+      <linearGradient id="ggTopDownGlow" x1="0" y1="0" x2="0" y2="1">
+        <!-- brightest at top, subtle overall -->
+        <stop offset="0"   stop-color="#E6EEF7" stop-opacity=".22"/>
+        <stop offset=".55" stop-color="#E6EEF7" stop-opacity=".10"/>
+        <stop offset="1"   stop-color="#E6EEF7" stop-opacity=".04"/>
+      </linearGradient>
+
+      <!-- Clip for the main triangle interior -->
+      <clipPath id="triClip">
+        <path d="M24 8 L40 38 H8 Z"/>
+      </clipPath>
     </defs>
 
-    <!-- faint field, kept subtle to avoid “badge”/eye -->
-    <circle cx="24" cy="24" r="10" fill="url(#ggCoreGlow)"/>
-
-    <!-- Thin outer rim (slightly larger than main) -->
-    <g transform="translate(24 24) scale(1.08) translate(-24 -24)">
+    <!-- Thin OUTER rim (slightly larger than main) -->
+    <g transform="translate(24 24) scale(1.10) translate(-24 -24)">
       <path d="M24 8 L40 38 H8 Z"
-            fill="none" stroke="url(#ggWhiteShimmer4)"
-            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            fill="none" stroke="url(#ggWhiteShimmer5)"
+            stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
 
-    <!-- Main triangle (the “thick” readable frame) -->
+    <!-- MAIN thick triangle -->
     <path d="M24 8 L40 38 H8 Z"
-          fill="none" stroke="url(#ggWhiteShimmer4)"
+          fill="none" stroke="url(#ggWhiteShimmer5)"
           stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"/>
 
-    <!-- Three inner steps: smaller, dimmer, slightly offset upward; gentle blur -->
-    <g filter="url(#ggInnerBlur)" fill="none" stroke="url(#ggWhiteShimmer4)"
+    <!-- Top→bottom glow INSIDE main triangle (no badge/halo outside) -->
+    <g clip-path="url(#triClip)">
+      <rect x="0" y="0" width="48" height="48" fill="url(#ggTopDownGlow)"/>
+    </g>
+
+    <!-- Three inner steps: smaller, dimmer, lightly blurred -->
+    <g filter="url(#ggInnerBlur)" fill="none" stroke="url(#ggWhiteShimmer5)"
        stroke-linecap="round" stroke-linejoin="round">
       <!-- step 1 -->
-      <g transform="translate(24 24) scale(.84) translate(-24 -24)">
-        <path d="M24 8 L40 38 H8 Z" stroke-width="2.0" opacity=".82"/>
+      <g transform="translate(24 24) scale(.86) translate(-24 -24)">
+        <path d="M24 8 L40 38 H8 Z" stroke-width="2.0" opacity=".80"/>
       </g>
       <!-- step 2 -->
-      <g transform="translate(24 22.8) scale(.68) translate(-24 -24)">
-        <path d="M24 8 L40 38 H8 Z" stroke-width="1.6" opacity=".60"/>
+      <g transform="translate(24 23.2) scale(.70) translate(-24 -24)">
+        <path d="M24 8 L40 38 H8 Z" stroke-width="1.6" opacity=".56"/>
       </g>
       <!-- step 3 -->
-      <g transform="translate(24 21.6) scale(.54) translate(-24 -24)">
-        <path d="M24 8 L40 38 H8 Z" stroke-width="1.2" opacity=".44"/>
+      <g transform="translate(24 22.4) scale(.56) translate(-24 -24)">
+        <path d="M24 8 L40 38 H8 Z" stroke-width="1.2" opacity=".40"/>
       </g>
     </g>
   </svg>`;
 
-  // Apply the lockup
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
@@ -4853,7 +4854,7 @@ window.SCOREBOARD_KNOBS = {
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /Galactly — header logo ===== -->
+<!-- ===== /Galactly — header logo v2 ===== -->
 
 
 
