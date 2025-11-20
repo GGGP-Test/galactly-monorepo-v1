@@ -4757,15 +4757,15 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header logo v3 (outer thin rim + main thick + 3 inner steps + top→bottom glow) ===== -->
+<!-- ===== Galactly — header logo v4 (clean white; outer rim + core + 3 inner steps; top→bottom glow) ===== -->
 <style>
-  /* Remove any old badge */
+  /* Kill any old badge */
   .brand-badge{ display:none !important; }
 
-  /* Header lockup spacing + vertical nudge knob */
+  /* Header lockup spacing + vertical nudge */
   .site-header .brand{
-    display:flex; align-items:center; gap:1px; text-decoration:none;
-    --brand-y: 3.5px; /* increase to move icon DOWN */
+    display:flex; align-items:center; gap: var(--brand-gap, 4px) !important; text-decoration:none;
+    --brand-y: 2px; /* + = move icon DOWN, - = up */
   }
   .brand-icon{ transform: translateY(var(--brand-y)); }
 
@@ -4777,9 +4777,11 @@ window.SCOREBOARD_KNOBS = {
     white-space:nowrap;
   }
 
-  /* Icon size balanced to word */
-  .brand-icon svg{ width:20px; height:20px; display:block; }
-  @media (min-width:901px){ .brand-icon svg{ width:38px; height:38px; } }
+  /* Icon size (forced with !important so old rules can’t win) */
+  .brand-icon svg{ width:28px !important; height:28px !important; display:block; }
+  @media (min-width:901px){
+    .brand-icon svg{ width:34px !important; height:34px !important; }
+  }
 </style>
 
 <script>
@@ -4787,6 +4789,7 @@ window.SCOREBOARD_KNOBS = {
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
 
+  // Inline SVG so nothing external can override the strokes
   const icon = `
     <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
       <defs>
@@ -4794,38 +4797,51 @@ window.SCOREBOARD_KNOBS = {
           <stop offset="0" stop-color="#FFFFFF"/>
           <stop offset="1" stop-color="#E6EEF7"/>
         </linearGradient>
-        <!-- faint top→bottom inner glow so it reads as “lit”, not an eye -->
+        <!-- faint top→bottom inner glow -->
         <linearGradient id="triGlow" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#E6EEF7" stop-opacity=".16"/>
           <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
         </linearGradient>
+        <!-- very light blur for the inner steps so it feels lit, not “eye” -->
+        <filter id="soften" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="0.35"/>
+        </filter>
       </defs>
 
-      <!-- soft interior glow field (behind the lines) -->
+      <!-- soft interior glow field (behind lines) -->
       <path d="M24 12.2 L35.0 32.4 H13.0 Z" fill="url(#triGlow)"/>
 
       <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round">
-        <!-- OUTER THIN TRIANGLE — farther out so it’s clearly distinct -->
-        <path d="M24 5.4 L41.8 39.2 H6.2 Z" stroke-width="1.2" opacity=".70"/>
+        <!-- OUTER THIN RIM — set farther out so it’s clearly visible -->
+        <path d="M24 4.8 L42.4 39.8 H5.6 Z" stroke-width="1.1" opacity=".70"/>
 
         <!-- CORE HEAVY FRAME -->
         <path d="M24 8.6 L38.8 38 H9.2 Z" stroke-width="3.0"/>
 
-        <!-- THREE INNER STEPS (base-biased, slightly rising toward apex) -->
-        <path d="M24 13.4 L34.2 33.0 H13.8 Z" stroke-width="2.0" opacity=".85"/>
-        <path d="M24 18.2 L30.4 29.2 H17.6 Z" stroke-width="1.6" opacity=".72"/>
-        <path d="M24 22.6 L27.6 26.6 H20.4 Z" stroke-width="1.2" opacity=".58"/>
+        <!-- THREE INNER STEPS (base-biased; slight upward rise) -->
+        <g filter="url(#soften)">
+          <path d="M24 13.6 L34.2 33.0 H13.8 Z" stroke-width="1.9" opacity=".82"/>
+          <path d="M24 18.4 L30.4 29.2 H17.6 Z" stroke-width="1.5" opacity=".68"/>
+          <path d="M24 22.8 L27.6 26.6 H20.4 Z" stroke-width="1.1" opacity=".54"/>
+        </g>
       </g>
     </svg>`;
 
+  // Inject fresh lockup (icon + word)
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
   `;
   brand.setAttribute('aria-label','Galactly');
+
+  // TUNING KNOBS (change once, no need to edit CSS):
+  //   icon–word gap:
+  brand.style.setProperty('--brand-gap', '4px');   // tighten/loosen spacing
+  //   vertical nudge:
+  brand.style.setProperty('--brand-y', '2px');     // move icon slightly down
 })();
 </script>
-<!-- ===== /Galactly — header logo v3 ===== -->
+<!-- ===== /Galactly — header logo v4 ===== -->
 
 
 <div id="site-footer"></div>
