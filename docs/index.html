@@ -3214,20 +3214,18 @@
       <a href="index.html" class="brand" aria-label="Galactly">
         <span class="brand-mark" aria-hidden="true">
           <!-- Triad Nest — no background circle, stepped inner lines -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48" width="52" height="52" role="img" focusable="false" aria-label="Galactly logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48" width="64" height="64" role="img" focusable="false" aria-label="Galactly logo">
             <defs>
-              <linearGradient id="triadGrad" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stop-color="#E6EEF7"/>
-                <stop offset="1" stop-color="#F2DCA0"/>
+              <!-- white → platinum for a soft shimmer, no halo -->
+              <linearGradient id="triadWhite" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#FFFFFF"/>
+                <stop offset="1" stop-color="#E6EEF7"/>
               </linearGradient>
             </defs>
-            <g fill="none" stroke="url(#triadGrad)" stroke-linecap="round" stroke-linejoin="round">
-              <!-- outer frame -->
-              <path d="M0 -12 L12 10 L-12 10 Z" stroke-width="2.8"/>
-              <!-- step 2 -->
-              <path d="M0 -7.5 L7.6 6 L-7.6 6 Z" stroke-width="2.0" opacity=".86"/>
-              <!-- step 3 -->
-              <path d="M0 -3.8 L3.9 3.2 L-3.9 3.2 Z" stroke-width="1.4" opacity=".68"/>
+            <g fill="none" stroke="url(#triadWhite)" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M0 -12 L12 10 L-12 10 Z" stroke-width="3.6"/>
+              <path d="M0 -7.5 L7.6 6 L-7.6 6 Z" stroke-width="2.4" opacity=".8"/>
+              <path d="M0 -3.8 L3.9 3.2 L-3.9 3.2 Z" stroke-width="1.8" opacity=".62"/>
             </g>
           </svg>
         </span>
@@ -4742,7 +4740,55 @@ window.SCOREBOARD_KNOBS = {
 
 
 
+<!-- ===== FOOTER (inline) ===== -->
+<footer id="site-footer" class="footer" aria-label="Footer">
+  <div class="inner">
+    <div class="cols">
+      <div class="col col-brand">
+        <a class="brand" href="index.html" aria-label="Galactly">
+          <!-- tiny mark reused to keep visual continuity -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48" width="22" height="22" aria-hidden="true">
+            <defs><linearGradient id="w2" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
+            </linearGradient></defs>
+            <g fill="none" stroke="url(#w2)" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M0 -12 L12 10 L-12 10 Z" stroke-width="3"/>
+              <path d="M0 -7.5 L7.6 6 L-7.6 6 Z" stroke-width="2" opacity=".8"/>
+              <path d="M0 -3.8 L3.9 3.2 L-3.9 3.2 Z" stroke-width="1.5" opacity=".6"/>
+            </g>
+          </svg>
+          <span class="wordmark">Galactly</span>
+        </a>
+        <p class="copy">© 2025 Galactly — Sales Engagement &amp; Lead Intelligence</p>
+      </div>
 
+      <nav class="col">
+        <a href="#how">How it works</a>
+        <a href="#sectors">Sectors</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
+      <nav class="col">
+        <a href="/help">Help Desk</a>
+        <a href="/experts">Experts</a>
+        <a href="/affiliate">Affiliate</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer{margin-top:80px;padding:40px 0;border-top:1px solid rgba(255,255,255,.08);
+          background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));}
+  .footer .inner{max-width:1140px;margin:0 auto;padding:0 16px;}
+  .footer .cols{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;justify-content:space-between;}
+  .footer .col{min-width:180px;color:#bcd0e0;font:400 14px/1.6 Inter,system-ui;}
+  .footer a{color:#dbe8f2;text-decoration:none;display:block;margin:6px 0;}
+  .footer a:hover{opacity:.92}
+  .footer .col-brand .brand{display:inline-flex;align-items:center;gap:8px;margin-bottom:6px}
+  .footer .wordmark{font:600 18px "Newsreader",Georgia,serif;color:#eaf0f6}
+  @media (max-width:640px){.footer{padding:28px 0}.footer .cols{gap:14px}}
+</style>
+<!-- ===== /FOOTER ===== -->
 
 
 <!-- D3 + TopoJSON for accurate state borders -->
@@ -4766,62 +4812,39 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- === Galactly: Triad Nest brand sprite (permanent) === -->
+<!-- === Galactly: brand sprite + favicon setter (no halo) === -->
 <svg aria-hidden="true" width="0" height="0" style="position:absolute;left:-9999px;overflow:hidden">
   <defs>
-    <!-- palette: platinum + faint gold -->
-    <linearGradient id="gg-rim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#F2DCA0"/><stop offset=".75" stop-color="#E6EEF7"/>
+    <linearGradient id="gg-white" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
     </linearGradient>
   </defs>
 
-  <!-- MARK: Triad Nest (beveled apex + 3-step dimness) -->
-  <symbol id="gg-triad-nest" viewBox="0 0 96 96">
-    <!-- subtle center glow (frequency field) -->
-    <radialGradient id="gg-energy" cx=".5" cy=".5" r=".7">
-      <stop offset="0" stop-color="#F2DCA0" stop-opacity=".36"/>
-      <stop offset=".56" stop-color="#E6EEF7" stop-opacity=".2"/>
-      <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
-    </radialGradient>
-    <circle cx="48" cy="48" r="44" fill="url(#gg-energy)"/>
-
-    <!-- outer triangle (not a perfect pyramid; reads modern, not “cult”) -->
-    <path d="M48,16 L84,80 L12,80 Z" fill="none"
-          stroke="#E6EEF7" stroke-width="6" stroke-linejoin="round"/>
-    <!-- micro bevel at apex -->
-    <path d="M48,16 L52,24 L44,24 Z" fill="#0b1117"/>
-
-    <!-- nested 3-step dimness -->
-    <g fill="none" stroke="url(#gg-rim)" stroke-linejoin="round">
-      <g opacity="1.0" transform="translate(48 48) scale(.82) translate(-48 -48)">
-        <path d="M48,16 L84,80 L12,80 Z" stroke-width="3.4"/>
-      </g>
-      <g opacity=".62" transform="translate(48 48) scale(.66) translate(-48 -48)">
-        <path d="M48,16 L84,80 L12,80 Z" stroke-width="2.8"/>
-      </g>
-      <g opacity=".34" transform="translate(48 48) scale(.52) translate(-48 -48)">
-        <path d="M48,16 L84,80 L12,80 Z" stroke-width="2.4"/>
-      </g>
+  <!-- Mark: stepped triangle, no glow -->
+  <symbol id="gg-triad" viewBox="-24 -24 48 48">
+    <g fill="none" stroke="url(#gg-white)" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 -12 L12 10 L-12 10 Z" stroke-width="3.6"/>
+      <path d="M0 -7.5 L7.6 6 L-7.6 6 Z" stroke-width="2.4" opacity=".8"/>
+      <path d="M0 -3.8 L3.9 3.2 L-3.9 3.2 Z" stroke-width="1.8" opacity=".62"/>
     </g>
-  </symbol>
-
-  <!-- (optional) 1-line wordmark lockup -->
-  <symbol id="gg-lockup" viewBox="0 0 320 28">
-    <g fill="#E6EEF7">
-      <text x="0"  y="20" font-family="Newsreader, Georgia, serif" font-size="20" font-weight="600">Galact</text>
-      <text x="86" y="20" font-family="Newsreader, Georgia, serif" font-size="20" font-weight="600">ly</text>
-    </g>
-    <use href="#gg-triad-nest" x="64" y="2" width="24" height="24"/>
   </symbol>
 </svg>
 
-<!-- (hidden) source used to generate the favicon -->
+<!-- Favicon source (rounded dark chip + white mark) -->
 <svg id="gg-favicon-src" viewBox="0 0 96 96" width="0" height="0" style="position:absolute;left:-9999px">
-  <use href="#gg-triad-nest"/>
+  <rect x="8" y="8" width="80" height="80" rx="16" fill="#0e1420"/>
+  <g transform="translate(48 48)">
+    <!-- reuse exact geometry of the mark -->
+    <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 -24 L24 20 L-24 20 Z" stroke-width="6"/>
+      <path d="M0 -15 L15.2 12 L-15.2 12 Z" stroke-width="4" opacity=".8"/>
+      <path d="M0 -7.6 L7.8 6.4 L-7.8 6.4 Z" stroke-width="3" opacity=".62"/>
+    </g>
+  </g>
 </svg>
 
 <script>
-  // Minimal, permanent favicon setter (no big data URL pasted by hand)
+  // Set a crisp, no-halo SVG favicon
   (function(){
     var fav = document.querySelector('#favicon');
     if(!fav){
@@ -4835,7 +4858,7 @@ window.SCOREBOARD_KNOBS = {
     fav.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
   })();
 </script>
-<!-- === /Galactly: Triad Nest brand sprite === -->
+<!-- === /Galactly: brand sprite + favicon setter === -->
 
 
 
