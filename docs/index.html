@@ -4772,248 +4772,187 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- GALACTLY — LOGO OPTIONS v4 (inner-rounded + energy field) -->
-<script>
-(function(){
-  // Remove any older panels to avoid duplicates
-  document.querySelectorAll('#logoTryV4').forEach(n=>n.remove());
+<!-- === Galactly Logo Lab (inline preview + favicon switch) === -->
+<div id="galactly-logo-lab" style="margin:32px 0 40px;">
+  <style>
+    #galactly-logo-lab{--size:144px; --glass:rgba(12,18,28,.82); --stroke:#E6EEF7; --gold:#F2DCA0}
+    #galactly-logo-lab .wrap{max-width:1160px;margin:0 auto;padding:12px 16px;background:var(--glass);
+      border:1px solid rgba(255,255,255,.12);border-radius:14px}
+    #galactly-logo-lab .head{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px;
+      color:#cfe0ee;font:600 13px/1.2 Inter,system-ui}
+    #galactly-logo-lab .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    #galactly-logo-lab .card{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;
+      padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.02);
+      transition:transform .08s ease,filter .15s ease,border-color .15s ease}
+    #galactly-logo-lab .card:hover{filter:brightness(1.05)}
+    #galactly-logo-lab .card.is-sel{border-color:rgba(242,220,160,.6);box-shadow:0 0 0 1px rgba(242,220,160,.18) inset}
+    #galactly-logo-lab .art{display:grid;place-items:center;width:var(--size);height:var(--size)}
+    #galactly-logo-lab .art svg{display:block;width:100%;height:100%}
+    #galactly-logo-lab .meta{color:#cfe0ee;font:600 12px/1.2 Inter,system-ui}
+    @media (max-width:720px){#galactly-logo-lab{--size:124px} #galactly-logo-lab .grid{grid-template-columns:1fr}}
+  </style>
 
-  /* ------- palette tuned for your site ------- */
-  const PLAT = '#E6EEF7';   // cool platinum (text/lines)
-  const GOLD = '#F2DCA0';   // faint gold accent
-  const BG   = 'rgba(8,12,20,.96)'; // site backdrop color used for tiny “apex split” filler, etc.
+  <div class="wrap">
+    <div class="head">
+      <div>Galactly — logo options (click any to set favicon)</div>
+      <div style="opacity:.7">Palette: platinum #E6EEF7 &nbsp;·&nbsp; faint gold #F2DCA0</div>
+    </div>
 
-  /* ================= CSS ================= */
-  const css = `
-    #logoTryV4{font:600 14px/1.2 Inter,system-ui;color:#cfe0ee;max-width:1180px;margin:36px auto;padding:0 16px}
-    #logoTryV4 .wrap{background:rgba(8,12,20,.78);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:18px}
-    #logoTryV4 h4{margin:0 0 10px;font:800 15px/1 Inter,system-ui;color:#e6eef7}
-    #logoTryV4 .controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:6px 0 14px}
-    #logoTryV4 .controls label{font:12px/1.2 Inter,system-ui;color:#9db0c3;white-space:nowrap}
-    #logoTryV4 .controls input[type="range"]{width:200px}
-    #logoTryV4 .row{display:flex;gap:16px;align-items:stretch}
-    #logoTryV4 .card{flex:1;display:flex;align-items:center;gap:16px;padding:16px;border-radius:12px;
-      background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
-      cursor:pointer;transition:transform .08s ease,background .15s ease}
-    #logoTryV4 .card:hover{background:rgba(255,255,255,.05);transform:translateY(-1px)}
-    #logoTryV4 .icon{width:132px;height:132px;display:grid;place-items:center;border-radius:12px;background:rgba(255,255,255,.02);
-      border:1px solid rgba(255,255,255,.05)}
-    #logoTryV4 svg{width:120px;height:120px;display:block}
-    #logoTryV4 .meta b{display:block;color:#eaf0f6;font-weight:800}
-    #logoTryV4 .meta small{display:block;font:600 11px/1.25 Inter,system-ui;color:#9db0c3;margin-top:4px}
-    #logoTryV4 .note{margin-top:12px;font:12px/1.45 Inter,system-ui;color:#98acc0}
-    #logoTryV4 .out{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06);color:#cfe0ee;font:12px/1.35 ui-monospace,Consolas,monospace;
-      white-space:nowrap;overflow:auto}
-    #logoTryV4 .btn{margin-top:10px;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
-      background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));color:#eaf0f6;font-weight:700;cursor:pointer}
-  `;
-  const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    <div class="grid">
 
-  /* ================= geometry helpers ================= */
-  // Linear interpolation
-  const L = (p,q,t) => ({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t });
-  // Given two points, return a point 'd' px from p towards q
-  function advance(p,q,d){
-    const vx=q.x-p.x, vy=q.y-p.y, len=Math.hypot(vx,vy)||1;
-    const t = d/len; return { x: p.x + vx*t, y: p.y + vy*t };
-  }
+      <!-- A — TriPulse (split-apex) -->
+      <div class="card" data-key="A" title="Set favicon: Option A — TriPulse">
+        <div class="art">
+          <svg id="galA" viewBox="0 0 96 96" aria-label="Galactly TriPulse Mark">
+            <defs>
+              <linearGradient id="rimA" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#F2DCA0"/><stop offset=".7" stop-color="#E6EEF7"/>
+              </linearGradient>
+              <radialGradient id="energyA" cx=".5" cy=".2" r=".65">
+                <stop offset="0" stop-color="#F2DCA0" stop-opacity=".55"/>
+                <stop offset=".5" stop-color="#E6EEF7" stop-opacity=".28"/>
+                <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
+              </radialGradient>
+              <clipPath id="triClipA"><polygon points="48,10 86,80 10,80"/></clipPath>
+            </defs>
 
-  // Build an inner *rounded* triangle path by shaving each corner by (inset*roundK)
-  // roundK is driven by the “Inner roundness” slider (0→no curve, higher→softer inner corner).
-  function innerRoundedTriPath(A,B,C,inset,roundK){
-    const verts=[A,B,C], out=[];
-    for(let i=0;i<3;i++){
-      const V=verts[i], P=verts[(i+2)%3], N=verts[(i+1)%3];
-      const k = 1 + roundK * 0.35;                // stronger curvature as roundK grows
-      const a = advance(V,P,inset*k);             // first point on edge PV
-      const b = advance(V,N,inset*k);             // second point on edge VN
-      out.push({a, V, b});
-    }
-    let d=`M ${out[0].a.x} ${out[0].a.y} Q ${out[0].V.x} ${out[0].V.y} ${out[0].b.x} ${out[0].b.y}`;
-    for(let i=1;i<3;i++){
-      d += ` L ${out[i].a.x} ${out[i].a.y} Q ${out[i].V.x} ${out[i].V.y} ${out[i].b.x} ${out[i].b.y}`;
-    }
-    return d + ' Z';
-  }
+            <!-- Energy field (apex-biased) -->
+            <rect width="96" height="96" fill="url(#energyA)" clip-path="url(#triClipA)">
+              <animate attributeName="opacity" values=".85;.92;.85" dur="3.2s" repeatCount="indefinite"/>
+            </rect>
 
-  // Inner rounded diamond (top/right/bottom/left)
-  function innerRoundedDiamondPath(T,R,Bt,Lf,inset,roundK){
-    const V=[T,R,Bt,Lf], out=[];
-    for(let i=0;i<4;i++){
-      const Vtx=V[i], P=V[(i+3)%4], N=V[(i+1)%4];
-      const k=1 + roundK*0.35;
-      const a=advance(Vtx,P,inset*k), b=advance(Vtx,N,inset*k);
-      out.push({a,Vtx,b});
-    }
-    let d=`M ${out[0].a.x} ${out[0].a.y} Q ${out[0].Vtx.x} ${out[0].Vtx.y} ${out[0].b.x} ${out[0].b.y}`;
-    for(let i=1;i<4;i++){
-      d += ` L ${out[i].a.x} ${out[i].a.y} Q ${out[i].Vtx.x} ${out[i].Vtx.y} ${out[i].b.x} ${out[i].b.y}`;
-    }
-    return d + ' Z';
-  }
+            <!-- Ring (stroke-only triangle with micro split at apex) -->
+            <path d="M 12 80 L 84 80" stroke="#E6EEF7" stroke-width="6" stroke-linecap="round" fill="none"/>
+            <path d="M 48 16 L 14 80" stroke="#E6EEF7" stroke-width="6" stroke-linecap="round" fill="none"/>
+            <path d="M 82 80 L 48 16" stroke="#E6EEF7" stroke-width="6" stroke-linecap="round" fill="none"/>
+            <path d="M 12 80 L 84 80 L 48 16 Z" fill="none" stroke="url(#rimA)" stroke-width="2" opacity=".9"/>
 
-  // Build an SVG string for a triangle with inner-rounded ring + energy + chevrons
-  function svgTriangle({variant='apex', ring=9, round=2, strokeW=2.6}={}){
-    const A={x:60, y:12}, B={x:96-14, y:96-12}, C={x:14, y:96-12}; // slightly broader triangle
-    const inner = innerRoundedTriPath(A,B,C, ring, round);
-
-    // energy: apex-centered or base-centered radial gradient
-    const gid = 'g' + Math.random().toString(36).slice(2,7);
-    const clipId = 'clip' + gid, maskId='mask'+gid, blurId='blur'+gid;
-
-    // Gradient orientation
-    const rx = variant==='base' ? 0.5 : 0.5;
-    const ry = variant==='base' ? 0.86 : 0.18;    // base vs apex
-    const r  = 0.7;
-
-    // chevron roots (apex or base)
-    const chevrons =
-      variant==='base'
-      ? `
-        <path d="M20 84 L48 70" stroke-width="${strokeW}" stroke-opacity=".72"/>
-        <path d="M76 84 L48 70" stroke-width="${strokeW}" stroke-opacity=".72"/>
-        <path d="M28 84 L48 73" stroke-width="${strokeW*0.78}" stroke-opacity=".50"/>
-        <path d="M68 84 L48 73" stroke-width="${strokeW*0.78}" stroke-opacity=".50"/>
-        <path d="M36 84 L48 76" stroke-width="${strokeW*0.62}" stroke-opacity=".32"/>
-        <path d="M60 84 L48 76" stroke-width="${strokeW*0.62}" stroke-opacity=".32"/>`
-      : `
-        <path d="M60 18 L52 36" stroke-width="${strokeW}" stroke-opacity=".72"/>
-        <path d="M60 18 L68 36" stroke-width="${strokeW}" stroke-opacity=".72"/>
-        <path d="M58 22 L51 36" stroke-width="${strokeW*0.78}" stroke-opacity=".50"/>
-        <path d="M62 22 L69 36" stroke-width="${strokeW*0.78}" stroke-opacity=".50"/>
-        <path d="M56 26 L51 37" stroke-width="${strokeW*0.62}" stroke-opacity=".32"/>
-        <path d="M64 26 L69 37" stroke-width="${strokeW*0.62}" stroke-opacity=".32"/>`;
-
-    return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="geometricPrecision">
-      <defs>
-        <linearGradient id="rim${gid}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="${GOLD}"/><stop offset="0.6" stop-color="${PLAT}"/>
-        </linearGradient>
-        <radialGradient id="${gid}" cx="${rx}" cy="${ry}" r="${r}">
-          <stop offset="0" stop-color="${GOLD}" stop-opacity=".55"/>
-          <stop offset=".45" stop-color="${PLAT}" stop-opacity=".32"/>
-          <stop offset="1" stop-color="${PLAT}" stop-opacity="0"/>
-        </radialGradient>
-        <filter id="${blurId}" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2.6"/>
-        </filter>
-        <clipPath id="${clipId}">
-          <path d="${inner}"/>
-        </clipPath>
-        <mask id="${maskId}">
-          <path d="M ${A.x} ${A.y} L ${B.x} ${B.y} L ${C.x} ${C.y} Z" fill="white"/>
-          <path d="${inner}" fill="black"/>
-        </mask>
-      </defs>
-
-      <!-- ring (outer crisp, inner rounded) -->
-      <path d="M ${A.x} ${A.y} L ${B.x} ${B.y} L ${C.x} ${C.y} Z" fill="url(#rim${gid})" mask="url(#${maskId})"/>
-      <path d="M ${A.x} ${A.y} L ${B.x} ${B.y} L ${C.x} ${C.y} Z" fill="none" stroke="${PLAT}" stroke-opacity=".9" stroke-width="1.5"/>
-
-      <!-- energy field inside -->
-      <rect x="0" y="0" width="96" height="96" fill="url(#${gid})" clip-path="url(#${clipId})" filter="url(#${blurId})"/>
-
-      <!-- frequency chevrons -->
-      <g fill="none" stroke="url(#rim${gid})" stroke-linecap="round">${chevrons}</g>
-    </svg>`.trim();
-  }
-
-  // Diamond version with same inner-rounded ring + edge-biased energy
-  function svgDiamond({ring=9, round=2, strokeW=2.6}={}){
-    const T={x:48,y:10}, R={x:86,y:48}, Bt={x:48,y:86}, Lf={x:10,y:48};
-    const inner = innerRoundedDiamondPath(T,R,Bt,Lf, ring, round);
-    const gid = 'd' + Math.random().toString(36).slice(2,7);
-    const clipId = 'clip' + gid, maskId='mask'+gid, blurId='blur'+gid;
-
-    return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="geometricPrecision">
-      <defs>
-        <linearGradient id="rim${gid}" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="${GOLD}"/><stop offset="1" stop-color="${PLAT}"/>
-        </linearGradient>
-        <!-- Edge-biased energy: four soft lobes toward each side -->
-        <radialGradient id="${gid}t" cx=".5" cy=".12" r=".45"><stop offset="0" stop-color="${GOLD}" stop-opacity=".50"/><stop offset="1" stop-color="${PLAT}" stop-opacity="0"/></radialGradient>
-        <radialGradient id="${gid}r" cx=".88" cy=".5"  r=".45"><stop offset="0" stop-color="${GOLD}" stop-opacity=".44"/><stop offset="1" stop-color="${PLAT}" stop-opacity="0"/></radialGradient>
-        <radialGradient id="${gid}b" cx=".5" cy=".88" r=".45"><stop offset="0" stop-color="${GOLD}" stop-opacity=".50"/><stop offset="1" stop-color="${PLAT}" stop-opacity="0"/></radialGradient>
-        <radialGradient id="${gid}l" cx=".12" cy=".5"  r=".45"><stop offset="0" stop-color="${GOLD}" stop-opacity=".44"/><stop offset="1" stop-color="${PLAT}" stop-opacity="0"/></radialGradient>
-        <filter id="${blurId}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.6"/></filter>
-        <clipPath id="${clipId}"><path d="${inner}"/></clipPath>
-        <mask id="${maskId}">
-          <path d="M ${T.x} ${T.y} L ${R.x} ${R.y} L ${Bt.x} ${Bt.y} L ${Lf.x} ${Lf.y} Z" fill="white"/>
-          <path d="${inner}" fill="black"/>
-        </mask>
-      </defs>
-
-      <!-- ring -->
-      <path d="M ${T.x} ${T.y} L ${R.x} ${R.y} L ${Bt.x} ${Bt.y} L ${Lf.x} ${Lf.y} Z" fill="url(#rim${gid})" mask="url(#${maskId})"/>
-      <path d="M ${T.x} ${T.y} L ${R.x} ${R.y} L ${Bt.x} ${Bt.y} L ${Lf.x} ${Lf.y} Z" fill="none" stroke="${PLAT}" stroke-opacity=".9" stroke-width="1.5"/>
-
-      <!-- energy lobes -->
-      <rect x="0" y="0" width="96" height="96" fill="url(#${gid}t)" clip-path="url(#${clipId})" filter="url(#${blurId})"/>
-      <rect x="0" y="0" width="96" height="96" fill="url(#${gid}r)" clip-path="url(#${clipId})" filter="url(#${blurId})"/>
-      <rect x="0" y="0" width="96" height="96" fill="url(#${gid}b)" clip-path="url(#${clipId})" filter="url(#${blurId})"/>
-      <rect x="0" y="0" width="96" height="96" fill="url(#${gid}l)" clip-path="url(#${clipId})" filter="url(#${blurId})"/>
-    </svg>`.trim();
-  }
-
-  /* ================= UI ================= */
-  const host = document.createElement('div'); host.id='logoTryV4';
-  host.innerHTML = `
-    <div class="wrap">
-      <h4>Galactly — three professional logo options (click any card to set a temporary favicon)</h4>
-      <div class="controls">
-        <label>Inner roundness: <span id="rV">2</span> px</label><input id="round" type="range" min="0" max="8" step="1" value="2">
-        <label>Ring weight: <span id="wV">9</span> px</label><input id="ring"  type="range" min="5" max="12" step="1" value="9">
-        <label>Signal stroke: <span id="sV">2.6</span> px</label><input id="sw"    type="range" min="2.0" max="3.4" step="0.1" value="2.6">
+            <!-- Frequency chevrons near apex -->
+            <g stroke="url(#rimA)" stroke-linecap="round" stroke-width="2.5">
+              <path d="M 48 22 L 55 36"/><path d="M 48 22 L 41 36"/>
+              <path d="M 48 26 L 53 36" opacity=".6"/><path d="M 48 26 L 43 36" opacity=".6"/>
+              <path d="M 48 30 L 51 36" opacity=".35"/><path d="M 48 30 L 45 36" opacity=".35"/>
+            </g>
+          </svg>
+        </div>
+        <div class="meta">A — TriPulse (split-apex)</div>
       </div>
-      <div class="row" id="row"></div>
-      <div class="note">Click a card to set a temporary favicon. The exact permanent snippet appears below.</div>
-      <div class="out" id="favOut">Permanent favicon snippet will appear here after you click a card.</div>
-      <button class="btn" id="copyFav">Copy snippet</button>
-    </div>`;
-  document.body.appendChild(host);
 
-  const row = host.querySelector('#row');
-  const rIn = host.querySelector('#round'), wIn = host.querySelector('#ring'), sIn = host.querySelector('#sw');
-  const rV  = host.querySelector('#rV'),    wV  = host.querySelector('#wV'),   sV  = host.querySelector('#sV');
-  const out = host.querySelector('#favOut');
+      <!-- B — BasePulse (grounded base) -->
+      <div class="card" data-key="B" title="Set favicon: Option B — BasePulse">
+        <div class="art">
+          <svg id="galB" viewBox="0 0 96 96" aria-label="Galactly BasePulse Mark">
+            <defs>
+              <linearGradient id="rimB" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#F2DCA0"/><stop offset=".7" stop-color="#E6EEF7"/>
+              </linearGradient>
+              <radialGradient id="energyB" cx=".5" cy=".82" r=".65">
+                <stop offset="0" stop-color="#F2DCA0" stop-opacity=".55"/>
+                <stop offset=".5" stop-color="#E6EEF7" stop-opacity=".28"/>
+                <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
+              </radialGradient>
+              <clipPath id="triClipB"><polygon points="48,12 86,82 10,82"/></clipPath>
+            </defs>
 
-  function toDataUri(svg){ return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg); }
-  function card(title, tag, svg){
-    const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<div class="icon">${svg}</div><div class="meta"><b>Galactly</b><small>${tag}</small></div>`;
-    el.addEventListener('click', ()=>{
-      // set temporary favicon
-      document.querySelectorAll('link[rel="icon"]').forEach(n=>n.remove());
-      const link = document.createElement('link'); link.rel='icon'; link.type='image/svg+xml'; link.href = toDataUri(svg);
-      document.head.appendChild(link);
-      out.textContent = `<link rel="icon" type="image/svg+xml" href="${toDataUri(svg)}">`;
-    });
-    return el;
-  }
+            <rect width="96" height="96" fill="url(#energyB)" clip-path="url(#triClipB)">
+              <animate attributeName="opacity" values=".85;.92;.85" dur="3.2s" repeatCount="indefinite"/>
+            </rect>
 
-  function render(){
-    const round = +rIn.value, ring = +wIn.value, sw = +sIn.value;
-    rV.textContent = String(round); wV.textContent = String(ring); sV.textContent = sw.toFixed(1);
-    row.innerHTML = '';
-    row.appendChild( card('A','apex energy (inner-rounded)', svgTriangle({variant:'apex', ring, round, strokeW:sw})) );
-    row.appendChild( card('B','base energy (inner-rounded)', svgTriangle({variant:'base', ring, round, strokeW:sw})) );
-    row.appendChild( card('C','diamond energy (edge-emphasis)', svgDiamond({ring, round, strokeW:sw})) );
-  }
+            <path d="M 48 12 L 86 82 L 10 82 Z" fill="none" stroke="#E6EEF7" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M 48 12 L 86 82 L 10 82 Z" fill="none" stroke="url(#rimB)" stroke-width="2" opacity=".9"/>
 
-  rIn.addEventListener('input', render);
-  wIn.addEventListener('input', render);
-  sIn.addEventListener('input', render);
-  host.querySelector('#copyFav').addEventListener('click', ()=> {
-    if (out.textContent) navigator.clipboard.writeText(out.textContent).catch(()=>{});
-  });
+            <!-- Base frequency chevrons (intent converges to base) -->
+            <g stroke="url(#rimB)" stroke-linecap="round" stroke-width="2.5">
+              <path d="M 20 82 L 48 70"/><path d="M 76 82 L 48 70"/>
+              <path d="M 28 82 L 48 73" opacity=".6"/><path d="M 68 82 L 48 73" opacity=".6"/>
+              <path d="M 36 82 L 48 76" opacity=".35"/><path d="M 60 82 L 48 76" opacity=".35"/>
+            </g>
+          </svg>
+        </div>
+        <div class="meta">B — BasePulse (grounded base)</div>
+      </div>
 
-  render();
-})();
-</script>
-<!-- /GALACTLY — LOGO OPTIONS v4 -->
+      <!-- C — Orbit-G (circular time/intent, subtle G gap) -->
+      <div class="card" data-key="C" title="Set favicon: Option C — Orbit-G">
+        <div class="art">
+          <svg id="galC" viewBox="0 0 96 96" aria-label="Galactly Orbit-G Mark">
+            <defs>
+              <linearGradient id="rimC" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#F2DCA0"/><stop offset="1" stop-color="#E6EEF7"/>
+              </linearGradient>
+              <radialGradient id="energyC" cx=".5" cy=".5" r=".7">
+                <stop offset="0" stop-color="#F2DCA0" stop-opacity=".38"/>
+                <stop offset=".6" stop-color="#E6EEF7" stop-opacity=".2"/>
+                <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
+              </radialGradient>
+              <mask id="ringCut">
+                <rect width="96" height="96" fill="white"/>
+                <circle cx="48" cy="48" r="28" fill="black"/>
+                <!-- G gap on right -->
+                <rect x="72" y="44" width="14" height="8" fill="black" rx="2"/>
+                <!-- three notches (triad) -->
+                <rect x="47" y="8"  width="2" height="10" fill="black" rx="1"/>
+                <rect x="83" y="46" width="10" height="2" fill="black" rx="1"/>
+                <rect x="3"  y="46" width="10" height="2" fill="black" rx="1"/>
+              </mask>
+            </defs>
+
+            <circle cx="48" cy="48" r="40" fill="url(#energyC)" opacity=".9">
+              <animate attributeName="opacity" values=".85;.92;.85" dur="3.2s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="48" cy="48" r="40" fill="none" stroke="#E6EEF7" stroke-width="6" mask="url(#ringCut)"/>
+            <circle cx="48" cy="48" r="40" fill="none" stroke="url(#rimC)" stroke-width="2" mask="url(#ringCut)" opacity=".95"/>
+          </svg>
+        </div>
+        <div class="meta">C — Orbit-G (time dial)</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const lab = document.getElementById('galactly-logo-lab');
+      if(!lab) return;
+
+      function ensureFaviconLink(){
+        let link = document.querySelector('link[rel="icon"]');
+        if(!link){
+          link = document.createElement('link');
+          link.rel = 'icon';
+          link.type = 'image/svg+xml';
+          document.head.appendChild(link);
+        }
+        return link;
+      }
+      function svgToDataUrl(svgEl){
+        const clone = svgEl.cloneNode(true);
+        clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+        const svgTxt = clone.outerHTML.replace(/\s+/g,' ').trim();
+        return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgTxt);
+      }
+      function setFaviconFrom(card){
+        const svg = card.querySelector('svg');
+        const href = svgToDataUrl(svg);
+        const link = ensureFaviconLink();
+        link.href = href;
+
+        lab.querySelectorAll('.card').forEach(c=>c.classList.remove('is-sel'));
+        card.classList.add('is-sel');
+      }
+
+      // click to set favicon
+      lab.querySelectorAll('.card').forEach(card=>{
+        card.addEventListener('click', ()=> setFaviconFrom(card), {passive:true});
+      });
+
+      // default select A
+      const first = lab.querySelector('.card[data-key="A"]');
+      if(first) setFaviconFrom(first);
+    })();
+  </script>
+</div>
+<!-- === /Galactly Logo Lab === -->
 
 
 
