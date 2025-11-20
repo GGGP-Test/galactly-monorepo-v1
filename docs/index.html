@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
-<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48"><defs><linearGradient id="g" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="%23E6EEF7"/><stop offset="1" stop-color="%23F2DCA0"/></linearGradient></defs><circle r="22" fill="%230e1420"/><g fill="none" stroke="url(%23g)" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -11 L11 9 L-11 9 Z" stroke-width="2.6"/><path d="M0 -7 L7 5.6 L-7 5.6 Z" stroke-width="1.8" opacity=".9"/><path d="M0 -3.8 L3.8 3.0 L-3.8 3.0 Z" stroke-width="1.2" opacity=".82"/></g></svg>'>
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48"><defs><linearGradient id="g" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="%23E6EEF7"/><stop offset="1" stop-color="%23F2DCA0"/></linearGradient></defs><rect x="-22" y="-22" width="44" height="44" rx="8" fill="%230e1420"/><g fill="none" stroke="url(%23g)" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -11 L11 9 L-11 9 Z" stroke-width="2.6"/><path d="M0 -7 L7 5.6 L-7 5.6 Z" stroke-width="1.8" opacity=".9"/><path d="M0 -3.8 L3.8 3.0 L-3.8 3.0 Z" stroke-width="1.2" opacity=".82"/></g></svg>'>
   
 <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
@@ -3211,33 +3211,27 @@
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
-        <a href="index.html" class="brand" aria-label="Galactly">
-          <span class="brand-mark" aria-hidden="true">
-            <!-- Triad Nest — refined logo mark (platinum → faint-gold) -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48" width="40" height="40" role="img" focusable="false" aria-label="Galactly logo">
-              <defs>
-                <linearGradient id="triadGrad" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stop-color="#E6EEF7"/>
-                  <stop offset="1" stop-color="#F2DCA0"/>
-                </linearGradient>
-                <!-- soft ambient glow (subtle; not a filled badge) -->
-                <radialGradient id="triadGlow" r="1">
-                  <stop offset="0"  stop-color="#E6EEF7" stop-opacity=".18"/>
-                  <stop offset=".75" stop-color="#E6EEF7" stop-opacity="0"/>
-                </radialGradient>
-              </defs>
-              <circle r="20" fill="url(#triadGlow)"/>
-              <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="url(#triadGrad)">
-                <!-- outer frame, slightly broader -->
-                <path d="M0 -12 L12 10 L-12 10 Z" stroke-width="2.6"/>
-                <!-- step 2 -->
-                <path d="M0 -7.5 L7.6 6 L-7.6 6 Z" stroke-width="1.8" opacity=".92"/>
-                <!-- step 3 -->
-                <path d="M0 -3.8 L3.9 3.2 L-3.9 3.2 Z" stroke-width="1.2" opacity=".84"/>
-              </g>
-            </svg>
-          </span>
-        </a>
+      <a href="index.html" class="brand" aria-label="Galactly">
+        <span class="brand-mark" aria-hidden="true">
+          <!-- Triad Nest — no background circle, stepped inner lines -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48" width="52" height="52" role="img" focusable="false" aria-label="Galactly logo">
+            <defs>
+              <linearGradient id="triadGrad" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#E6EEF7"/>
+                <stop offset="1" stop-color="#F2DCA0"/>
+              </linearGradient>
+            </defs>
+            <g fill="none" stroke="url(#triadGrad)" stroke-linecap="round" stroke-linejoin="round">
+              <!-- outer frame -->
+              <path d="M0 -12 L12 10 L-12 10 Z" stroke-width="2.8"/>
+              <!-- step 2 -->
+              <path d="M0 -7.5 L7.6 6 L-7.6 6 Z" stroke-width="2.0" opacity=".86"/>
+              <!-- step 3 -->
+              <path d="M0 -3.8 L3.9 3.2 L-3.9 3.2 Z" stroke-width="1.4" opacity=".68"/>
+            </g>
+          </svg>
+        </span>
+      </a>
       <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="#get-started" data-track-id="nav-how">How it works</a>
         <a class="nav-link" href="sectors.html" data-track-id="nav-sectors">Sectors</a>
