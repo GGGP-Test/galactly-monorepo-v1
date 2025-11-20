@@ -4757,15 +4757,15 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header mark + word (clean white, refined) ===== -->
+<!-- ===== Galactly — header mark + word (clean white, base-frequency variant) ===== -->
 <style>
-  /* Header lockup: big, inside the flow, no badge, no weird dashes */
+  /* Header lockup */
   .brand-badge{ display:none !important; }
   .site-header .brand{
     display:flex; align-items:center; gap:12px; text-decoration:none;
   }
   .site-header .brand svg{ display:block }
-  .site-header .brand path{
+  .site-header .brand path, .site-header .brand line{
     stroke-dasharray:none !important; stroke-dashoffset:0 !important;
   }
   .brand-word{
@@ -4775,9 +4775,12 @@ window.SCOREBOARD_KNOBS = {
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
   }
-  /* Icon size (desktop bumps up a bit) */
-  .brand-icon svg{ width:44px; height:44px; }
-  @media (min-width: 901px){ .brand-icon svg{ width:48px; height:48px; } }
+  .brand-icon svg{ width:46px; height:46px; }
+  @media (min-width:901px){ .brand-icon svg{ width:50px; height:50px; } }
+
+  /* Subtle motion to sell “frequency”, not a spinner or eye */
+  @keyframes ggDash { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-36} }
+  @keyframes ggJitter { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-0.4px) } }
 </style>
 
 <script>
@@ -4785,59 +4788,58 @@ window.SCOREBOARD_KNOBS = {
     const brand = document.querySelector('.site-header .brand');
     if(!brand) return;
 
-    // Concentric (same path), dimmer + softly blurred inner steps. No circle.
     const icon = `
       <svg viewBox="0 0 48 48" role="img" aria-label="Galactly mark">
         <defs>
-          <linearGradient id="ggWhiteShimmer2" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#FFFFFF"/>
-            <stop offset="1" stop-color="#E6EEF7"/>
+          <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
           </linearGradient>
 
-          <!-- One base triangle path; all steps scale from this so alignment is perfect -->
-          <path id="ggTriBase" d="M24 8 L40 40 H8 Z"/>
+          <!-- Base triangle path; every layer derives from this for perfect alignment -->
+          <path id="tri" d="M24 8 L40 40 H8 Z"/>
 
-          <!-- Subtle softeners for inner steps -->
-          <filter id="ggSoft1" x="-20%" y="-20%" width="140%" height="140%">
+          <!-- softeners for inner strokes + base lines -->
+          <filter id="soft1" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="0.35"/>
           </filter>
-          <filter id="ggSoft2" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="0.65"/>
-          </filter>
-
-          <!-- Whisper edge glow that hugs inner edges (no badge, avoids “eye”) -->
-          <filter id="ggEdge" x="-25%" y="-25%" width="150%" height="150%">
-            <feGaussianBlur stdDeviation="1.1" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          <filter id="soft2" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="0.7"/>
           </filter>
         </defs>
 
-        <!-- OUTER (crisp) -->
-        <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round">
-          <use href="#ggTriBase" stroke-width="3.2"/>
+        <!-- OUTER: crisp -->
+        <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#tri" stroke-width="3.2"/>
         </g>
 
-        <!-- MID (dimmer + softened) -->
-        <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round"
-           opacity="0.66" filter="url(#ggSoft1)">
-          <use href="#ggTriBase"
-               transform="translate(24 24) scale(.78) translate(-24 -24)"
+        <!-- MID: a touch dimmer, slightly raised (not perfectly concentric) -->
+        <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round"
+           opacity="0.70" filter="url(#soft1)">
+          <use href="#tri"
+               transform="translate(24 23) scale(.80) translate(-24 -23)"
                stroke-width="2.0"/>
         </g>
 
-        <!-- INNER (smallest, more dim, slightly blurrier) -->
-        <g fill="none" stroke="url(#ggWhiteShimmer2)" stroke-linecap="round" stroke-linejoin="round"
-           opacity="0.45" filter="url(#ggSoft2)">
-          <use href="#ggTriBase"
-               transform="translate(24 24) scale(.62) translate(-24 -24)"
+        <!-- INNER: smallest, dimmest, a bit blurrier, raised a hair more -->
+        <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round"
+           opacity="0.45" filter="url(#soft2)">
+          <use href="#tri"
+               transform="translate(24 22.2) scale(.62) translate(-24 -22.2)"
                stroke-width="1.4"/>
         </g>
 
-        <!-- Edge-only glow to sell “energy/frequency” without a halo -->
-        <g fill="none" stroke="#FFFFFF" opacity="0.10" filter="url(#ggEdge)">
-          <use href="#ggTriBase"
-               transform="translate(24 24) scale(.70) translate(-24 -24)"
-               stroke-width="2.0"/>
+        <!-- BASE-ONLY frequency lines (three stripes that live just along the base) -->
+        <g class="base-lines" fill="none" stroke="url(#ggShimmer)" stroke-linecap="round">
+          <!-- lengths chosen so they sit cleanly inside the triangle’s base -->
+          <line x1="12" y1="40" x2="36" y2="40"
+                stroke-width="2.0" opacity="0.95"
+                style="filter:url(#soft1); stroke-dasharray:16 20; animation:ggDash 2.6s linear infinite, ggJitter 2.8s ease-in-out infinite;" />
+          <line x1="14" y1="36.4" x2="34" y2="36.4"
+                stroke-width="1.6" opacity="0.70"
+                style="filter:url(#soft1); stroke-dasharray:14 18; animation:ggDash 2.4s linear infinite reverse, ggJitter 3.1s ease-in-out infinite;" />
+          <line x1="16" y1="33.2" x2="32" y2="33.2"
+                stroke-width="1.2" opacity="0.55"
+                style="filter:url(#soft2); stroke-dasharray:12 16; animation:ggDash 2.2s linear infinite, ggJitter 2.6s ease-in-out infinite reverse;" />
         </g>
       </svg>`;
 
@@ -4848,7 +4850,7 @@ window.SCOREBOARD_KNOBS = {
     brand.setAttribute('aria-label','Galactly');
   })();
 </script>
-<!-- ===== /Galactly — header mark + word (clean white, refined) ===== -->
+<!-- ===== /Galactly — header mark + word (base-frequency variant) ===== -->
 
 
 
