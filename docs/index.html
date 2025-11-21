@@ -4756,29 +4756,38 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — double mirrored G (FINAL, using your path) ===== -->
+<!-- ===== Galactly — double mirrored G (pro polish + filled stroke) ===== -->
 <style>
   .site-header .brand{
     display:flex; align-items:center;
-    --icon-w: 36px;          /* overall icon size */
-    --brand-gap: 10px;       /* space between icon and word */
+    --icon-w: 38px;          /* overall icon size */
+    --brand-gap: 10px;
     gap: var(--brand-gap);
   }
-  /* >>> X-padding knob between the two Gs <<< */
-  .brand-icon{ --gg-gap-x: 12px; }     /* 0 = touch, negative = interlock */
-
-  .brand-icon svg{ width: var(--icon-w); height: var(--icon-w); display:block; }
-  .brand-word{
-    font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    letter-spacing:.2px;
-    background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    white-space:nowrap;
+  /* knobs */
+  .brand-icon{
+    --gg-gap-x: 10px;        /* X spacing between the two Gs (can be negative) */
+    --tube: 7px;             /* stroke thickness / "tube" width */
   }
 
-  /* SVG polish */
-  .brand-icon .piece use{ vector-effect: non-scaling-stroke; }
-  .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
+  .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
+  .brand-word{
+    font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    letter-spacing:.2px; white-space:nowrap;
+  }
+
+  /* polish the path: round ends/corners, crisp edges */
+  .brand-icon .tube{
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-miterlimit: 2;
+    shape-rendering: geometricPrecision;
+    paint-order: stroke fill;
+    filter: url(#ggSoftGlow);
+  }
 </style>
 
 <script>
@@ -4787,46 +4796,48 @@ window.SCOREBOARD_KNOBS = {
   if(!brand) return;
 
   const icon = `
-<svg viewBox="0 0 64 64" role="img" aria-label="Galactly double G"
-     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
 
   <defs>
-    <!-- metal-ish stroke -->
-    <linearGradient id="ggMetal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"   stop-color="#FFFFFF"/>
-      <stop offset="0.45" stop-color="#E8EEF6"/>
-      <stop offset="0.75" stop-color="#C9D3DF"/>
-      <stop offset="1"   stop-color="#98A6B8"/>
+    <!-- Your exact G path (kept intact) -->
+    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
+      <path id="gPath" fill="none"
+        d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
+    </symbol>
+
+    <!-- professional, minimal colorway -->
+    <linearGradient id="ggInk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#EAF6FF"/>
+      <stop offset="0.45" stop-color="#A5D4FF"/>
+      <stop offset="0.9" stop-color="#3DA3FF"/>
+    </linearGradient>
+    <!-- slim inner highlight -->
+    <linearGradient id="ggHighlight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#FFFFFF" />
+      <stop offset="1"   stop-color="#FFFFFF" stop-opacity="0.35"/>
     </linearGradient>
 
-    <!-- soft glow -->
-    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+    <!-- soft outer glow for depth -->
+    <filter id="ggSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#000" flood-opacity="0.25"/>
-      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#8EE0FF" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="2.6" flood-color="#7FD6FF" flood-opacity="0.18"/>
     </filter>
-
-    <!-- Your exact G path wrapped in a symbol and scaled by viewBox -->
-    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
-      <path id="gRaw" fill="none" stroke-linecap="round" stroke-linejoin="round"
-            d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
-    </symbol>
   </defs>
 
-  <!-- RIGHT G -->
-  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#softGlow);">
-    <use href="#gSym" xlink:href="#gSym" width="64" height="64"
-         stroke="url(#ggMetal)" stroke-width="5" />
-    <!-- inner highlight -->
-    <use href="#gSym" xlink:href="#gSym" width="64" height="64"
-         stroke="#FFFFFF" stroke-width="2.2" opacity="0.85"/>
+  <!-- RIGHT G: base tube + inner highlight -->
+  <g class="tube" style="transform: translateX(calc(var(--gg-gap-x)/2));">
+    <use href="#gSym" width="64" height="64"
+         stroke="url(#ggInk)" stroke-width="var(--tube)"/>
+    <use href="#gSym" width="64" height="64"
+         stroke="url(#ggHighlight)" stroke-width="calc(var(--tube) * 0.42)" opacity="0.9"/>
   </g>
 
   <!-- LEFT G (mirrored) -->
-  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#softGlow);">
-    <use href="#gSym" xlink:href="#gSym" width="64" height="64"
-         stroke="url(#ggMetal)" stroke-width="5" />
-    <use href="#gSym" xlink:href="#gSym" width="64" height="64"
-         stroke="#FFFFFF" stroke-width="2.2" opacity="0.85"/>
+  <g class="tube" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1);">
+    <use href="#gSym" width="64" height="64"
+         stroke="url(#ggInk)" stroke-width="var(--tube)"/>
+    <use href="#gSym" width="64" height="64"
+         stroke="url(#ggHighlight)" stroke-width="calc(var(--tube) * 0.42)" opacity="0.9"/>
   </g>
 </svg>`;
 
@@ -4835,7 +4846,7 @@ window.SCOREBOARD_KNOBS = {
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /double mirrored G (FINAL) ===== -->
+<!-- ===== /double mirrored G ===== -->
 
 
 
