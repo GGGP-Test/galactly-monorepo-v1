@@ -4757,34 +4757,31 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header logo (mirrored G monogram) ===== -->
+<!-- ===== Galactly — mirrored GG header logo (shimmer + base-frequency lines) ===== -->
 <style>
-  /* Kill any old yellow badge */
+  /* kill any legacy badge */
   .brand-badge{ display:none !important; }
 
-  /* Header lockup knobs */
+  /* Header lockup spacing + vertical nudge */
   .site-header .brand{
-    display:flex; align-items:center; text-decoration:none;
-    --gg-gap: 8px;   /* space between icon and word */
-    --gg-y:   2px;   /* move icon up/down (+ = down) */
-    --gg-size: 32px; /* icon size on small screens */
+    display:flex; align-items:center; gap:8px; text-decoration:none;
+    --brand-y: 2px;              /* + pushes icon DOWN, - moves up */
   }
-  .site-header .brand{ gap: var(--gg-gap); }
-  .brand-icon{ transform: translateY(var(--gg-y)); }
-  .brand-icon svg{ width:var(--gg-size); height:var(--gg-size); display:block; }
+  .brand-icon{ transform: translateY(var(--brand-y)); }
 
-  /* Desktop scale */
-  @media (min-width: 901px){
-    .site-header .brand{ --gg-gap: 10px; --gg-size: 38px; --gg-y: 2px; }
-  }
-
-  /* Wordmark look */
+  /* Wordmark: same style you already use */
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
     background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
+  }
+
+  /* Icon size knob (match to word height visually) */
+  .brand-icon svg{ width:30px; height:30px; display:block; }
+  @media (min-width:901px){
+    .brand-icon svg{ width:34px; height:34px; }
   }
 </style>
 
@@ -4793,74 +4790,62 @@ window.SCOREBOARD_KNOBS = {
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
 
-  // Mirrored-G monogram: front G brighter; mirrored G slightly dimmer
-  // Clean strokes, white→platinum shimmer, subtle interior glow to keep it from looking like an “eye”.
+  // Mirrored “GG” built from true strokes (not fonts) so it reads clean at small sizes.
+  // Foreground G = brighter; mirrored G = slightly dimmer + slight left offset.
   const icon = `
-  <svg viewBox="0 0 48 48" role="img" aria-label="Galactly monogram">
+  <svg viewBox="-24 -24 48 48" role="img" aria-label="Galactly mark">
     <defs>
-      <!-- stroke shimmer -->
-      <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
+      <!-- shimmer used for both Gs -->
+      <linearGradient id="ggShimmer" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
         <stop offset="0" stop-color="#FFFFFF"/>
         <stop offset="1" stop-color="#E6EEF7"/>
       </linearGradient>
-      <!-- soft interior field (top → bottom fades) -->
-      <linearGradient id="innerGlow" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#E6EEF7" stop-opacity=".18"/>
-        <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
+      <!-- subtle top→bottom glow so it feels lit (not an “eye”) -->
+      <linearGradient id="ggGlow" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
+        <stop offset="0"  stop-color="#E6EEF7" stop-opacity=".18"/>
+        <stop offset="1"  stop-color="#E6EEF7" stop-opacity="0"/>
       </linearGradient>
-      <!-- tiny glow around strokes -->
-      <filter id="halo" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="0.6" result="b"/>
-        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
     </defs>
 
-    <!-- faint field behind the letterforms so they read at small sizes -->
-    <rect x="8" y="10" width="32" height="28" rx="6" fill="url(#innerGlow)" opacity=".22"/>
+    <!-- faint field inside the mark -->
+    <rect x="-18" y="-14" width="36" height="28" rx="12" fill="url(#ggGlow)"/>
 
-    <!-- Mirrored G (back) -->
-    <g transform="translate(46,0) scale(-1,1)" fill="none" stroke="url(#ggShimmer)"
-       stroke-linecap="round" stroke-linejoin="round" filter="url(#halo)" opacity=".78">
-      <!-- C curve of the G -->
-      <path d="M30 11
-               Q18 11 18 24
-               Q18 37 30 37" stroke-width="2.6"/>
-      <!-- G crossbar -->
-      <path d="M30 24 H37" stroke-width="2.6"/>
+    <!-- === Mirrored back G (a touch dimmer) === -->
+    <g transform="translate(-3,0)" fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round" opacity=".72">
+      <!-- C-arc of the G (start near right, sweep around left) -->
+      <path d="M 6,-12 A 14,14 0 1 0 6,12" stroke-width="3"/>
+      <!-- inner bar -->
+      <path d="M 2,2 H 10" stroke-width="3"/>
+      <!-- base “frequency” accents (three lighter arcs near the base) -->
+      <path d="M -2,8 A 10,10 0 0 0 2,8" stroke-width="1.4" opacity=".55"/>
+      <path d="M -4,10 A 12,12 0 0 0 4,10" stroke-width="1.1" opacity=".42"/>
+      <path d="M -6,12 A 14,14 0 0 0 6,12" stroke-width="0.9" opacity=".30"/>
     </g>
 
-    <!-- Front G (brighter) -->
-    <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round" filter="url(#halo)">
-      <path d="M30 11
-               Q18 11 18 24
-               Q18 37 30 37" stroke-width="3.2"/>
-      <path d="M30 24 H38" stroke-width="3.2"/>
-    </g>
-
-    <!-- frequency vibe: thin inner echoes (three-step dimness, base-weighted) -->
-    <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round" opacity=".6">
-      <!-- echoes inside the front G -->
-      <path d="M30 13
-               Q20 13 20 24
-               Q20 35 30 35" stroke-width="1.2"/>
-      <path d="M30 15.2
-               Q22 15.2 22 24
-               Q22 32.8 30 32.8" stroke-width="1" opacity=".66"/>
-      <path d="M30 17.2
-               Q23.4 17.2 23.4 24
-               Q23.4 30.8 30 30.8" stroke-width=".9" opacity=".52"/>
+    <!-- === Foreground G (brighter, slight right) === -->
+    <g transform="translate(3,0)" fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round" opacity=".95">
+      <path d="M 6,-12 A 14,14 0 1 0 6,12" stroke-width="3.4"/>
+      <path d="M 2,2 H 10" stroke-width="3.4"/>
+      <path d="M -2,8 A 10,10 0 0 0 2,8" stroke-width="1.6" opacity=".70"/>
+      <path d="M -4,10 A 12,12 0 0 0 4,10" stroke-width="1.2" opacity=".50"/>
+      <path d="M -6,12 A 14,14 0 0 0 6,12" stroke-width="1.0" opacity=".36"/>
     </g>
   </svg>`;
 
-  // Replace brand contents (ensures no leftover circle/badge remains)
+  // Replace the header brand content with [icon] [word]
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
   `;
   brand.setAttribute('aria-label','Galactly');
+
+  // ---- knobs you asked for ----
+  // Size:   tweak in CSS -> .brand-icon svg{ width:..; height:.. }
+  // Gap:    tweak in CSS -> .site-header .brand{ gap:.. }
+  // Y-nudge tweak in CSS -> .site-header .brand{ --brand-y: ..px }
 })();
 </script>
-<!-- ===== /Galactly — header logo (mirrored G monogram) ===== -->
+<!-- ===== /Galactly — mirrored GG header logo ===== -->
 
 
 
