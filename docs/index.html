@@ -4757,31 +4757,36 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header logo: Mirrored “GG” (front brighter, back dimmer) ===== -->
+<!-- ===== Galactly — Mirrored G header logo (final, scoped, with working knobs) ===== -->
 <style>
-  /* kill any old badge */
+  /* Remove any old yellow badge */
   .brand-badge{ display:none !important; }
 
-  /* lockup + easy knobs */
+  /* Header lockup knobs that actually apply */
   .site-header .brand{
     display:flex; align-items:center; text-decoration:none;
-    --brand-gap: 10px;   /* space between icon and “Galactly” */
-    --brand-y:    2px;   /* move icon up(-)/down(+) */
-    gap: var(--brand-gap) !important;
+    gap: var(--brand-gap, 8px) !important;          /* ← spacing between icon and word */
+    --brand-y: var(--brand-nudge-y, 2px);           /* ← move icon down(+) / up(-) */
+    --icon-size: var(--brand-icon-size, 36px);      /* ← icon size; try 34–40 */
   }
-  .brand-icon{ transform: translateY(var(--brand-y)); }
-  .brand-icon svg{ display:block; width:32px; height:32px; }      /* mobile */
-  @media (min-width:901px){
-    .brand-icon svg{ width:38px; height:38px; }                   /* desktop */
+  .site-header .brand .brand-icon{ transform: translateY(var(--brand-y)); }
+  .site-header .brand .brand-icon svg{
+    width:var(--icon-size) !important; height:var(--icon-size) !important; display:block;
   }
 
-  /* shimmering white word */
-  .brand-word{
+  /* Keep the existing shimmering word look you already use */
+  .site-header .brand .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
     background: linear-gradient(180deg,#FFFFFF,#E6EEF7);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
+  }
+
+  /* Hard override only inside our icon so earlier global rules can’t kill dashes */
+  .site-header .brand .brand-icon .gg-dash{
+    stroke-dashoffset:0 !important;
+    stroke-linecap:round; stroke-linejoin:round;
   }
 </style>
 
@@ -4790,64 +4795,71 @@ window.SCOREBOARD_KNOBS = {
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
 
-  /* Mirrored double-G:
-     - true “G” (not a C): each has a gap + a short horizontal bar
-     - back G slightly dimmer (opacity .74)
-     - no background disk (so it can’t read like an “eye”)
-  */
+  // Set visual knobs from JS if you want different defaults (optional)
+  brand.style.setProperty('--brand-gap', '6px');        // closer to the word
+  brand.style.setProperty('--brand-nudge-y', '1px');    // tiny down nudge
+  brand.style.setProperty('--brand-icon-size', '34px'); // slightly smaller
+
+  // Mirrored Gs: right-facing G (front, brighter) + left-facing G (mirrored, dimmer)
+  // C-shape is a stroked circle with a controlled gap (dasharray), plus a short crossbar.
   const icon = `
-  <svg viewBox="0 0 64 32" role="img" aria-label="Galactly mirrored G logo">
-    <defs>
-      <!-- white shimmer -->
-      <linearGradient id="ggStroke" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#FFFFFF"/>
-        <stop offset="1" stop-color="#E6EEF7"/>
-      </linearGradient>
+<svg viewBox="0 0 48 48" role="img" aria-label="Galactly mirrored Gs">
+  <defs>
+    <!-- white shimmer (top → soft platinum) -->
+    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
+    </linearGradient>
+    <!-- subtle inner glow so it feels "lit" not an eye -->
+    <radialGradient id="ggGlow" cx=".5" cy=".45" r=".65">
+      <stop offset="0" stop-color="#E6EEF7" stop-opacity=".18"/>
+      <stop offset=".7" stop-color="#E6EEF7" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="ggSoft">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.35" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
 
-      <!-- soft inner field to suggest energy/frequency (very faint) -->
-      <radialGradient id="ggGlow" cx=".5" cy=".5" r=".7">
-        <stop offset="0" stop-color="#E6EEF7" stop-opacity=".16"/>
-        <stop offset="1" stop-color="#E6EEF7" stop-opacity="0"/>
-      </radialGradient>
+  <!-- faint field to avoid "empty eye", tuned very low -->
+  <circle cx="24" cy="24" r="13.5" fill="url(#ggGlow)"/>
 
-      <!-- cut a gap on the RIGHT side (for the left/front-facing G) -->
-      <mask id="gapRight">
-        <rect x="0" y="0" width="64" height="32" fill="#fff"/>
-        <rect x="23" y="8" width="6" height="16" rx="3" fill="#000"/>
-      </mask>
-      <!-- cut a gap on the LEFT side (for the mirrored G) -->
-      <mask id="gapLeft">
-        <rect x="0" y="0" width="64" height="32" fill="#fff"/>
-        <rect x="35" y="8" width="6" height="16" rx="3" fill="#000"/>
-      </mask>
-    </defs>
-
-    <!-- Back G (mirrored), slightly dimmer -->
-    <g opacity=".74">
-      <!-- faint inner glow behind stroke -->
-      <circle cx="42" cy="16" r="10.6" fill="url(#ggGlow)"/>
-      <!-- ring with a gap on LEFT -->
-      <circle cx="42" cy="16" r="10.6" fill="none"
-              stroke="url(#ggStroke)" stroke-width="3"
-              mask="url(#gapLeft)"/>
-      <!-- short bar pointing inward (left→right) to read as “G” -->
-      <line x1="36.8" y1="16" x2="40.8" y2="16"
-            stroke="url(#ggStroke)" stroke-width="3" stroke-linecap="round"/>
+  <!-- Settings for the glyphs -->
+  <g stroke="url(#ggShimmer)" fill="none" filter="url(#ggSoft)">
+    <!-- ===== FRONT G (faces right; a touch brighter) ===== -->
+    <g transform="translate(25 24)"> <!-- slight right bias so stems overlap nicely -->
+      <!-- C-arc: show ~76% of the circle, with the gap on the right (0°) -->
+      <circle class="gg-dash" cx="0" cy="0" r="10.4"
+              stroke-width="2.9" stroke-opacity="1"
+              transform="rotate(-90)"
+              stroke-dasharray="50 22"/>
+      <!-- inner frequency accents near the base (3-step dimness) -->
+      <circle class="gg-dash" cx="0" cy="0" r="8.6"
+              stroke-width="1.7" stroke-opacity=".78"
+              transform="rotate(-92)" stroke-dasharray="32 40"/>
+      <circle class="gg-dash" cx="0" cy="0" r="7.0"
+              stroke-width="1.2" stroke-opacity=".58"
+              transform="rotate(-94)" stroke-dasharray="22 50"/>
+      <!-- crossbar -->
+      <line x1="3.8" y1="0" x2="-0.6" y2="0" stroke-width="2.4" stroke-opacity=".98"/>
     </g>
 
-    <!-- Front G (normal orientation), brighter -->
-    <g opacity="1.0">
-      <circle cx="22" cy="16" r="11.0" fill="url(#ggGlow)"/>
-      <circle cx="22" cy="16" r="11.0" fill="none"
-              stroke="url(#ggStroke)" stroke-width="3.2"
-              mask="url(#gapRight)"/>
-      <!-- short bar pointing inward (right→left) -->
-      <line x1="27.2" y1="16" x2="23.2" y2="16"
-            stroke="url(#ggStroke)" stroke-width="3.2" stroke-linecap="round"/>
+    <!-- ===== MIRRORED G (faces left; slightly dimmer) ===== -->
+    <g transform="translate(23 24) scale(-1,1)"> <!-- mirror around its center; slight left bias -->
+      <circle class="gg-dash" cx="0" cy="0" r="10.4"
+              stroke-width="2.9" stroke-opacity=".78"
+              transform="rotate(-90)" stroke-dasharray="50 22"/>
+      <circle class="gg-dash" cx="0" cy="0" r="8.6"
+              stroke-width="1.7" stroke-opacity=".58"
+              transform="rotate(-92)" stroke-dasharray="32 40"/>
+      <circle class="gg-dash" cx="0" cy="0" r="7.0"
+              stroke-width="1.2" stroke-opacity=".42"
+              transform="rotate(-94)" stroke-dasharray="22 50"/>
+      <line x1="3.8" y1="0" x2="-0.6" y2="0" stroke-width="2.4" stroke-opacity=".78"/>
     </g>
-  </svg>`;
+  </g>
+</svg>`.trim();
 
-  /* Inject icon + word (keeps your footer & favicon intact) */
+  // Overwrite header content (wins even if older blocks ran)
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
@@ -4855,7 +4867,7 @@ window.SCOREBOARD_KNOBS = {
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /Galactly — mirrored GG header logo ===== -->
+<!-- ===== /Galactly — Mirrored G header logo ===== -->
 
 
 
