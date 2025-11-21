@@ -4757,18 +4757,19 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — single G mark (shimmer white) ===== -->
+<!-- ===== Galactly — double mirrored G mark (non-round) ===== -->
 <style>
   /* spacing + easy knobs */
   .site-header .brand{
     display:flex; align-items:center;
-    --icon-w: 32px;     /* size of the G icon (try 28–40) */
-    --brand-gap: 8px;   /* space between icon and "Galactly" */
+    --icon-w: 32px;     /* size of the whole icon (try 28–40) */
+    --brand-gap: 8px;   /* space between icon and word */
     gap: var(--brand-gap);
   }
-  .brand-icon svg{
-    width: var(--icon-w); height: var(--icon-w); display:block;
-  }
+  /* >>> X-padding between the two Gs (this is the knob you asked for) <<< */
+  .brand-icon{ --gg-gap-x: 8px; }      /* decrease to bring closer; negative to interlock */
+
+  .brand-icon svg{ width: var(--icon-w); height: var(--icon-w); display:block; }
   @media (min-width:901px){
     .site-header .brand{ --icon-w: 36px; --brand-gap: 10px; }
   }
@@ -4779,6 +4780,9 @@ window.SCOREBOARD_KNOBS = {
     -webkit-background-clip:text; background-clip:text; color:transparent;
     white-space:nowrap;
   }
+
+  /* make CSS transforms behave nicely inside the inline SVG */
+  .brand-icon svg .g { transform-box: fill-box; transform-origin: 50% 50%; }
 </style>
 
 <script>
@@ -4786,33 +4790,57 @@ window.SCOREBOARD_KNOBS = {
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
 
-  // One G: circular stroke with a deliberate right-side gap + bold cross-bar.
-  // The gap prevents "spinner" vibes; the cross-bar makes the G unmistakable.
+  // Two mirrored, squared Gs. Each G is a rounded-rectangle loop (not a circle),
+  // with a right-side notch (mask) + bold crossbar.
+  // X gap between them is controlled by CSS var --gg-gap-x on .brand-icon.
+
   const icon = `
-    <svg viewBox="0 0 48 48" role="img" aria-label="Galactly G">
-      <defs>
-        <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#FFFFFF"/>
-          <stop offset="1" stop-color="#E6EEF7"/>
-        </linearGradient>
-      </defs>
-      <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round">
-        <!-- outer ring with a clear gap on the right -->
-        <circle cx="24" cy="24" r="15.5"
-                stroke-width="3.2"
-                stroke-dasharray="92 20"  /* painted length, then the open gap */
-                stroke-dashoffset="10" />  /* rotate the gap slightly upward */
-        <!-- bold cross-bar to lock-in the G shape -->
-        <path d="M24 24 H 34" stroke-width="3.2"/>
-      </g>
-    </svg>`;
+<svg viewBox="0 0 64 64" role="img" aria-label="Galactly double G">
+  <defs>
+    <linearGradient id="ggShimmer2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6EEF7"/>
+    </linearGradient>
+
+    <!-- notch mask: removes a small vertical bite on the right edge to form the 'G' -->
+    <mask id="gNotch">
+      <!-- everything visible by default -->
+      <rect x="0" y="0" width="64" height="64" fill="white"/>
+      <!-- the 'bite' that hides stroke on the right side -->
+      <rect x="40" y="22" width="10" height="12" rx="2" ry="2" fill="black"/>
+    </mask>
+  </defs>
+
+  <!-- shared styling via attributes -->
+  <g fill="none" stroke="url(#ggShimmer2)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- RIGHT G (normal) -->
+    <g class="g g-right"
+       style="transform: translateX(calc(var(--gg-gap-x) / 2));">
+      <!-- rectangular loop (not round) -->
+      <rect x="18" y="10" width="28" height="44" rx="12" ry="12"
+            stroke-width="4" mask="url(#gNotch)"/>
+      <!-- cross-bar -->
+      <path d="M32 32 H 42" stroke-width="4"/>
+    </g>
+
+    <!-- LEFT G (mirrored) -->
+    <g class="g g-left"
+       style="transform: translateX(calc(-1 * var(--gg-gap-x) / 2)) scaleX(-1);">
+      <rect x="18" y="10" width="28" height="44" rx="12" ry="12"
+            stroke-width="4" mask="url(#gNotch)"/>
+      <path d="M32 32 H 42" stroke-width="4"/>
+    </g>
+
+  </g>
+</svg>`;
 
   const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
   brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /single G mark ===== -->
+<!-- ===== /double mirrored G mark ===== -->
 
 
 
