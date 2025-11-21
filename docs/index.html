@@ -4757,19 +4757,21 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — mirrored GG header logo (shimmer + base-frequency lines) ===== -->
+<!-- ===== Galactly — header logo v4 (mirrored Gs: left bright, right mirrored & dimmer) ===== -->
 <style>
-  /* kill any legacy badge */
+  /* Hide any old badge if it still exists */
   .brand-badge{ display:none !important; }
 
-  /* Header lockup spacing + vertical nudge */
+  /* Header lockup — knobs you can tweak */
   .site-header .brand{
-    display:flex; align-items:center; gap:8px; text-decoration:none;
-    --brand-y: 2px;              /* + pushes icon DOWN, - moves up */
+    display:flex; align-items:center; text-decoration:none;
+    --brand-gap: 8px;    /* space between icon and word */
+    --brand-y:   2px;    /* move icon DOWN (+) or up (-) */
   }
+  .site-header .brand > * + *{ margin-left: var(--brand-gap); }
   .brand-icon{ transform: translateY(var(--brand-y)); }
 
-  /* Wordmark: same style you already use */
+  /* Word styling (kept as you had it) */
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
@@ -4778,11 +4780,9 @@ window.SCOREBOARD_KNOBS = {
     white-space:nowrap;
   }
 
-  /* Icon size knob (match to word height visually) */
+  /* Icon size (make it a touch smaller next to 22px text; bump on desktop) */
   .brand-icon svg{ width:30px; height:30px; display:block; }
-  @media (min-width:901px){
-    .brand-icon svg{ width:34px; height:34px; }
-  }
+  @media (min-width:901px){ .brand-icon svg{ width:34px; height:34px; } }
 </style>
 
 <script>
@@ -4790,62 +4790,53 @@ window.SCOREBOARD_KNOBS = {
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
 
-  // Mirrored “GG” built from true strokes (not fonts) so it reads clean at small sizes.
-  // Foreground G = brighter; mirrored G = slightly dimmer + slight left offset.
+  // Inline mirrored-G mark: left G (bright), right G (true mirror, slightly dimmer).
+  // Clean platinum→white stroke + very soft halo so it reads "lit", not "eye".
   const icon = `
-  <svg viewBox="-24 -24 48 48" role="img" aria-label="Galactly mark">
+  <svg viewBox="-28 -22 56 44" role="img" aria-label="Galactly mirrored G mark">
     <defs>
-      <!-- shimmer used for both Gs -->
-      <linearGradient id="ggShimmer" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="#FFFFFF"/>
-        <stop offset="1" stop-color="#E6EEF7"/>
+      <linearGradient id="ggBright" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
       </linearGradient>
-      <!-- subtle top→bottom glow so it feels lit (not an “eye”) -->
-      <linearGradient id="ggGlow" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
-        <stop offset="0"  stop-color="#E6EEF7" stop-opacity=".18"/>
-        <stop offset="1"  stop-color="#E6EEF7" stop-opacity="0"/>
+      <linearGradient id="ggDim" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
       </linearGradient>
+      <radialGradient id="ggHalo" r="1">
+        <stop offset="0"  stop-color="#E6EEF7" stop-opacity=".16"/>
+        <stop offset=".75" stop-color="#E6EEF7" stop-opacity="0"/>
+      </radialGradient>
     </defs>
 
-    <!-- faint field inside the mark -->
-    <rect x="-18" y="-14" width="36" height="28" rx="12" fill="url(#ggGlow)"/>
+    <!-- subtle field so strokes feel illuminated -->
+    <circle cx="0" cy="0" r="18" fill="url(#ggHalo)"/>
 
-    <!-- === Mirrored back G (a touch dimmer) === -->
-    <g transform="translate(-3,0)" fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round" opacity=".72">
-      <!-- C-arc of the G (start near right, sweep around left) -->
-      <path d="M 6,-12 A 14,14 0 1 0 6,12" stroke-width="3"/>
-      <!-- inner bar -->
-      <path d="M 2,2 H 10" stroke-width="3"/>
-      <!-- base “frequency” accents (three lighter arcs near the base) -->
-      <path d="M -2,8 A 10,10 0 0 0 2,8" stroke-width="1.4" opacity=".55"/>
-      <path d="M -4,10 A 12,12 0 0 0 4,10" stroke-width="1.1" opacity=".42"/>
-      <path d="M -6,12 A 14,14 0 0 0 6,12" stroke-width="0.9" opacity=".30"/>
-    </g>
+    <!-- Shared styling -->
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- LEFT G (bright) -->
+      <g transform="translate(-8,0)" stroke="url(#ggBright)" opacity="1">
+        <!-- C-arc (40°..320°), r=10 -->
+        <path d="M 7.660 6.429 A 10 10 0 1 1 7.660 -6.429" stroke-width="2.8"/>
+        <!-- crossbar -->
+        <path d="M -2 0 H 2" stroke-width="2.2"/>
+      </g>
 
-    <!-- === Foreground G (brighter, slight right) === -->
-    <g transform="translate(3,0)" fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round" opacity=".95">
-      <path d="M 6,-12 A 14,14 0 1 0 6,12" stroke-width="3.4"/>
-      <path d="M 2,2 H 10" stroke-width="3.4"/>
-      <path d="M -2,8 A 10,10 0 0 0 2,8" stroke-width="1.6" opacity=".70"/>
-      <path d="M -4,10 A 12,12 0 0 0 4,10" stroke-width="1.2" opacity=".50"/>
-      <path d="M -6,12 A 14,14 0 0 0 6,12" stroke-width="1.0" opacity=".36"/>
+      <!-- RIGHT G (true mirror of the same geometry), slightly dimmer -->
+      <g transform="translate(8,0) scale(-1,1)" stroke="url(#ggDim)" opacity=".82">
+        <path d="M 7.660 6.429 A 10 10 0 1 1 7.660 -6.429" stroke-width="2.6"/>
+        <path d="M -2 0 H 2" stroke-width="2.0"/>
+      </g>
     </g>
   </svg>`;
 
-  // Replace the header brand content with [icon] [word]
+  // Install [icon][word] in the header.
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
   `;
   brand.setAttribute('aria-label','Galactly');
-
-  // ---- knobs you asked for ----
-  // Size:   tweak in CSS -> .brand-icon svg{ width:..; height:.. }
-  // Gap:    tweak in CSS -> .site-header .brand{ gap:.. }
-  // Y-nudge tweak in CSS -> .site-header .brand{ --brand-y: ..px }
 })();
 </script>
-<!-- ===== /Galactly — mirrored GG header logo ===== -->
+<!-- ===== /Galactly — header logo v4 ===== -->
 
 
 
