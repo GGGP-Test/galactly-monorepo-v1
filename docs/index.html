@@ -4757,24 +4757,21 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — single “G” mark (white shimmer, clear cross-bar) ===== -->
+<!-- ===== Galactly — single G mark (shimmer white) ===== -->
 <style>
-  /* brand spacing + easy knobs */
+  /* spacing + easy knobs */
   .site-header .brand{
     display:flex; align-items:center;
-    gap:8px;                    /* ← tighten/loosen space between icon and word */
-    --brand-y: 1px;             /* ← move icon up/down (+ = down) */
-    --icon-w: 32px;             /* ← icon size (desktop below bumps up) */
+    --icon-w: 32px;     /* size of the G icon (try 28–40) */
+    --brand-gap: 8px;   /* space between icon and "Galactly" */
+    gap: var(--brand-gap);
   }
   .brand-icon svg{
-    width:var(--icon-w); height:var(--icon-w);
-    display:block; transform: translateY(var(--brand-y));
+    width: var(--icon-w); height: var(--icon-w); display:block;
   }
-  @media (min-width: 901px){
-    .site-header .brand{ gap:10px; --icon-w: 36px; --brand-y: 1.5px; }
+  @media (min-width:901px){
+    .site-header .brand{ --icon-w: 36px; --brand-gap: 10px; }
   }
-
-  /* shimmering white word (unchanged) */
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
@@ -4787,11 +4784,10 @@ window.SCOREBOARD_KNOBS = {
 <script>
 (function(){
   const brand = document.querySelector('.site-header .brand');
-  if (!brand) return;
+  if(!brand) return;
 
-  // One “G”: outer circular stroke with a small right-side gap + a clear cross bar.
-  // The dash array creates the open gap so it can never look like a full ring.
-  // Two faint inner echoes suggest “frequency”, but are short so they don’t clutter.
+  // One G: circular stroke with a deliberate right-side gap + bold cross-bar.
+  // The gap prevents "spinner" vibes; the cross-bar makes the G unmistakable.
   const icon = `
     <svg viewBox="0 0 48 48" role="img" aria-label="Galactly G">
       <defs>
@@ -4800,42 +4796,23 @@ window.SCOREBOARD_KNOBS = {
           <stop offset="1" stop-color="#E6EEF7"/>
         </linearGradient>
       </defs>
-
-      <!-- Outer G ring with a deliberate gap at right -->
-      <circle cx="24" cy="24" r="15.5"
-              fill="none"
-              stroke="url(#ggShimmer)" stroke-width="3"
-              stroke-linecap="round"
-              stroke-dasharray="88 18"  /* ~ 88px painted, ~18px gap on right */
-              stroke-dashoffset="12" /> /* rotate the gap slightly up */
-
-      <!-- Clear cross-bar so it reads unmistakably as a G -->
-      <path d="M24 24 H 33"
-            fill="none"
-            stroke="url(#ggShimmer)" stroke-width="3" stroke-linecap="round"/>
-
-      <!-- Two subtle inner echoes near the base (frequency feel) -->
-      <circle cx="24" cy="24" r="12"
-              fill="none"
-              stroke="url(#ggShimmer)" stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-dasharray="42 120" stroke-dashoffset="250"
-              opacity=".55"/>
-      <circle cx="24" cy="24" r="9.2"
-              fill="none"
-              stroke="url(#ggShimmer)" stroke-width="1.2"
-              stroke-linecap="round"
-              stroke-dasharray="30 120" stroke-dashoffset="245"
-              opacity=".38"/>
+      <g fill="none" stroke="url(#ggShimmer)" stroke-linecap="round" stroke-linejoin="round">
+        <!-- outer ring with a clear gap on the right -->
+        <circle cx="24" cy="24" r="15.5"
+                stroke-width="3.2"
+                stroke-dasharray="92 20"  /* painted length, then the open gap */
+                stroke-dashoffset="10" />  /* rotate the gap slightly upward */
+        <!-- bold cross-bar to lock-in the G shape -->
+        <path d="M24 24 H 34" stroke-width="3.2"/>
+      </g>
     </svg>`;
 
-  // Replace just the icon; keep your existing word exactly as-is.
   const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
   brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /Galactly — single “G” mark ===== -->
+<!-- ===== /single G mark ===== -->
 
 
 
