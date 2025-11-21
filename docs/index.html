@@ -4757,22 +4757,23 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — double mirrored G mark (non-round) ===== -->
+<!-- ===== Galactly — double mirrored G mark (with cross-bars) ===== -->
 <style>
-  /* spacing + easy knobs */
   .site-header .brand{
     display:flex; align-items:center;
-    --icon-w: 32px;     /* size of the whole icon (try 28–40) */
+    --icon-w: 32px;     /* overall icon size */
     --brand-gap: 8px;   /* space between icon and word */
     gap: var(--brand-gap);
   }
-  /* >>> X-padding between the two Gs (this is the knob you asked for) <<< */
-  .brand-icon{ --gg-gap-x: 8px; }      /* decrease to bring closer; negative to interlock */
+
+  /* >>> X-padding between the two Gs <<< */
+  .brand-icon{ --gg-gap-x: 8px; }  /* 0 = touch, negative = interlock */
 
   .brand-icon svg{ width: var(--icon-w); height: var(--icon-w); display:block; }
   @media (min-width:901px){
     .site-header .brand{ --icon-w: 36px; --brand-gap: 10px; }
   }
+
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
@@ -4781,18 +4782,14 @@ window.SCOREBOARD_KNOBS = {
     white-space:nowrap;
   }
 
-  /* make CSS transforms behave nicely inside the inline SVG */
-  .brand-icon svg .g { transform-box: fill-box; transform-origin: 50% 50%; }
+  /* keep CSS transforms centered on each G group */
+  .brand-icon svg .g{ transform-box: fill-box; transform-origin: 50% 50%; }
 </style>
 
 <script>
 (function(){
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
-
-  // Two mirrored, squared Gs. Each G is a rounded-rectangle loop (not a circle),
-  // with a right-side notch (mask) + bold crossbar.
-  // X gap between them is controlled by CSS var --gg-gap-x on .brand-icon.
 
   const icon = `
 <svg viewBox="0 0 64 64" role="img" aria-label="Galactly double G">
@@ -4802,34 +4799,33 @@ window.SCOREBOARD_KNOBS = {
       <stop offset="1" stop-color="#E6EEF7"/>
     </linearGradient>
 
-    <!-- notch mask: removes a small vertical bite on the right edge to form the 'G' -->
-    <mask id="gNotch">
-      <!-- everything visible by default -->
+    <!-- masks cut a vertical bite (opening) to form the 'G' -->
+    <mask id="notchRight" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
       <rect x="0" y="0" width="64" height="64" fill="white"/>
-      <!-- the 'bite' that hides stroke on the right side -->
-      <rect x="40" y="22" width="10" height="12" rx="2" ry="2" fill="black"/>
+      <rect x="46" y="22" width="10" height="20" rx="2" fill="black"/>
+    </mask>
+    <mask id="notchLeft" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="64" height="64" fill="white"/>
+      <rect x="8" y="22" width="10" height="20" rx="2" fill="black"/>
     </mask>
   </defs>
 
-  <!-- shared styling via attributes -->
   <g fill="none" stroke="url(#ggShimmer2)" stroke-linecap="round" stroke-linejoin="round">
 
-    <!-- RIGHT G (normal) -->
-    <g class="g g-right"
-       style="transform: translateX(calc(var(--gg-gap-x) / 2));">
-      <!-- rectangular loop (not round) -->
-      <rect x="18" y="10" width="28" height="44" rx="12" ry="12"
-            stroke-width="4" mask="url(#gNotch)"/>
-      <!-- cross-bar -->
-      <path d="M32 32 H 42" stroke-width="4"/>
+    <!-- LEFT G (opening on the left + cross-bar pointing right) -->
+    <g class="g g-left" style="transform: translateX(calc(-1 * var(--gg-gap-x) / 2));">
+      <!-- squared loop (non-round) -->
+      <rect x="14" y="10" width="36" height="44" rx="12" ry="12"
+            stroke-width="4.5" mask="url(#notchLeft)"/>
+      <!-- the perpendicular stroke that makes it a G -->
+      <path d="M16 32 H 32" stroke-width="4.5"/>
     </g>
 
-    <!-- LEFT G (mirrored) -->
-    <g class="g g-left"
-       style="transform: translateX(calc(-1 * var(--gg-gap-x) / 2)) scaleX(-1);">
-      <rect x="18" y="10" width="28" height="44" rx="12" ry="12"
-            stroke-width="4" mask="url(#gNotch)"/>
-      <path d="M32 32 H 42" stroke-width="4"/>
+    <!-- RIGHT G (opening on the right + cross-bar pointing left) -->
+    <g class="g g-right" style="transform: translateX(calc(var(--gg-gap-x) / 2));">
+      <rect x="14" y="10" width="36" height="44" rx="12" ry="12"
+            stroke-width="4.5" mask="url(#notchRight)"/>
+      <path d="M48 32 H 32" stroke-width="4.5"/>
     </g>
 
   </g>
