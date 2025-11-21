@@ -15,30 +15,14 @@
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
-<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48">
-  <defs>
-    <linearGradient id="g" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="%23E6EEF7"/><stop offset="1" stop-color="%23F2DCA0"/>
-    </linearGradient>
-    <!-- dimmer overlay for the short bottom-right segment -->
-    <linearGradient id="dim" x1="24" y1="24" x2="-24" y2="-24" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="%230e1420" stop-opacity=".48"/>
-      <stop offset=".6" stop-color="%230e1420" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
+<!-- Favicons: SVG primary + PNG fallbacks + manifest -->
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48"><defs><linearGradient id="g" x1="0" y1="-24" x2="0" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="%23E6EEF7"/><stop offset="1" stop-color="%23F2DCA0"/></linearGradient><linearGradient id="dim" x1="24" y1="24" x2="-24" y2="-24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="%230e1420" stop-opacity=".48"/><stop offset=".6" stop-color="%230e1420" stop-opacity="0"/></linearGradient></defs><circle cx="0" cy="0" r="22" fill="%230e1420"/><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M5 -12 A12 12 0 1 0 5 12" stroke="url(%23g)" stroke-width="6.6"/><path d="M2 0 H12" stroke="url(%23g)" stroke-width="6.6"/><path d="M5 12 A12 12 0 0 1 8 10" stroke="url(%23dim)" stroke-width="6.6"/></g></svg>'>
 
-  <!-- bigger background so the icon reads larger in the tab -->
-  <circle cx="0" cy="0" r="22" fill="%230e1420"/>
-
-  <!-- bold G with clear right-side gap -->
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="url(%23g)">
-    <path d="M5 -12 A12 12 0 1 0 5 12" stroke-width="6.6"/>
-    <path d="M2 0 H12" stroke-width="6.6"/>
-    <!-- short dim extension starting at the very bottom, nudged right but not closed -->
-    <path d="M5 12 A12 12 0 0 1 8 10" stroke="url(%23dim)" stroke-width="6.6"/>
-  </g>
-</svg>'>
+<!-- PNG fallbacks (put these files at your site root or adjust paths) -->
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
   
 <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
