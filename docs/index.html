@@ -4757,21 +4757,22 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — header logo v4 (mirrored Gs: left bright, right mirrored & dimmer) ===== -->
+<!-- ===== Galactly — header logo (Mirrored G + G) ===== -->
 <style>
-  /* Hide any old badge if it still exists */
+  /* kill any old badge */
   .brand-badge{ display:none !important; }
 
-  /* Header lockup — knobs you can tweak */
+  /* Header lockup + easy knobs */
   .site-header .brand{
-    display:flex; align-items:center; text-decoration:none;
-    --brand-gap: 8px;    /* space between icon and word */
-    --brand-y:   2px;    /* move icon DOWN (+) or up (-) */
+    --icon: 34px;      /* icon size (change to 30 / 32 / 36…) */
+    --gap: 10px;       /* space between icon and word */
+    --brand-y: 0px;    /* + moves icon down, - up */
+    display:flex; align-items:center; gap:var(--gap); text-decoration:none;
   }
-  .site-header .brand > * + *{ margin-left: var(--brand-gap); }
   .brand-icon{ transform: translateY(var(--brand-y)); }
+  .brand-icon svg{ width:var(--icon); height:var(--icon); display:block; }
 
-  /* Word styling (kept as you had it) */
+  /* word next to icon */
   .brand-word{
     font: 800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     letter-spacing:.2px;
@@ -4780,9 +4781,8 @@ window.SCOREBOARD_KNOBS = {
     white-space:nowrap;
   }
 
-  /* Icon size (make it a touch smaller next to 22px text; bump on desktop) */
-  .brand-icon svg{ width:30px; height:30px; display:block; }
-  @media (min-width:901px){ .brand-icon svg{ width:34px; height:34px; } }
+  /* subtle hover polish (optional) */
+  .site-header .brand:hover .brand-icon svg{ filter: drop-shadow(0 0 6px rgba(230,238,247,.25)); }
 </style>
 
 <script>
@@ -4790,45 +4790,37 @@ window.SCOREBOARD_KNOBS = {
   const brand = document.querySelector('.site-header .brand');
   if(!brand) return;
 
-  // Inline mirrored-G mark: left G (bright), right G (true mirror, slightly dimmer).
-  // Clean platinum→white stroke + very soft halo so it reads "lit", not "eye".
+  // Mirrored Gs: right G brighter; left G is true mirror (scaleX(-1))
   const icon = `
-  <svg viewBox="-28 -22 56 44" role="img" aria-label="Galactly mirrored G mark">
-    <defs>
-      <linearGradient id="ggBright" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
-      </linearGradient>
-      <linearGradient id="ggDim" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
-      </linearGradient>
-      <radialGradient id="ggHalo" r="1">
-        <stop offset="0"  stop-color="#E6EEF7" stop-opacity=".16"/>
-        <stop offset=".75" stop-color="#E6EEF7" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
+    <svg viewBox="0 0 56 28" role="img" aria-label="Galactly mark">
+      <defs>
+        <linearGradient id="ggShine" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6EEF7"/>
+        </linearGradient>
+      </defs>
 
-    <!-- subtle field so strokes feel illuminated -->
-    <circle cx="0" cy="0" r="18" fill="url(#ggHalo)"/>
-
-    <!-- Shared styling -->
-    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <!-- LEFT G (bright) -->
-      <g transform="translate(-8,0)" stroke="url(#ggBright)" opacity="1">
-        <!-- C-arc (40°..320°), r=10 -->
-        <path d="M 7.660 6.429 A 10 10 0 1 1 7.660 -6.429" stroke-width="2.8"/>
+      <!-- RIGHT G (primary) -->
+      <g fill="none" stroke="url(#ggShine)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8">
+        <!-- C-arc: top-right → around left → bottom-right -->
+        <path d="M36 8 A 10 10 0 1 1 36 20" />
         <!-- crossbar -->
-        <path d="M -2 0 H 2" stroke-width="2.2"/>
+        <path d="M32 16 H 40" stroke-width="2.4" />
+        <!-- inner frequency echoes (subtle) -->
+        <path d="M36 9.3 A 8.7 8.7 0 1 1 36 18.7" opacity=".65" stroke-width="1.8"/>
+        <path d="M36 10.6 A 7.4 7.4 0 1 1 36 17.4" opacity=".45" stroke-width="1.2"/>
       </g>
 
-      <!-- RIGHT G (true mirror of the same geometry), slightly dimmer -->
-      <g transform="translate(8,0) scale(-1,1)" stroke="url(#ggDim)" opacity=".82">
-        <path d="M 7.660 6.429 A 10 10 0 1 1 7.660 -6.429" stroke-width="2.6"/>
-        <path d="M -2 0 H 2" stroke-width="2.0"/>
+      <!-- LEFT G (mirrored, slightly dimmer) -->
+      <g transform="scale(-1,1) translate(-56,0)"
+         fill="none" stroke="url(#ggShine)" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M36 8 A 10 10 0 1 1 36 20" stroke-width="2.8" opacity=".78"/>
+        <path d="M32 16 H 40" stroke-width="2.4" opacity=".78"/>
+        <path d="M36 9.3 A 8.7 8.7 0 1 1 36 18.7" opacity=".52" stroke-width="1.8"/>
+        <path d="M36 10.6 A 7.4 7.4 0 1 1 36 17.4" opacity=".36" stroke-width="1.2"/>
       </g>
-    </g>
-  </svg>`;
+    </svg>`;
 
-  // Install [icon][word] in the header.
+  // Replace brand contents with icon + word; keep the word in place
   brand.innerHTML = `
     <span class="brand-icon" aria-hidden="true">${icon}</span>
     <span class="brand-word">Galactly</span>
@@ -4836,7 +4828,7 @@ window.SCOREBOARD_KNOBS = {
   brand.setAttribute('aria-label','Galactly');
 })();
 </script>
-<!-- ===== /Galactly — header logo v4 ===== -->
+<!-- ===== /Galactly — header logo (Mirrored G + G) ===== -->
 
 
 
