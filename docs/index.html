@@ -4756,19 +4756,16 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-<!-- ===== Galactly — double mirrored G (pro polish + filled stroke) ===== -->
+<!-- ===== Galactly — double mirrored G (filled inside + white shimmer stroke) ===== -->
 <style>
   .site-header .brand{
     display:flex; align-items:center;
-    --icon-w: 38px;          /* overall icon size */
+    --icon-w: 36px;        /* logo size */
     --brand-gap: 10px;
     gap: var(--brand-gap);
   }
-  /* knobs */
-  .brand-icon{
-    --gg-gap-x: 10px;        /* X spacing between the two Gs (can be negative) */
-    --tube: 7px;             /* stroke thickness / "tube" width */
-  }
+  /* >>> spacing knob between the two Gs <<< */
+  .brand-icon{ --gg-gap-x: 10px; }     /* 0 = touch, negative = interlock */
 
   .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
   .brand-word{
@@ -4778,16 +4775,9 @@ window.SCOREBOARD_KNOBS = {
     letter-spacing:.2px; white-space:nowrap;
   }
 
-  /* polish the path: round ends/corners, crisp edges */
-  .brand-icon .tube{
-    vector-effect: non-scaling-stroke;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-miterlimit: 2;
-    shape-rendering: geometricPrecision;
-    paint-order: stroke fill;
-    filter: url(#ggSoftGlow);
-  }
+  /* keep transforms centered + crisp edges */
+  .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
+  .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 </style>
 
 <script>
@@ -4799,51 +4789,50 @@ window.SCOREBOARD_KNOBS = {
 <svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
 
   <defs>
-    <!-- Your exact G path (kept intact) -->
+    <!-- Your exact G outline (kept intact) -->
     <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
-      <path id="gPath" fill="none"
-        d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
+      <path id="gPath" d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
     </symbol>
 
-    <!-- professional, minimal colorway -->
-    <linearGradient id="ggInk" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"   stop-color="#EAF6FF"/>
-      <stop offset="0.45" stop-color="#A5D4FF"/>
-      <stop offset="0.9" stop-color="#3DA3FF"/>
-    </linearGradient>
-    <!-- slim inner highlight -->
-    <linearGradient id="ggHighlight" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"   stop-color="#FFFFFF" />
-      <stop offset="1"   stop-color="#FFFFFF" stop-opacity="0.35"/>
+    <!-- Minimal, professional fill for the inside (cool gray/blue) -->
+    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#ECF4FF"/>
+      <stop offset="0.55" stop-color="#CFE0F3"/>
+      <stop offset="1"   stop-color="#AEBED2"/>
     </linearGradient>
 
-    <!-- soft outer glow for depth -->
+    <!-- Mostly white stroke with a tiny shimmer -->
+    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#FFFFFF"/>
+      <stop offset="1"   stop-color="#E9F0F8"/>
+    </linearGradient>
+
+    <!-- Subtle depth -->
     <filter id="ggSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#000" flood-opacity="0.25"/>
-      <feDropShadow dx="0" dy="0" stdDeviation="2.6" flood-color="#7FD6FF" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#000" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#9ED8FF" flood-opacity="0.15"/>
     </filter>
   </defs>
 
-  <!-- RIGHT G: base tube + inner highlight -->
-  <g class="tube" style="transform: translateX(calc(var(--gg-gap-x)/2));">
-    <use href="#gSym" width="64" height="64"
-         stroke="url(#ggInk)" stroke-width="var(--tube)"/>
-    <use href="#gSym" width="64" height="64"
-         stroke="url(#ggHighlight)" stroke-width="calc(var(--tube) * 0.42)" opacity="0.9"/>
+  <!-- RIGHT G: fill INSIDE + white shimmer stroke -->
+  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#ggSoftGlow);">
+    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="1.8" fill="none"/>
   </g>
 
-  <!-- LEFT G (mirrored) -->
-  <g class="tube" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1);">
-    <use href="#gSym" width="64" height="64"
-         stroke="url(#ggInk)" stroke-width="var(--tube)"/>
-    <use href="#gSym" width="64" height="64"
-         stroke="url(#ggHighlight)" stroke-width="calc(var(--tube) * 0.42)" opacity="0.9"/>
+  <!-- LEFT G (mirrored): same fill + stroke -->
+  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#ggSoftGlow);">
+    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="1.8" fill="none"/>
   </g>
 </svg>`;
 
   const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
   brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
   brand.setAttribute('aria-label','Galactly');
+})();
+</script>
+<!-- ===== /double mirrored G (filled + white stroke) ===== -->
 })();
 </script>
 <!-- ===== /double mirrored G ===== -->
