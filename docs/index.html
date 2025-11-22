@@ -4872,6 +4872,34 @@ window.SCOREBOARD_KNOBS = {
 
 
 
+
+
+<script>
+/* Make Enter submit the hero CTA (desktop + mobile) */
+(function () {
+  function wireEnter(inputId, buttonId) {
+    var input = document.getElementById(inputId);
+    var btn   = document.getElementById(buttonId);
+    if (!input || !btn) return;
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();      // keep the page from jumping
+        btn.click();             // behave exactly like the button
+      }
+    });
+  }
+
+  wireEnter('hostHeroDesktop', 'cta-desktop'); // desktop hero
+  wireEnter('hostHeroMobile',  'cta');         // mobile hero
+})();
+</script>
+
+
+
+
+
+
 <div id="site-footer"></div>
 <script defer src="/galactly-monorepo-v1/fragments/layout.js?v=4"
         data-root="/galactly-monorepo-v1/fragments/"></script>
