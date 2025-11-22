@@ -1,4 +1,4 @@
-<!-- docs/start.html -->
+<!-- docs/start.html (fully replaced) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,7 +11,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<link rel="icon" href="data:,">
+<!-- Favicon (same style as index) -->
+<link rel="icon" type="image/svg+xml" sizes="any"
+  href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-24 -24 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='-24' x2='0' y2='24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23E6EEF7'/%3E%3Cstop offset='1' stop-color='%23F2DCA0'/%3E%3C/linearGradient%3E%3ClinearGradient id='dim' x1='24' y1='24' x2='-24' y2='-24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%230e1420' stop-opacity='.48'/%3E%3Cstop offset='.6' stop-color='%230e1420' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='0' cy='0' r='22' fill='%230e1420'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 -12 A12 12 0 1 0 5 12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M2 0 H12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M5 12 A12 12 0 0 1 8 10' stroke='url(%23dim)' stroke-width='6.6'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=3">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=3">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
+<link rel="manifest" href="site.webmanifest?v=3">
+<link rel="shortcut icon" href="favicon.ico?v=3">
 
 <style>
   :root{
@@ -19,86 +26,105 @@
     --text:#e9f1f7; --muted:#91a6b8;
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
     --ctaText:#1b1405;
+    --brand-gap:10px;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
   a{color:inherit;text-decoration:none}
 
-  /* Header (simple, consistent) */
+  /* Header (glass, consistent with landing) */
   .site-header{position:sticky;top:0;z-index:10;height:60px;display:grid;place-items:center;
     background:rgba(12,18,28,.38); -webkit-backdrop-filter:blur(12px) saturate(140%);
     backdrop-filter:blur(12px) saturate(140%); border-bottom:1px solid rgba(255,255,255,.06)}
-  .site-header .inner{max-width:1100px;width:100%;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .brand{display:flex;align-items:center;gap:10px}
-  .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
-    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
+  .site-header .inner{max-width:1100px;width:100%;padding:0 16px;display:flex;align-items:center;justify-content:flex-start;gap:12px}
+  .brand{display:flex;align-items:center;gap:var(--brand-gap); text-decoration:none}
+  .brand-badge{display:none} /* retired */
+
+  /* Brand lockup (same look as index) */
+  .brand-word{
+    font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    letter-spacing:.2px;
+    background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
+    -webkit-background-clip:text; background-clip:text; color:transparent; white-space:nowrap;
+  }
+  .brand-icon svg{ width:36px; height:36px; display:block; }
+  @media (min-width:901px){ .brand-icon svg{ width:40px; height:40px; } }
 
   /* Layout */
   .wrap{min-height:calc(100svh - 60px); display:grid; place-items:center; padding:40px 16px}
-  .card{width:min(860px, 92vw); border-radius:18px; background:linear-gradient(180deg,#0b121d,#0b1119);
+  .card{width:min(960px, 95vw); border-radius:18px; background:linear-gradient(180deg,#0b121d,#0b1119);
     border:1px solid rgba(255,255,255,.10); box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
     display:flex; flex-direction:column; overflow:hidden}
   .card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
   .steps{display:flex;gap:8px;align-items:center}
   .steps .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.22);box-shadow:0 0 0 1px rgba(255,255,255,.12) inset}
   .steps .dot.on{background:linear-gradient(180deg,var(--gold),var(--gold-700))}
-  .api-badge{font-size:12px;color:#cfe2ff;opacity:.9;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:5px 7px;border-radius:8px}
-  .card-bd{padding:14px 16px}
-  .pill{display:inline-block;margin:2px 0 6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
-  h2{font:600 clamp(22px,3.2vw,28px) "Newsreader", Georgia, serif; margin:10px 0 14px}
+  .card-bd{padding:16px}
+
+  h2{font:600 clamp(22px,3.2vw,28px) "Newsreader", Georgia, serif; margin:10px 0 16px}
+  .pill{display:inline-block;margin:2px 0 10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
+
+  /* Role selection — big cards */
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:820px){ .role-grid{grid-template-columns:1fr} }
+  .role-card{
+    position:relative; border-radius:16px; padding:22px 20px; cursor:pointer;
+    border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03);
+    display:flex; gap:14px; align-items:flex-start; min-height:140px;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    outline:none;
+  }
+  .role-card:hover{ transform:translateY(-1px); box-shadow:0 14px 30px rgba(0,0,0,.28) }
+  .role-card:focus-visible{ box-shadow:0 0 0 3px rgba(150,200,255,.35) inset }
+  .role-card .icon{
+    width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(180deg,#e6eef7,#bcd1ed);
+    color:#0d1420; display:grid;place-items:center;font-weight:800;font-size:18px; flex:0 0 auto;
+  }
+  .role-card h3{margin:2px 0 6px;font:800 20px/1.1 "Plus Jakarta Sans",Inter,sans-serif}
+  .role-card p{margin:0;color:#a9bed2}
+  .role-card.active{
+    border-color:transparent;
+    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+    box-shadow:0 0 0 1px rgba(255,255,255,.06) inset, 0 12px 28px rgba(230,195,107,.12);
+  }
+  .role-card.active .icon{
+    background:linear-gradient(180deg,var(--gold),var(--gold-700)); color:var(--ctaText)
+  }
+
+  /* Forms */
   .accordion{border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03);overflow:hidden}
   .acc-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
   .acc-bd{padding:14px}
-
-  .chips{display:flex;gap:10px;flex-wrap:wrap}
-  .chip{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05);cursor:pointer}
-  .chip.active{background:linear-gradient(180deg,var(--gold),var(--gold-700)); color:var(--ctaText); border:none}
-  .hint{font-size:12px;color:#8ba6bf}
-
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
-
   .field{display:flex;flex-direction:column;gap:8px}
   .field label{font-weight:600;color:#cfe0ee}
   .field input{padding:12px 14px;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.02);color:var(--text);outline:none}
   .field input::placeholder{color:#9fb3c7;opacity:.95}
   .field input:focus{border-color:#2b445c; box-shadow:0 0 0 2px rgba(99,211,255,.18) inset}
+  .hint{font-size:12px;color:#8ba6bf}
+
+  .website-card{display:flex;align-items:center;gap:12px;padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);}
+  .site-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05); font-weight:700;}
+  .lock{width:16px;height:16px;opacity:.9}
 
   .card-ft{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-top:1px solid rgba(255,255,255,.06)}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer;background:rgba(255,255,255,.02);color:#cfe0ee;font-weight:600}
   .btn.ghost{background:transparent}
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
-  .btn.inline{padding:8px 12px;border-radius:10px}
   .btn:active{transform:translateY(1px)}
-  .topbar{display:flex;align-items:center;gap:10px}
-  .topbar a{opacity:.9}
-  .topbar a:hover{opacity:1}
-
-  /* Step 2B website confirmation */
-  .website-card{
-    display:flex;align-items:center;gap:12px;
-    padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.03);
-  }
-  .site-chip{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.05); font-weight:700;
-  }
-  .lock{width:16px;height:16px;opacity:.9}
-  .ghost-note{font-size:12px;color:#9fb3c7}
-  .center{display:grid;place-items:center}
 </style>
 </head>
 <body>
-  <!-- Simple header -->
+  <!-- Header (brand only; no “Back to site”) -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
-      <div class="topbar">
-        <a href="index.html">Back to site</a>
-      </div>
+      <a href="index.html" class="brand" aria-label="Galactly">
+        <span class="brand-icon" aria-hidden="true"></span>
+        <span class="brand-word">Galactly</span>
+      </a>
     </div>
   </header>
 
@@ -110,24 +136,33 @@
           <span class="dot" data-step-dot="1"></span>
           <span class="dot" data-step-dot="2"></span>
         </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span id="apiBadge" class="api-badge">Ready</span>
-        </div>
+        <!-- right side intentionally empty -->
       </div>
 
       <div class="card-bd">
         <!-- Step 1 -->
         <section class="step" id="step1">
-          <div class="pill">Get set up in 60 seconds</div>
-          <h2>Pick your side</h2>
-          <div class="accordion" role="group" aria-labelledby="roleLegend">
-            <div class="acc-hd"><h4 id="roleLegend" style="margin:0">Role</h4><div class="hint">Required</div></div>
-            <div class="acc-bd">
-              <div class="chips" id="roleChips">
-                <span id="opt-supplier" class="chip active" role="button" tabindex="0" aria-pressed="true">🙌 I sell packaging (Supplier)</span>
-                <span id="opt-buyer" class="chip" role="button" tabindex="0" aria-pressed="false">🛒 I buy packaging (Buyer)</span>
+          <div class="pill">Set up in under a minute</div>
+          <h2>What brings you to Galactly?</h2>
+
+          <div class="role-grid" id="roleGrid" role="listbox" aria-label="Choose role">
+            <!-- Supplier card -->
+            <article id="card-supplier" class="role-card active" role="option" aria-selected="true" tabindex="0" data-role="supplier">
+              <div class="icon">S</div>
+              <div>
+                <h3>Supplier — I sell packaging</h3>
+                <p>Capture buyers already signaling intent, prioritize by timing, and let outreach run on autopilot.</p>
               </div>
-            </div>
+            </article>
+
+            <!-- Buyer card -->
+            <article id="card-buyer" class="role-card" role="option" aria-selected="false" tabindex="0" data-role="buyer">
+              <div class="icon">B</div>
+              <div>
+                <h3>Buyer — I buy packaging</h3>
+                <p>Describe your need once—get matched to vetted suppliers fast, with clear timelines and quotes.</p>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -145,7 +180,7 @@
                     <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
                   </div>
                   <div class="field">
-                    <label for="phone">Phone <span class="ghost-note">(optional — for alerts)</span></label>
+                    <label for="phone">Phone <span class="hint">(optional — for alerts)</span></label>
                     <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
                   </div>
                 </div>
@@ -158,7 +193,7 @@
                 </div>
               </div>
               <div class="hint" style="margin-top:8px">
-                Your website will be detected from your email domain and confirmed next.
+                We use your domain to confirm your company website next.
               </div>
             </div>
           </div>
@@ -174,10 +209,10 @@
             </svg>
             <span class="site-chip" id="siteChip">yourcompany.com</span>
           </div>
-          <div class="hint" style="margin-top:10px">We lock your domain to match your business email.</div>
+          <div class="hint" style="margin-top:10px">Your domain is matched to your business email.</div>
           <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
             <button id="confirmSite" class="btn primary" type="button">Yes, that’s my website</button>
-            <button id="changeSite" class="btn inline" type="button">Not my website</button>
+            <button id="changeSite" class="btn inline" type="button">Use a different website</button>
           </div>
         </section>
       </div>
@@ -189,8 +224,42 @@
     </div>
   </main>
 
-  <!-- Shared helpers (created earlier) -->
+  <!-- Shared helpers -->
   <script src="./js/onb.common.js"></script>
+
+  <!-- Brand icon injection (same as index look/feel) -->
+  <script>
+  (function(){
+    const el = document.querySelector('.brand-icon');
+    if(!el) return;
+    el.innerHTML = `
+<svg viewBox="0 0 64 64" aria-label="Galactly logo" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
+      <path d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
+    </symbol>
+    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#ECF4FF"/>
+      <stop offset="0.55" stop-color="#CFE0F3"/>
+      <stop offset="1"   stop-color="#AEBED2"/>
+    </linearGradient>
+    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9F0F8"/>
+    </linearGradient>
+    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%">
+      <stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g pointer-events="none"><circle cx="32" cy="33" r="21" fill="url(#ggHalo)"/></g>
+  <g style="filter: drop-shadow(0 1px 1px rgba(0,0,0,.25))">
+    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
+    <use href="#gSym" width="64" height="64" fill="none" stroke="url(#ggShimmer)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>`;
+  })();
+  </script>
 
   <script>
   (function(){
@@ -200,9 +269,12 @@
     const confirmBtn = document.getElementById("confirmSite");
     const changeBtn  = document.getElementById("changeSite");
 
-    const optSupplier = document.getElementById("opt-supplier");
-    const optBuyer = document.getElementById("opt-buyer");
+    // Role cards
+    const cardSupplier = document.getElementById("card-supplier");
+    const cardBuyer    = document.getElementById("card-buyer");
+    const roleGrid     = document.getElementById("roleGrid");
 
+    // Contact
     const emailEl = document.getElementById("email");
     const emailHint = document.getElementById("emailHint");
     const phoneEl = document.getElementById("phone");
@@ -230,13 +302,14 @@
       if (step === 2) updateSiteChip();
     }
 
-    function setRole(r){
-      state.role = r;
-      ONB.setRoleUI?.(r);
-      optSupplier?.setAttribute("aria-pressed", String(r==="supplier"));
-      optBuyer?.setAttribute("aria-pressed", String(r==="buyer"));
-      optSupplier?.classList.toggle("active", r==="supplier");
-      optBuyer?.classList.toggle("active", r==="buyer");
+    function setRoleUI(role){
+      state.role = role;
+      const sup = role === "supplier";
+      cardSupplier.classList.toggle("active", sup);
+      cardBuyer.classList.toggle("active", !sup);
+      cardSupplier.setAttribute("aria-selected", String(sup));
+      cardBuyer.setAttribute("aria-selected", String(!sup));
+      ONB.setRoleUI?.(role); // keep any existing styling hooks in sync
     }
 
     function updateSiteChip(){
@@ -245,21 +318,16 @@
       emailHint.textContent = state.host ? ("We’ll use your domain: @" + h) : "";
     }
 
-    function setHost(raw, source){
+    function setHost(raw){
       const h = ONB.normHost(raw||"");
       if (!h) return;
       state.host = h;
-      // If user hasn't manually changed the email domain, keep the domain part in sync.
+      // Keep email domain in sync unless they’ve manually taken over
       const v = emailEl.value.trim();
       const hasAt = v.includes("@");
       if (!state.userEditedEmailDomain){
-        if (!hasAt && v){
-          // v = local-part only; append @host live.
-          emailEl.value = v + "@" + h;
-        }else if (hasAt){
-          const local = v.split("@")[0];
-          emailEl.value = local + "@" + h;
-        }
+        if (!hasAt && v){ emailEl.value = v + "@" + h; }
+        else if (hasAt){ emailEl.value = v.split("@")[0] + "@" + h; }
       }
       updateSiteChip();
     }
@@ -271,29 +339,34 @@
     }
 
     /* ---------- Event wiring ---------- */
-    // Role chips
-    optSupplier?.addEventListener("click", ()=> setRole("supplier"));
-    optBuyer?.addEventListener("click", ()=> setRole("buyer"));
-    optSupplier?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("supplier"); }});
-    optBuyer?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("buyer"); }});
+    // Role cards (click + keyboard)
+    function wireRoleCard(card, role){
+      card.addEventListener("click", ()=> setRoleUI(role));
+      card.addEventListener("keydown",(e)=>{
+        if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRoleUI(role); }
+        if(e.key==="ArrowLeft"||e.key==="ArrowRight"){
+          e.preventDefault();
+          const other = role==="supplier" ? cardBuyer : cardSupplier;
+          other.focus(); setRoleUI(other.dataset.role);
+        }
+      });
+    }
+    wireRoleCard(cardSupplier,"supplier");
+    wireRoleCard(cardBuyer,"buyer");
 
-    // Email typing: detect whether user edits domain part; live-sync host.
+    // Email typing: detect domain edits; live-sync host.
     emailEl?.addEventListener("input", ()=>{
       const v = emailEl.value;
       const at = v.indexOf("@");
       if (at >= 0){
         const right = v.slice(at+1);
-        // If they touched the domain portion, mark as manual.
         state.userEditedEmailDomain = right.length > 0;
         const d = ONB.normHost(right);
         if (d){ state.host = d; updateSiteChip(); }
-      }else{
-        // No '@' yet → if we already know host, softly show hint only.
+      } else {
         updateSiteChip();
       }
     });
-
-    // On blur, if they never typed '@' but we have host, auto-complete email.
     emailEl?.addEventListener("blur", ()=>{
       const v = emailEl.value.trim();
       if (v && !v.includes("@") && state.host){
@@ -302,21 +375,21 @@
       }
     });
 
-    // Footer nav
+    // Footer nav buttons
     backBtn?.addEventListener("click", ()=>{
-      show(Math.max(0, state.step - 1));
-      if (state.step === 1){ emailEl.focus(); }
+      const nextStep = Math.max(0, state.step - 1);
+      show(nextStep);
+      if (nextStep === 1){ emailEl.focus(); }
     });
 
     nextBtn?.addEventListener("click", ()=>{
       if (state.step === 0){ show(1); return; }
       if (state.step === 1){
-        // Validate email + derive host
         const email = emailEl.value.trim();
         if (!email || !email.includes("@")){ alert("Please enter your business email."); emailEl.focus(); return; }
         const d = domainFromEmailLive();
         if (!d){ alert("Please use a business email (with a valid domain)."); emailEl.focus(); return; }
-        setHost(d, "email");
+        setHost(d);
         show(2);
         return;
       }
@@ -324,7 +397,6 @@
 
     // Step 2B actions
     confirmBtn?.addEventListener("click", ()=>{
-      // Persist seed and go to step3.html
       const seed = ONB.writeSeed({
         role: state.role,
         host: state.host,
@@ -334,46 +406,40 @@
     });
 
     changeBtn?.addEventListener("click", ()=>{
-      // Go back so they can change email (domain).
       show(1);
-      // Put cursor after '@' if present, to nudge them to change domain.
       emailEl.focus();
       const v = emailEl.value; const at = v.indexOf("@");
-      if (at >= 0){
-        emailEl.setSelectionRange(at+1, v.length);
-      }
-      // Let them take over domain edits now.
+      if (at >= 0) emailEl.setSelectionRange(at+1, v.length);
       state.userEditedEmailDomain = true;
     });
 
-    // Enter to advance (but not inside inputs)
-    document.addEventListener("keydown",(e)=>{
+    // Enter to advance — everywhere (including inside inputs)
+    function enterAdvances(e){
+      if(e.key!=="Enter") return;
+      // Allow buttons/links to handle their own default
       const tag = (e.target && e.target.tagName) || "";
-      if(e.key==="Enter" && !["INPUT","TEXTAREA","BUTTON","A","SELECT"].includes(tag)){
-        e.preventDefault();
-        if (state.step === 2){ confirmBtn.click(); } else { nextBtn.click(); }
-      }
-    });
+      if (["BUTTON","A"].includes(tag)) return;
+      e.preventDefault();
+      if (state.step === 2){ confirmBtn.click(); }
+      else { nextBtn.click(); }
+    }
+    document.addEventListener("keydown", enterAdvances);
+    // Also bind on each input to be safe on mobile keyboards
+    [emailEl,nameEl,phoneEl].forEach(el=> el && el.addEventListener("keydown", enterAdvances));
 
     /* ---------- Prefill from seed / query ---------- */
     const initial = ONB.readSeed?.() || {};
-    setRole(initial.role || "supplier");
-
-    // Seed: host from landing hero
-    if (initial.host){ setHost(initial.host, "seed"); }
-
-    // Seed: contact fields
+    setRoleUI(initial.role || "supplier");
+    if (initial.host){ setHost(initial.host); }
     if (initial.contact){
       if (initial.contact.name)  nameEl.value  = initial.contact.name;
       if (initial.contact.phone) phoneEl.value = initial.contact.phone;
       if (initial.contact.email){
         emailEl.value = initial.contact.email;
         const d = ONB.domainFromEmail(initial.contact.email);
-        if (d) setHost(d, "email");
+        if (d) setHost(d);
       }
     }
-
-    // If we have a host but email lacks '@', show suffix hint
     updateSiteChip();
     show(0);
   })();
