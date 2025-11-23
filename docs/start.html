@@ -1,483 +1,609 @@
-<!-- docs/start.html -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Get started — Galactly</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galactly — Onboarding</title>
 
-<!-- Fonts (match landing) -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!--
+    THEME NOTES
+    - Gradient background + glass UI inspired by the 21st.dev example (reimplemented from scratch).
+    - Step 1 keeps the Buyer/Supplier choice, but no big outer card; just clean, glassy elements.
+    - Step 2 is minimalist: email-only entry with arrow, derived website is shown as plain text (no chip).
+    - Titles use the same font treatment as your Section 3 `.proc-title` (with fallbacks if that CSS isn't present here).
+    - No "Ready" chips anywhere. Home icon at top-right returns to the landing page.
+    - Validations: no personal email (gmail.com, yahoo.com, etc.) and domain must match website.
+      Redirect/forwarding checks are stubbed (CORS limits in browser) but the UX + hook is here.
+    - Hooks to optional `window.onboarding` object so you can wire server/API flows in `onboarding.common.js`.
+  -->
 
-<!-- Favicon: same stack used on landing -->
-<link rel="icon" type="image/svg+xml" sizes="any"
-  href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-24 -24 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='-24' x2='0' y2='24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23E6EEF7'/%3E%3Cstop offset='1' stop-color='%23F2DCA0'/%3E%3C/linearGradient%3E%3ClinearGradient id='dim' x1='24' y1='24' x2='-24' y2='-24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%230e1420' stop-opacity='.48'/%3E%3Cstop offset='.6' stop-color='%230e1420' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='0' cy='0' r='22' fill='%230e1420'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 -12 A12 12 0 1 0 5 12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M2 0 H12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M5 12 A12 12 0 0 1 8 10' stroke='url(%23dim)' stroke-width='6.6'/%3E%3C/g%3E%3C/svg%3E" />
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=3">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=3">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
-<link rel="manifest" href="site.webmanifest?v=3">
-<link rel="shortcut icon" href="favicon.ico?v=3">
+  <style>
+    :root{
+      /* Brand palette (tune freely) */
+      --bg-1: #0a0f1c;          /* deep navy */
+      --bg-2: #0d1224;          /* slightly lighter navy */
+      --fg-1: #e9ecf3;          /* foreground text */
+      --fg-2: #9aa3b2;          /* secondary text */
+      --accent: #f4d06f;        /* gold accent */
+      --accent-2: #6ad2ff;      /* electric blue accent */
+      --glass: rgba(255,255,255,0.06);
+      --glass-strong: rgba(255,255,255,0.12);
+      --ring: rgba(255,255,255,0.25);
+      --error: #ff6b6b;
+      --ok: #66d19e;
 
-<style>
-  :root{
-    --bg:#0a0e14; --panel:#101623; --stroke:#1b2531;
-    --text:#e9f1f7; --muted:#91a6b8;
-    --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
-    --ctaText:#1b1405;
-    --glass: rgba(12,18,28,.38);
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
-  a{color:inherit;text-decoration:none}
+      /* Heading font fallback: tries to mirror your .proc-title */
+      --heading-family: var(--proc-title-font, var(--font-heading, ui-serif, "Times New Roman", Georgia, serif));
+      --heading-weight: var(--proc-title-weight, 600);
+      --heading-ls: -0.02em;
+    }
 
-  /* Header (glass, same feel as landing) */
-  .site-header{position:sticky;top:0;z-index:10;height:60px;display:grid;place-items:center;
-    background:var(--glass); -webkit-backdrop-filter:blur(12px) saturate(140%);
-    backdrop-filter:blur(12px) saturate(140%); border-bottom:1px solid rgba(255,255,255,.06)}
-  .site-header .inner{max-width:1100px;width:100%;padding:0 16px;display:flex;align-items:center;justify-content:flex-start;gap:12px}
-  .brand{display:flex;align-items:center;gap:10px}
-  .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
-    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
+    html, body{
+      height:100%;
+      background: radial-gradient(1200px 800px at 75% 25%, #201437 0%, transparent 55%),
+                  radial-gradient(1200px 800px at 25% 75%, #3c1029 0%, transparent 55%),
+                  linear-gradient(180deg, var(--bg-2), var(--bg-1));
+      color:var(--fg-1);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", "Noto Sans", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      margin:0;
+    }
 
-  /* Main layout */
-  .wrap{min-height:calc(100svh - 60px); display:grid; place-items:center; padding:40px 16px}
-  .card{width:min(980px, 92vw); border-radius:18px; background:linear-gradient(180deg,#0b121d,#0b1119);
-    border:1px solid rgba(255,255,255,.10); box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
-    display:flex; flex-direction:column; overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
-  .steps{display:flex;gap:8px;align-items:center}
-  .steps .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.22);box-shadow:0 0 0 1px rgba(255,255,255,.12) inset}
-  .steps .dot.on{background:linear-gradient(180deg,var(--gold),var(--gold-700))}
-  .card-bd{padding:18px 18px 8px}
+    /* Subtle animated blobs */
+    .bg-blob{
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .blob{ position:absolute; filter: blur(70px); opacity:.55; mix-blend-mode:screen; }
+    .b1{ width:42vmax; height:42vmax; background:#3a5bd7; top:-10vmax; left:-10vmax; border-radius:45% 55% 60% 40%; animation:float1 18s ease-in-out infinite; }
+    .b2{ width:35vmax; height:35vmax; background:#b33e85; bottom:-8vmax; right:-10vmax; border-radius:50% 50% 45% 55%; animation:float2 22s ease-in-out infinite; }
+    .b3{ width:26vmax; height:26vmax; background:#f4d06f; top:40%; left:60%; border-radius:60% 40% 50% 50%; opacity:.35; animation:float3 26s ease-in-out infinite; }
+    @keyframes float1{ 0%{transform:translate(0,0)} 50%{transform:translate(-18px,12px)} 100%{transform:translate(0,0)} }
+    @keyframes float2{ 0%{transform:translate(0,0)} 50%{transform:translate(20px,-10px)} 100%{transform:translate(0,0)} }
+    @keyframes float3{ 0%{transform:translate(0,0)} 50%{transform:translate(-14px,-18px)} 100%{transform:translate(0,0)} }
 
-  /* TITLES — match Section 3 on landing (Newsreader 600) */
-  .title{
-    font:600 clamp(24px,3.5vw,32px) "Newsreader", Georgia, serif;
-    margin:6px 0 18px;
-    letter-spacing:.2px;
-  }
+    /* Top chrome (no header bar—just logo left, home icon right) */
+    .topbar{
+      position:fixed; top:16px; left:0; right:0; z-index:10;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 18px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; color:var(--fg-1);
+      padding:8px 10px; border-radius:12px;
+      backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .brand img{ height:22px; width:auto; display:block; }
+    .brand span{ font-weight:700; letter-spacing:-0.01em; font-size:14px; opacity:.95; }
 
-  .pill{display:inline-block;margin:0 0 10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
+    .home-link{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:36px; height:36px; border-radius:10px;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 25px rgba(0,0,0,.2);
+      color: var(--fg-1); text-decoration:none;
+      backdrop-filter: blur(6px);
+      transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .home-link:hover{ transform:translateY(-1px); border-color:rgba(255,255,255,.22); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 14px 32px rgba(0,0,0,.25); }
+    .home-link svg{ width:18px; height:18px; }
 
-  /* Step 1: two large option cards */
-  .opts{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  @media (max-width:720px){ .opts{grid-template-columns:1fr} }
-  .opt{
-    display:flex;align-items:flex-start;gap:12px;padding:18px;border-radius:14px;
-    border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); cursor:pointer;
-    transition:border-color .15s, box-shadow .15s, background .15s;
-  }
-  .opt:hover{border-color:rgba(255,255,255,.18)}
-  .opt.active{
-    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.03));
-    box-shadow:0 0 0 1px rgba(141,200,255,.35) inset, 0 10px 30px rgba(141,200,255,.10);
-    border-color:rgba(141,200,255,.45);
-  }
-  .opt .ico{width:28px;height:28px;flex:0 0 auto;opacity:.95}
-  .opt h3{margin:0 0 4px;font:800 16px/1.25 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
-  .opt p{margin:0;color:#b9c9d9;font-size:13.5px}
+    /* Layout */
+    .wrap{
+      position:relative; z-index:1;
+      min-height:100dvh; display:grid; place-items:center;
+      padding:96px 16px 40px;
+    }
+    .stage{ width:min(980px, 92vw); margin-inline:auto; }
 
-  /* Step 2A form */
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
-  .field{display:flex;flex-direction:column;gap:8px}
-  .field label{font-weight:600;color:#cfe0ee}
-  .field input{padding:12px 14px;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.02);color:var(--text);outline:none}
-  .field input::placeholder{color:#9fb3c7;opacity:.95}
-  .field input:focus{border-color:#2b445c; box-shadow:0 0 0 2px rgba(99,211,255,.18) inset}
-  .hint{font-size:12px;color:#8ba6bf}
-  .chipsRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-  .chip{
-    display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
-    border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.05); font-weight:700; color:#cfe0ee;
-  }
+    /* Title style = Section 3 proc-title look (reuse class name to inherit if present) */
+    .title, .proc-title{
+      font-family: var(--heading-family);
+      font-weight: var(--heading-weight);
+      letter-spacing: var(--heading-ls);
+      font-size: clamp(28px, 4.2vw, 44px);
+      line-height: 1.08;
+      margin: 0 0 18px 0;
+      text-shadow: 0 1px 0 rgba(0,0,0,.35);
+    }
+    .subtitle{ color:var(--fg-2); margin:0 0 22px 0; }
 
-  /* Footer buttons */
-  .card-ft{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-top:1px solid rgba(255,255,255,.06)}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer;background:rgba(255,255,255,.02);color:#cfe0ee;font-weight:600}
-  .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
-  .btn.inline{padding:8px 12px;border-radius:10px}
-  .btn:active{transform:translateY(1px)}
+    /* Glass select cards (Step 1) */
+    .choices{
+      display:grid; grid-template-columns: 1fr; gap:16px;
+    }
+    @media (min-width:720px){ .choices{ grid-template-columns: 1fr 1fr; } }
+    .choice{
+      position:relative; border-radius:16px; padding:18px 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
+      border:1px solid rgba(255,255,255,.15);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25);
+      cursor:pointer; user-select:none;
+      display:flex; gap:14px; align-items:flex-start;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+    .choice:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 16px 42px rgba(0,0,0,.28); }
+    .choice.selected{ outline:2px solid var(--accent); box-shadow: 0 0 0 6px rgba(244,208,111,.15), 0 14px 40px rgba(244,208,111,.18); }
+    .choice h3{
+      margin:0 0 6px 0; font-size:18px;
+      font-weight:700; letter-spacing:-0.01em;
+    }
+    .choice p{ margin:0; color:var(--fg-2); font-size:14px; line-height:1.35; }
+    .choice .icon{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:38px; height:38px; border-radius:12px;
+      background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 8px 20px rgba(0,0,0,.25);
+      flex:0 0 auto;
+    }
+    .choice .icon svg{ width:18px; height:18px; }
 
-  /* ===== Header brand (exact, from landing) ===== */
-  .site-header .brand{display:flex;align-items:center;gap:10px}
-  .brand-icon{--gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0;}
-  .brand-icon svg{width:36px;height:36px;display:block}
-  .brand-word{
-    font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
-    -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
-  }
-  .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
-  .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
-</style>
+    /* Arrow buttons (no NEXT text) */
+    .row-actions{ display:flex; justify-content:space-between; gap:12px; margin-top:14px; }
+    .btn-icon{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:44px; height:44px; border-radius:999px; color:var(--fg-1);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 10px 26px rgba(0,0,0,.24);
+      backdrop-filter: blur(6px);
+      cursor:pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, opacity .18s ease;
+    }
+    .btn-icon[disabled]{ opacity:.4; pointer-events:none; }
+    .btn-icon:hover{ transform: translateY(-1px); border-color:rgba(255,255,255,.26); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 16px 38px rgba(0,0,0,.28); }
+    .btn-icon svg{ width:20px; height:20px; }
+
+    /* Step blocks */
+    .cardless{ max-width:860px; margin-inline:auto; }
+    .step{ display:none; }
+    .step.active{ display:block; }
+
+    /* Glass input */
+    .glass-input{
+      display:flex; align-items:center; gap:10px; padding:10px 12px;
+      border-radius:999px; border:1px solid rgba(255,255,255,.16);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 26px rgba(0,0,0,.24);
+      backdrop-filter: blur(6px);
+    }
+    .glass-input input{
+      flex:1; min-width:0; background:transparent; border:0; outline:0;
+      color:var(--fg-1); font-size:14px;
+    }
+    .glass-input input::placeholder{ color: rgba(233,236,243,.60); }
+    .glass-input .right{ display:flex; align-items:center; gap:8px; }
+
+    /* Step 2 presentation */
+    .bigline{ margin:10px 0 6px 4px; font-size:15px; color:var(--fg-2); }
+    .bigline b{ color:var(--fg-1); font-size: clamp(16px, 2.6vw, 20px); letter-spacing:-0.01em; }
+    .hint{ color:var(--fg-2); font-size:12px; margin:6px 4px 0; }
+
+    /* Inline error + learn more */
+    .error{ color:var(--error); font-size:13px; margin:8px 4px 0; display:flex; align-items:center; gap:8px; }
+    .learn{ position:relative; display:inline-flex; align-items:center; gap:6px; cursor:help; color:var(--accent-2); }
+    .tooltip{ position:absolute; left:0; top:calc(100% + 8px); width:min(88vw, 320px); background:rgba(16,20,36,.96); border:1px solid rgba(255,255,255,.14);
+      color:var(--fg-1); border-radius:12px; padding:10px 12px; box-shadow:0 24px 60px rgba(0,0,0,.4); display:none; z-index:20; }
+    .tooltip ul{ padding-left:18px; margin:6px 0; }
+    .tooltip li{ margin:6px 0; color:var(--fg-2); font-size:13px; }
+    .learn.open .tooltip{ display:block; }
+
+    /* Utility */
+    .hide{ display:none !important; }
+    .mt-8{ margin-top: 8px; }
+    .mt-16{ margin-top: 16px; }
+    .mt-24{ margin-top: 24px; }
+  </style>
 </head>
 <body>
-  <!-- Header with placeholder that the brand script replaces -->
-  <header class="site-header" aria-label="Site">
-    <div class="inner">
-      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span><span class="brand-word">Galactly</span></a>
-    </div>
-  </header>
+
+  <div class="bg-blob" aria-hidden="true">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+  </div>
+
+  <!-- Minimal chrome (logo left, home at right) -->
+  <div class="topbar">
+    <a class="brand" href="#" aria-label="Galactly">
+      <!-- We try multiple likely logo locations; JS below will pick the first that loads -->
+      <img id="brandLogo" alt="Galactly" src="" />
+      <span>Galactly</span>
+    </a>
+    <a class="home-link" href="index.html" aria-label="Back to home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11L12 3l9 8"></path>
+        <path d="M9 22V12h6v10"></path>
+      </svg>
+    </a>
+  </div>
 
   <main class="wrap">
-    <div class="card" role="region" aria-label="Onboarding">
+    <div class="stage cardless">
 
-      <!-- HEADER (steps only; NO “Ready” badge) -->
-      <div class="card-hd">
-        <div class="steps" aria-label="Steps">
-          <span class="dot on" data-step-dot="0"></span>
-          <span class="dot" data-step-dot="1"></span>
-          <span class="dot" data-step-dot="2"></span>
+      <!-- STEP 1 -->
+      <section id="step1" class="step active" aria-labelledby="s1-title">
+        <h1 id="s1-title" class="title proc-title">What brings you to Galactly?</h1>
+        <p class="subtitle">Pick one to tailor your setup.</p>
+
+        <div class="choices" role="listbox" aria-label="Select your role">
+          <div class="choice" data-role="supplier" tabindex="0" role="option" aria-selected="false">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 7h18v10H3z"></path><path d="M16 7V3H8v4"></path>
+              </svg>
+            </div>
+            <div>
+              <h3>Supplier — I sell packaging</h3>
+              <p>Capture buyers already signaling intent, prioritize by timing, and let smart outreach run on autopilot.</p>
+            </div>
+          </div>
+
+          <div class="choice" data-role="buyer" tabindex="0" role="option" aria-selected="false">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.58L23 6H6"></path>
+              </svg>
+            </div>
+            <div>
+              <h3>Buyer — I buy packaging</h3>
+              <p>Describe your need once—get matched to vetted suppliers fast, with clear timelines and quotes.</p>
+            </div>
+          </div>
         </div>
-        <div aria-hidden="true"></div>
-      </div>
 
-      <div class="card-bd">
-        <!-- STEP 1 — unchanged logic; pro look -->
-        <section class="step" id="step1">
-          <div class="pill">Set up in under a minute</div>
-          <h2 class="title">What brings you to Galactly?</h2>
+        <div class="row-actions mt-16">
+          <button type="button" id="s1-back" class="btn-icon" aria-label="Go back" disabled>
+            <!-- left arrow -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+          </button>
+          <button type="button" id="s1-next" class="btn-icon" aria-label="Continue" disabled>
+            <!-- right arrow -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"></path>
+            </svg>
+          </button>
+        </div>
+      </section>
 
-          <div class="opts" id="roleChips">
-            <!-- Supplier -->
-            <div id="opt-supplier" class="opt active" role="button" tabindex="0" aria-pressed="true">
-              <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="3" y="6" width="18" height="12" rx="3" stroke="#cfe0ee" stroke-width="1.6"/>
-                <path d="M7 10h10M7 14h6" stroke="#cfe0ee" stroke-width="1.6" stroke-linecap="round"/>
+      <!-- STEP 2 -->
+      <section id="step2" class="step" aria-labelledby="s2-title">
+        <h1 id="s2-title" class="title proc-title">Tell us who you are</h1>
+
+        <!-- Derived website (plain text, no chip) -->
+        <div id="derivedLine" class="bigline hide">Website we’ll use: <b id="derivedWebsite"></b></div>
+
+        <!-- Email input with arrow-only submission -->
+        <div class="glass-input mt-16" role="group" aria-label="Business email">
+          <input id="email" type="email" inputmode="email" autocomplete="email"
+                 placeholder="Business email (no personal Gmail, etc.)" aria-describedby="emailHint">
+          <div class="right">
+            <button type="button" class="btn-icon" id="email-go" aria-label="Continue with email" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"></path>
               </svg>
-              <div>
-                <h3>Supplier — I sell packaging</h3>
-                <p>Capture buyers already signaling intent, prioritize by timing, and let outreach run on autopilot.</p>
-              </div>
-            </div>
-
-            <!-- Buyer -->
-            <div id="opt-buyer" class="opt" role="button" tabindex="0" aria-pressed="false">
-              <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M4 7h16l-2 9a3 3 0 0 1-3 2H9a3 3 0 0 1-3-2L4 7Z" stroke="#cfe0ee" stroke-width="1.6" />
-                <circle cx="9" cy="19" r="1.3" fill="#cfe0ee"/><circle cx="15" cy="19" r="1.3" fill="#cfe0ee"/>
-              </svg>
-              <div>
-                <h3>Buyer — I buy packaging</h3>
-                <p>Describe your need once—get matched to vetted suppliers fast, with clear timelines and quotes.</p>
-              </div>
-            </div>
+            </button>
           </div>
-        </section>
-
-        <!-- STEP 2A — same logic, title font updated, bullets removed -->
-        <section class="step" id="step2a" hidden>
-          <div class="pill">Step 2 of 3</div>
-          <h2 class="title">Tell us about you</h2>
-
-          <div class="chipsRow">
-            <span class="chip">Verification</span>
-            <span class="chip">We’ll use this domain: <span id="domainTag">@yourcompany.com</span></span>
-          </div>
-
-          <div class="grid2">
-            <div>
-              <div class="field">
-                <label for="name">Your name</label>
-                <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
-              </div>
-              <div class="field">
-                <label for="phone">Phone <span class="hint">(optional — for alerts)</span></label>
-                <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
-              </div>
-            </div>
-            <div>
-              <div class="field">
-                <label for="email">Business email *</label>
-                <input id="email" type="email" autocomplete="email" placeholder="name@yourcompany.com" required>
-                <div id="emailHint" class="hint" aria-live="polite"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- STEP 2B — unchanged -->
-        <section class="step" id="step2b" hidden>
-          <div class="pill">Step 3 of 3</div>
-          <h2 class="title">Confirm your website</h2>
-          <div class="chipsRow">
-            <span class="chip">
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg>
-              <span id="siteChip">yourcompany.com</span>
+        </div>
+        <div id="emailHint" class="hint">Use your company address. Personal mail (gmail.com, yahoo.com, etc.) is blocked.</div>
+        <div id="emailError" class="error hide">
+          <span>Check your email.</span>
+          <span class="learn" id="learnTrigger">Learn more
+            <span class="tooltip" role="tooltip">
+              <strong>What can block progress?</strong>
+              <ul>
+                <li>Personal domains (gmail.com, yahoo.com, outlook.com...).</li>
+                <li>Website not reachable from the public internet.</li>
+                <li>Your domain forwards to another site or a holding page.</li>
+                <li>Domain doesn’t match your website.</li>
+              </ul>
             </span>
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
-            <button id="confirmSite" class="btn primary" type="button">Yes, that’s my website</button>
-            <button id="changeSite" class="btn inline" type="button">Not my website</button>
-          </div>
-        </section>
-      </div>
+          </span>
+        </div>
 
-      <div class="card-ft">
-        <button id="back" class="btn" type="button">Back</button>
-        <button id="next" class="btn primary" type="button">Next</button>
-      </div>
+        <!-- Website (read or inferred) -->
+        <div class="glass-input mt-8" role="group" aria-label="Your website">
+          <input id="website" type="url" inputmode="url" placeholder="Your website (https://example.com)">
+        </div>
+        <div class="hint">If you came from the landing CTA, this may already be pre-filled.</div>
+
+        <!-- Back / Continue -->
+        <div class="row-actions mt-16">
+          <button type="button" id="s2-back" class="btn-icon" aria-label="Back to role">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+          </button>
+          <button type="button" id="finish" class="btn-icon" aria-label="Finish" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Validation messages -->
+        <div id="domainMismatch" class="error hide">Your business email domain must match your website.</div>
+        <div id="siteUnreachable" class="error hide">Your website looks unreachable or misconfigured.
+          <span class="learn" id="learnTrigger2">Learn more
+            <span class="tooltip" role="tooltip">
+              <ul>
+                <li>Make sure DNS is set and the site is public.</li>
+                <li>Avoid forwarding/parking to another domain.</li>
+                <li>Responds with HTTP 200 on the root path.</li>
+                <li>Has basic content identifying you as a buyer or supplier.</li>
+              </ul>
+            </span>
+          </span>
+        </div>
+      </section>
+
     </div>
   </main>
 
-  <!-- Shared helpers (existing) -->
-  <script src="./js/onb.common.js"></script>
-
-  <!-- EXACT header brand from landing (your double mirrored G) -->
-  <style>
-    /* (kept near script for clarity; uses same knobs as landing) */
-    .site-header .brand{
-      display:flex; align-items:center;
-      --icon-w: 36px;        /* logo size */
-      --brand-gap: 10px;
-      gap: var(--brand-gap);
-    }
-  </style>
   <script>
-  (function(){
-    const brand = document.querySelector('.site-header .brand');
-    if(!brand) return;
+    /* ---------- best-effort brand logo detection (uses first successful path) ---------- */
+    (function tryLogo(){
+      const candidates = [
+        "/assets/logo/galactly-logo.svg",
+        "/assets/logo/logo.svg",
+        "/assets/brand/galactly-logo.svg",
+        "/assets/branding/galactly-logo.svg",
+        "/img/galactly-logo.svg",
+        "/images/logo.svg",
+        "/logo.svg",
+        "/assets/logo.png",
+        "/images/logo.png"
+      ];
+      const el = document.getElementById("brandLogo");
+      let idx = 0;
+      const testNext = () => {
+        if(idx >= candidates.length){ el.remove(); return; }
+        const src = candidates[idx++];
+        const img = new Image();
+        img.onload = () => { el.src = src; };
+        img.onerror = testNext;
+        img.src = src;
+      };
+      testNext();
+    })();
 
-    const icon = `
-<svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
+    /* ---------- tiny helpers ---------- */
+    const byId = (id)=>document.getElementById(id);
+    const qs = (sel,root=document)=>root.querySelector(sel);
+    const qsa = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
 
-  <defs>
-    <!-- Your exact single-G outline -->
-    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
-      <path id="gPath" d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
-    </symbol>
+    const step1 = byId("step1");
+    const step2 = byId("step2");
+    const s1Next = byId("s1-next");
+    const s2Back = byId("s2-back");
+    const finish = byId("finish");
+    const emailInput = byId("email");
+    const websiteInput = byId("website");
+    const emailGo = byId("email-go");
+    const derivedLine = byId("derivedLine");
+    const derivedWebsite = byId("derivedWebsite");
+    const emailError = byId("emailError");
+    const domainMismatch = byId("domainMismatch");
+    const siteUnreachable = byId("siteUnreachable");
 
-    <!-- Inside fill (subtle cool gray-blue) -->
-    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"   stop-color="#ECF4FF"/>
-      <stop offset="0.55" stop-color="#CFE0F3"/>
-      <stop offset="1"   stop-color="#AEBED2"/>
-    </linearGradient>
+    const personalDomains = new Set(["gmail.com","yahoo.com","outlook.com","hotmail.com","live.com","aol.com","icloud.com","proton.me","protonmail.com","yandex.com","gmx.com","mail.com","pm.me"]);
+    const urlParams = new URLSearchParams(location.search);
+    const preSite = urlParams.get("site") || localStorage.getItem("gal_site") || "";
 
-    <!-- Mostly white stroke with slight shimmer -->
-    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E9F0F8"/>
-    </linearGradient>
-
-    <!-- Lighting: halo behind + diagonal sheen across -->
-    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%">
-      <stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="ggSheen" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
-      <stop offset="0"   stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.46" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.54" stop-color="#FFFFFF" stop-opacity="0.35"/>
-      <stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="1"   stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-
-    <!-- Subtle depth (shadow) -->
-    <filter id="ggSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#000" flood-opacity="0.22"/>
-      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#9ED8FF" flood-opacity="0.15"/>
-    </filter>
-  </defs>
-
-  <!-- Ambient halo behind the mark -->
-  <g pointer-events="none">
-    <circle cx="32" cy="33" r="21" fill="url(#ggHalo)"/>
-  </g>
-
-  <!-- RIGHT (primary) G -->
-  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#ggSoftGlow);">
-    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
-    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
-  </g>
-
-  <!-- LEFT (reflection) G — slightly dimmed -->
-  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#ggSoftGlow); opacity: var(--left-dim);">
-    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
-    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
-  </g>
-</svg>`;
-
-    const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
-    brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
-    brand.setAttribute('aria-label','Galactly');
-  })();
-  </script>
-
-  <!-- Page logic (unchanged except minor title/domain hint wiring) -->
-  <script>
-  (function(){
-    const dots = [...document.querySelectorAll("[data-step-dot]")];
-    const backBtn = document.getElementById("back");
-    const nextBtn = document.getElementById("next");
-    const confirmBtn = document.getElementById("confirmSite");
-    const changeBtn  = document.getElementById("changeSite");
-
-    const optSupplier = document.getElementById("opt-supplier");
-    const optBuyer = document.getElementById("opt-buyer");
-
-    const emailEl = document.getElementById("email");
-    const emailHint = document.getElementById("emailHint");
-    const phoneEl = document.getElementById("phone");
-    const nameEl  = document.getElementById("name");
-    const siteChip = document.getElementById("siteChip");
-    const domainTag = document.getElementById("domainTag");
-
-    const state = {
-      step: 0,               // 0: role, 1: step2a, 2: step2b
-      role: "supplier",
-      host: "",              // normalized domain
-      userEditedEmailDomain: false
-    };
-
-    function show(step){
-      state.step = step;
-      document.getElementById("step1").hidden = step !== 0;
-      document.getElementById("step2a").hidden = step !== 1;
-      document.getElementById("step2b").hidden = step !== 2;
-      dots.forEach((d,i)=> d.classList.toggle("on", i <= step));
-      backBtn.style.visibility = step === 0 ? "hidden" : "visible";
-      nextBtn.style.display = (step === 2) ? "none" : "";
-      if (step === 0) nextBtn.textContent = "Next";
-      if (step === 1) nextBtn.textContent = "Continue";
-      if (step === 2) updateSiteChip();
+    if(preSite){
+      websiteInput.value = normalizeSite(preSite);
+      updateDerivedFromWebsite();
     }
 
-    function setRole(r){
-      state.role = r;
-      ONB.setRoleUI?.(r);
-      optSupplier?.setAttribute("aria-pressed", String(r==="supplier"));
-      optBuyer?.setAttribute("aria-pressed", String(r==="buyer"));
-      optSupplier?.classList.toggle("active", r==="supplier");
-      optBuyer?.classList.toggle("active", r==="buyer");
+    /* ---------- STEP 1 select role ---------- */
+    let role = null;
+    qsa(".choice", step1).forEach(el=>{
+      const r = el.getAttribute("data-role");
+      const pick = () => {
+        role = r;
+        qsa(".choice", step1).forEach(c => {
+          c.classList.toggle("selected", c === el);
+          c.setAttribute("aria-selected", c === el ? "true" : "false");
+        });
+        s1Next.disabled = false;
+        if(window.onboarding?.setRole) window.onboarding.setRole(role);
+      };
+      el.addEventListener("click", pick);
+      el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
+    });
+
+    s1Next.addEventListener("click", ()=>{
+      if(!role) return;
+      step1.classList.remove("active");
+      step2.classList.add("active");
+      emailInput.focus();
+      if(window.onboarding?.goTo) window.onboarding.goTo(2);
+    });
+
+    /* ---------- STEP 2 logic ---------- */
+    function normalizeSite(value){
+      try{
+        let v = (value||"").trim();
+        if(!v) return "";
+        if(!/^https?:\/\//i.test(v)) v = "https://" + v;
+        const u = new URL(v);
+        return u.origin;
+      }catch{ return ""; }
     }
 
-    function updateSiteChip(){
-      const h = state.host || "yourcompany.com";
-      if (siteChip) siteChip.textContent = h;
-      if (domainTag) domainTag.textContent = "@"+h;
-      if (emailHint) emailHint.textContent = state.host ? ("We’ll use this domain: @" + h) : "";
+    function extractDomainFromEmail(email){
+      const m = /@([A-Za-z0-9.-]+\.[A-Za-z]{2,})$/.exec(String(email).trim());
+      return m ? m[1].toLowerCase() : "";
     }
 
-    function setHost(raw){
-      const h = ONB.normHost(raw||"");
-      if (!h) return;
-      state.host = h;
-      const v = emailEl.value.trim();
-      const at = v.indexOf("@");
-      if (!state.userEditedEmailDomain){
-        if (at < 0 && v){
-          emailEl.value = v + "@" + h;
-        }else if (at >= 0){
-          const local = v.slice(0,at);
-          emailEl.value = local + "@" + h;
+    function showDerived(domain){
+      if(domain){
+        derivedWebsite.textContent = "https://" + domain;
+        derivedLine.classList.remove("hide");
+      }else{
+        derivedLine.classList.add("hide");
+      }
+    }
+
+    function updateDerivedFromWebsite(){
+      const site = normalizeSite(websiteInput.value);
+      if(site){
+        try{
+          const host = new URL(site).host;
+          showDerived(host);
+        }catch{
+          showDerived("");
         }
       }
-      updateSiteChip();
     }
 
-    function domainFromEmailLive(){
-      const v = emailEl.value.trim();
-      const d = ONB.domainFromEmail(v);
-      return d || "";
-    }
-
-    // Role cards
-    optSupplier?.addEventListener("click", ()=> setRole("supplier"));
-    optBuyer?.addEventListener("click", ()=> setRole("buyer"));
-    optSupplier?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("supplier"); }});
-    optBuyer?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("buyer"); }});
-
-    // Email typing: keep domain logic identical to your current flow
-    emailEl?.addEventListener("input", ()=>{
-      const v = emailEl.value;
-      const at = v.indexOf("@");
-      if (at >= 0){
-        const right = v.slice(at+1);
-        state.userEditedEmailDomain = right.length > 0;
-        const d = ONB.normHost(right);
-        if (d){ state.host = d; updateSiteChip(); }
-      }else{
-        updateSiteChip();
-      }
-    });
-    emailEl?.addEventListener("blur", ()=>{
-      const v = emailEl.value.trim();
-      if (v && !v.includes("@") && state.host){
-        emailEl.value = v + "@" + state.host;
-        state.userEditedEmailDomain = false;
-      }
+    websiteInput.addEventListener("input", ()=>{
+      updateDerivedFromWebsite();
+      validateEmailAndWebsite();
     });
 
-    // Footer nav
-    backBtn?.addEventListener("click", ()=>{
-      show(Math.max(0, state.step - 1));
-      if (state.step === 1){ emailEl.focus(); }
+    emailInput.addEventListener("input", ()=>{
+      emailError.classList.add("hide");
+      const domain = extractDomainFromEmail(emailInput.value);
+      showDerived(domain);
+      validateEmailAndWebsite();
+      emailGo.disabled = !looksValidBusinessEmail(emailInput.value);
     });
 
-    nextBtn?.addEventListener("click", ()=>{
-      if (state.step === 0){ show(1); return; }
-      if (state.step === 1){
-        const email = emailEl.value.trim();
-        if (!email || !email.includes("@")){ alert("Please enter your business email."); emailEl.focus(); return; }
-        const d = domainFromEmailLive();
-        if (!d){ alert("Please use a business email (with a valid domain)."); emailEl.focus(); return; }
-        setHost(d);
-        show(2);
-        return;
-      }
-    });
-
-    // Step 2B
-    confirmBtn?.addEventListener("click", ()=>{
-      const seed = ONB.writeSeed({
-        role: state.role,
-        host: state.host,
-        contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }
-      });
-      ONB.goToStep3(seed, "step3.html");
-    });
-
-    changeBtn?.addEventListener("click", ()=>{
-      show(1);
-      emailEl.focus();
-      const v = emailEl.value; const at = v.indexOf("@");
-      if (at >= 0){ emailEl.setSelectionRange(at+1, v.length); }
-      state.userEditedEmailDomain = true;
-    });
-
-    // Enter to advance (not inside inputs)
-    document.addEventListener("keydown",(e)=>{
-      const tag = (e.target && e.target.tagName) || "";
-      if(e.key==="Enter" && !["INPUT","TEXTAREA","BUTTON","A","SELECT"].includes(tag)){
+    emailInput.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter"){
         e.preventDefault();
-        if (state.step === 2){ confirmBtn.click(); } else { nextBtn.click(); }
+        if(!emailGo.disabled) emailGo.click();
       }
     });
 
-    // Seed + init
-    const initial = ONB.readSeed?.() || {};
-    setRole(initial.role || "supplier");
-    if (initial.host){ setHost(initial.host); }
-    if (initial.contact){
-      if (initial.contact.name)  nameEl.value  = initial.contact.name;
-      if (initial.contact.phone) phoneEl.value = initial.contact.phone;
-      if (initial.contact.email){
-        emailEl.value = initial.contact.email;
-        const d = ONB.domainFromEmail(initial.contact.email);
-        if (d) setHost(d);
+    emailGo.addEventListener("click", ()=>{
+      // advance cursor to website if empty, otherwise attempt finish-validations
+      if(!websiteInput.value && derivedWebsite.textContent){
+        websiteInput.value = derivedWebsite.textContent;
+      }
+      validateEmailAndWebsite(true);
+    });
+
+    s2Back.addEventListener("click", ()=>{
+      step2.classList.remove("active");
+      step1.classList.add("active");
+      if(window.onboarding?.goTo) window.onboarding.goTo(1);
+    });
+
+    finish.addEventListener("click", async ()=>{
+      // Final hook to your common.js (you can replace/no-op)
+      const payload = {
+        role,
+        email: emailInput.value.trim(),
+        website: normalizeSite(websiteInput.value)
+      };
+      try{
+        if(window.onboarding?.submit) await window.onboarding.submit(payload);
+        // fallback navigation (adjust):
+        location.href = "step3.html";
+      }catch(err){
+        console.error(err);
+        alert("Could not complete onboarding right now.");
+      }
+    });
+
+    function looksValidBusinessEmail(email){
+      email = String(email||"").trim();
+      const at = email.indexOf("@");
+      if(at < 1) return false;
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return false;
+      const domain = extractDomainFromEmail(email);
+      if(personalDomains.has(domain)) return false;
+      return true;
+    }
+
+    function validateEmailAndWebsite(raiseErrors){
+      const emailOk = looksValidBusinessEmail(emailInput.value);
+      const site = normalizeSite(websiteInput.value);
+      const siteOk = !!site;
+
+      // live mismatch check (domain must match website host)
+      const emailDomain = extractDomainFromEmail(emailInput.value);
+      let host = "";
+      try{ host = site ? new URL(site).host.toLowerCase() : ""; }catch{ host = ""; }
+
+      const domainMatches = emailDomain && host && (host.endsWith(emailDomain) || emailDomain.endsWith(host));
+
+      // Reset messages
+      emailError.classList.add("hide");
+      domainMismatch.classList.add("hide");
+      siteUnreachable.classList.add("hide");
+
+      // Basic errors
+      if(raiseErrors){
+        if(!emailOk) emailError.classList.remove("hide");
+        if(siteOk && !domainMatches) domainMismatch.classList.remove("hide");
+      }
+
+      // "Unreachable" heuristic stub (front-end only). Do lightweight HEAD ping where CORS allows.
+      if(siteOk){
+        tryReach(site).then(reachable => {
+          if(raiseErrors && !reachable){
+            siteUnreachable.classList.remove("hide");
+          }
+          finish.disabled = !(emailOk && domainMatches && reachable);
+        }).catch(()=>{
+          // Network errors => keep Finish disabled unless you prefer soft-allow.
+          finish.disabled = true;
+          if(raiseErrors) siteUnreachable.classList.remove("hide");
+        });
+      }else{
+        finish.disabled = true;
+      }
+
+      // enable finish when obviously good and we haven't pinged yet
+      if(!siteOk || !emailOk || !domainMatches){
+        finish.disabled = true;
+      }
+      if(window.onboarding?.setEmail) window.onboarding.setEmail(emailInput.value.trim());
+      if(window.onboarding?.setWebsite) window.onboarding.setWebsite(site);
+    }
+
+    async function tryReach(site){
+      // Attempt a fast fetch; many sites will block with CORS, so treat opaque as "unknown".
+      try{
+        const res = await fetch(site, { method:"HEAD", mode:"no-cors", cache:"no-store" });
+        // no-cors returns "opaque" type => we can't read status, assume likely reachable.
+        return true;
+      }catch(e){
+        return false;
       }
     }
-    updateSiteChip();
-    show(0);
-  })();
+
+    // Learn-more tooltips (hover or tap)
+    function setupLearn(id){
+      const el = byId(id);
+      if(!el) return;
+      const toggle = (open) => el.classList.toggle("open", open);
+      el.addEventListener("mouseenter", ()=>toggle(true));
+      el.addEventListener("mouseleave", ()=>toggle(false));
+      el.addEventListener("click", ()=>toggle(!el.classList.contains("open")));
+    }
+    setupLearn("learnTrigger");
+    setupLearn("learnTrigger2");
+
+    // Preselect role if present from query (?role=buyer|supplier)
+    const qsRole = (urlParams.get("role")||"").toLowerCase();
+    if(qsRole === "buyer" || qsRole === "supplier"){
+      const target = qs(`.choice[data-role="${qsRole}"]`);
+      if(target) target.click();
+    }
+
+    // Keep s1-next disabled until role chosen
+    s1Next.disabled = true;
   </script>
 </body>
 </html>
