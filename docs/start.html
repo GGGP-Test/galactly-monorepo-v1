@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Favicon: same as landing (SVG + PNG fallbacks) -->
+<!-- Favicon: same stack used on landing -->
 <link rel="icon" type="image/svg+xml" sizes="any"
   href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-24 -24 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='-24' x2='0' y2='24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23E6EEF7'/%3E%3Cstop offset='1' stop-color='%23F2DCA0'/%3E%3C/linearGradient%3E%3ClinearGradient id='dim' x1='24' y1='24' x2='-24' y2='-24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%230e1420' stop-opacity='.48'/%3E%3Cstop offset='.6' stop-color='%230e1420' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='0' cy='0' r='22' fill='%230e1420'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 -12 A12 12 0 1 0 5 12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M2 0 H12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M5 12 A12 12 0 0 1 8 10' stroke='url(%23dim)' stroke-width='6.6'/%3E%3C/g%3E%3C/svg%3E" />
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=3">
@@ -26,222 +26,191 @@
     --text:#e9f1f7; --muted:#91a6b8;
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
     --ctaText:#1b1405;
+    --glass: rgba(12,18,28,.38);
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
   a{color:inherit;text-decoration:none}
 
-  /* Header (glassy, consistent with landing) */
+  /* Header (glass, same feel as landing) */
   .site-header{position:sticky;top:0;z-index:10;height:60px;display:grid;place-items:center;
-    background:rgba(12,18,28,.38); -webkit-backdrop-filter:blur(12px) saturate(140%);
+    background:var(--glass); -webkit-backdrop-filter:blur(12px) saturate(140%);
     backdrop-filter:blur(12px) saturate(140%); border-bottom:1px solid rgba(255,255,255,.06)}
   .site-header .inner{max-width:1100px;width:100%;padding:0 16px;display:flex;align-items:center;justify-content:flex-start;gap:12px}
   .brand{display:flex;align-items:center;gap:10px}
-  .brand-badge{display:none} /* no yellow square */
+  .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
+    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
 
-  /* Landing-style wordmark */
-  .brand-word{
-    font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    letter-spacing:.2px; white-space:nowrap;
-    background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-  }
-
-  /* Layout */
+  /* Main layout */
   .wrap{min-height:calc(100svh - 60px); display:grid; place-items:center; padding:40px 16px}
-  .card{width:min(980px, 94vw); border-radius:18px; background:linear-gradient(180deg,#0b121d,#0b1119);
+  .card{width:min(980px, 92vw); border-radius:18px; background:linear-gradient(180deg,#0b121d,#0b1119);
     border:1px solid rgba(255,255,255,.10); box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
     display:flex; flex-direction:column; overflow:hidden}
   .card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
   .steps{display:flex;gap:8px;align-items:center}
   .steps .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.22);box-shadow:0 0 0 1px rgba(255,255,255,.12) inset}
   .steps .dot.on{background:linear-gradient(180deg,var(--gold),var(--gold-700))}
-  .api-badge{font-size:12px;color:#cfe2ff;opacity:.9;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:5px 7px;border-radius:8px}
-  .card-bd{padding:14px 16px}
-  .pill{display:inline-block;margin:2px 0 6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
-  h2{font:600 clamp(22px,3.2vw,28px) "Newsreader", Georgia, serif; margin:10px 0 14px}
+  .card-bd{padding:18px 18px 8px}
 
+  /* TITLES — match Section 3 on landing (Newsreader 600) */
+  .title{
+    font:600 clamp(24px,3.5vw,32px) "Newsreader", Georgia, serif;
+    margin:6px 0 18px;
+    letter-spacing:.2px;
+  }
+
+  .pill{display:inline-block;margin:0 0 10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
+
+  /* Step 1: two large option cards */
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:720px){ .opts{grid-template-columns:1fr} }
+  .opt{
+    display:flex;align-items:flex-start;gap:12px;padding:18px;border-radius:14px;
+    border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); cursor:pointer;
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .opt:hover{border-color:rgba(255,255,255,.18)}
+  .opt.active{
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.03));
+    box-shadow:0 0 0 1px rgba(141,200,255,.35) inset, 0 10px 30px rgba(141,200,255,.10);
+    border-color:rgba(141,200,255,.45);
+  }
+  .opt .ico{width:28px;height:28px;flex:0 0 auto;opacity:.95}
+  .opt h3{margin:0 0 4px;font:800 16px/1.25 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+  .opt p{margin:0;color:#b9c9d9;font-size:13.5px}
+
+  /* Step 2A form */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
+  .field{display:flex;flex-direction:column;gap:8px}
+  .field label{font-weight:600;color:#cfe0ee}
+  .field input{padding:12px 14px;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.02);color:var(--text);outline:none}
+  .field input::placeholder{color:#9fb3c7;opacity:.95}
+  .field input:focus{border-color:#2b445c; box-shadow:0 0 0 2px rgba(99,211,255,.18) inset}
+  .hint{font-size:12px;color:#8ba6bf}
+  .chipsRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.05); font-weight:700; color:#cfe0ee;
+  }
+
+  /* Footer buttons */
   .card-ft{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-top:1px solid rgba(255,255,255,.06)}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer;background:rgba(255,255,255,.02);color:#cfe0ee;font-weight:600}
-  .btn.ghost{background:transparent}
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
   .btn.inline{padding:8px 12px;border-radius:10px}
   .btn:active{transform:translateY(1px)}
 
-  /* STEP 1 — keep IDs/JS; present chips as big selectable cards with vector icons */
-  .chips{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  @media (max-width:720px){ .chips{grid-template-columns:1fr} }
-  .chip{
-    display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:14px;cursor:pointer;
-    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  /* ===== Header brand (exact, from landing) ===== */
+  .site-header .brand{display:flex;align-items:center;gap:10px}
+  .brand-icon{--gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0;}
+  .brand-icon svg{width:36px;height:36px;display:block}
+  .brand-word{
+    font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
+    -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
   }
-  .chip svg{width:22px;height:22px;opacity:.92;color:#cfe2ff;flex:0 0 auto;margin-top:2px}
-  .chip b{display:block;margin-bottom:4px}
-  .chip .sub{color:#9fb3c7;font-weight:500}
-  .chip:hover{border-color:rgba(255,255,255,.20)}
-  .chip.active{
-    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-    border:1px solid rgba(255,255,255,.30); /* light stroke when chosen */
-    box-shadow:0 10px 30px rgba(230,195,107,.08), inset 0 0 0 1px rgba(255,255,255,.04);
-  }
-
-  /* ===== STEP 2 — professional layout (visual only) ===== */
-  #step2a .form2{
-    display:grid; grid-template-columns: 1fr 1fr; gap:22px; align-items:start;
-  }
-  @media (max-width: 820px){ #step2a .form2{ grid-template-columns: 1fr; } }
-  #step2a .col{ min-width:0; }
-  #step2a .field{ display:flex; flex-direction:column; gap:8px; }
-  #step2a .input{
-    position:relative; border:1px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.03); border-radius:12px;
-  }
-  #step2a .input:focus-within{
-    border-color:#2b445c; box-shadow:0 0 0 2px rgba(99,211,255,.18) inset;
-  }
-  #step2a .input input{
-    width:100%; padding:12px 14px 12px 42px; background:transparent; border:0; color:var(--text); outline:none;
-  }
-  #step2a .icon{ position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:#cfe0ee; opacity:.9; }
-
-  #step2a .preview-card{
-    border-radius:16px; background:linear-gradient(180deg,#0b121d,#0b1119);
-    border:1px solid rgba(255,255,255,.10);
-    box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
-    padding:16px;
-  }
-  #step2a .badge-light{
-    display:inline-block; padding:6px 10px; border-radius:999px;
-    font-size:12px; color:#cfe2ff; background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.10); margin-bottom:10px;
-  }
-  #step2a #emailHint.email-hint{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:8px 12px; border-radius:999px;
-    background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.12);
-    color:#9fb3c7; font-weight:600; font-size:12px;
-  }
-  #step2a .bullets{ margin:12px 0 0 0; padding-left:18px; color:#cfe0ee; }
-  #step2a .bullets li{ margin:6px 0; }
-  #step2a .note{ margin-top:12px; }
+  .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+  .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
 </style>
 </head>
 <body>
-  <!-- Header with landing logo (brand script below injects the mirrored G) -->
+  <!-- Header with placeholder that the brand script replaces -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="index.html" class="brand" aria-label="Galactly">
-        <span class="brand-word">Galactly</span>
-      </a>
+      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span><span class="brand-word">Galactly</span></a>
     </div>
   </header>
 
   <main class="wrap">
     <div class="card" role="region" aria-label="Onboarding">
+
+      <!-- HEADER (steps only; NO “Ready” badge) -->
       <div class="card-hd">
         <div class="steps" aria-label="Steps">
           <span class="dot on" data-step-dot="0"></span>
           <span class="dot" data-step-dot="1"></span>
           <span class="dot" data-step-dot="2"></span>
         </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span id="apiBadge" class="api-badge">Ready</span>
-        </div>
+        <div aria-hidden="true"></div>
       </div>
 
       <div class="card-bd">
-        <!-- Step 1 (UNCHANGED IDs/logic; styled as large cards) -->
+        <!-- STEP 1 — unchanged logic; pro look -->
         <section class="step" id="step1">
           <div class="pill">Set up in under a minute</div>
-          <h2>What brings you to Galactly?</h2>
+          <h2 class="title">What brings you to Galactly?</h2>
 
-          <div class="chips" id="roleChips">
-            <span id="opt-supplier" class="chip active" role="button" tabindex="0" aria-pressed="true">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 7H4a2 2 0 0 0-2 2v8a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V9a2 2 0 0 0-2-2Zm-8 10H5a1 1 0 0 1 0-2h7a1 1 0 0 1 0 2Zm7-4H5a1 1 0 0 1 0-2h14a1 1 0 0 1 0 2Z"/></svg>
+          <div class="opts" id="roleChips">
+            <!-- Supplier -->
+            <div id="opt-supplier" class="opt active" role="button" tabindex="0" aria-pressed="true">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="6" width="18" height="12" rx="3" stroke="#cfe0ee" stroke-width="1.6"/>
+                <path d="M7 10h10M7 14h6" stroke="#cfe0ee" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
               <div>
-                <b>Supplier — I sell packaging</b>
-                <div class="sub">Capture buyers already signaling intent, prioritize by timing, and let outreach run on autopilot.</div>
-              </div>
-            </span>
-
-            <span id="opt-buyer" class="chip" role="button" tabindex="0" aria-pressed="false">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18a2 2 0 1 0 2 2 2 2 0 0 0-2-2Zm10 0a2 2 0 1 0 2 2 2 2 0 0 0-2-2ZM7.2 14h9.8a1 1 0 0 0 .95-.68l2.05-6.15A1 1 0 0 0 19 6H6.3l-.4-2H2v2h2l2.3 9.2A1 1 0 0 0 7.2 14Z"/></svg>
-              <div>
-                <b>Buyer — I buy packaging</b>
-                <div class="sub">Describe your need once—get matched to vetted suppliers fast, with clear timelines and quotes.</div>
-              </div>
-            </span>
-          </div>
-        </section>
-
-        <!-- Step 2A (VISUAL REDESIGN ONLY; IDs unchanged) -->
-        <section class="step" id="step2a" hidden>
-          <div class="pill">Step 2 of 3</div>
-          <h2>Tell us who you are</h2>
-
-          <div class="form2" role="group" aria-labelledby="contactLegend">
-            <!-- LEFT: fields -->
-            <div class="col">
-              <div class="field">
-                <label for="name">Your name</label>
-                <div class="input">
-                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.7-9 6v1h18v-1c0-3.3-4-6-9-6Z"/></svg>
-                  <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="phone">Phone <span class="ghost-note">(optional — for alerts)</span></label>
-                <div class="input">
-                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a14.4 14.4 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11 11 0 0 0 3.4.54 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 8a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11 11 0 0 0 .54 3.4 1 1 0 0 1-.25 1Z"/></svg>
-                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="email">Business email <span aria-hidden="true">*</span></label>
-                <div class="input">
-                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 4H4a2 2 0 0 0-2 2v1l10 6 10-6V6a2 2 0 0 0-2-2Zm0 6.3-8 4.8-8-4.8V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2Z"/></svg>
-                  <input id="email" type="email" autocomplete="email" placeholder="name@yourcompany.com" required>
-                </div>
+                <h3>Supplier — I sell packaging</h3>
+                <p>Capture buyers already signaling intent, prioritize by timing, and let outreach run on autopilot.</p>
               </div>
             </div>
 
-            <!-- RIGHT: live preview / reassurance -->
-            <aside class="col preview">
-              <div class="preview-card">
-                <div class="badge-light">Verification</div>
-                <div id="emailHint" class="email-hint" aria-live="polite"></div>
-                <ul class="bullets">
-                  <li>We derive your website from your business email only.</li>
-                  <li>No credit card to start, switch roles anytime.</li>
-                  <li>Your data is encrypted in transit and at rest.</li>
-                </ul>
+            <!-- Buyer -->
+            <div id="opt-buyer" class="opt" role="button" tabindex="0" aria-pressed="false">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7h16l-2 9a3 3 0 0 1-3 2H9a3 3 0 0 1-3-2L4 7Z" stroke="#cfe0ee" stroke-width="1.6" />
+                <circle cx="9" cy="19" r="1.3" fill="#cfe0ee"/><circle cx="15" cy="19" r="1.3" fill="#cfe0ee"/>
+              </svg>
+              <div>
+                <h3>Buyer — I buy packaging</h3>
+                <p>Describe your need once—get matched to vetted suppliers fast, with clear timelines and quotes.</p>
               </div>
-            </aside>
+            </div>
           </div>
-
-          <p class="hint note">Your website will be detected from your email domain and confirmed next.</p>
         </section>
 
-        <!-- Step 2B (unchanged) -->
+        <!-- STEP 2A — same logic, title font updated, bullets removed -->
+        <section class="step" id="step2a" hidden>
+          <div class="pill">Step 2 of 3</div>
+          <h2 class="title">Tell us who you are</h2>
+
+          <div class="chipsRow">
+            <span class="chip">Verification</span>
+            <span class="chip">We’ll use your domain: <span id="domainTag">@yourcompany.com</span></span>
+          </div>
+
+          <div class="grid2">
+            <div>
+              <div class="field">
+                <label for="name">Your name</label>
+                <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
+              </div>
+              <div class="field">
+                <label for="phone">Phone <span class="hint">(optional — for alerts)</span></label>
+                <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
+              </div>
+            </div>
+            <div>
+              <div class="field">
+                <label for="email">Business email *</label>
+                <input id="email" type="email" autocomplete="email" placeholder="name@yourcompany.com" required>
+                <div id="emailHint" class="hint" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 2B — unchanged -->
         <section class="step" id="step2b" hidden>
           <div class="pill">Step 3 of 3</div>
-          <h2>Confirm your website</h2>
-          <div class="website-card" role="group" aria-labelledby="webLegend"
-               style="display:flex;align-items:center;gap:12px;padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);">
-            <svg class="lock" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:16px;height:16px;opacity:.9">
-              <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/>
-            </svg>
-            <span class="site-chip" id="siteChip"
-                  style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05); font-weight:700;">
-              yourcompany.com
+          <h2 class="title">Confirm your website</h2>
+          <div class="chipsRow">
+            <span class="chip">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg>
+              <span id="siteChip">yourcompany.com</span>
             </span>
           </div>
-          <div class="hint" style="margin-top:10px">We lock your domain to match your business email.</div>
           <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
             <button id="confirmSite" class="btn primary" type="button">Yes, that’s my website</button>
             <button id="changeSite" class="btn inline" type="button">Not my website</button>
@@ -250,16 +219,99 @@
       </div>
 
       <div class="card-ft">
-        <button id="back" class="btn ghost" type="button">Back</button>
+        <button id="back" class="btn" type="button">Back</button>
         <button id="next" class="btn primary" type="button">Next</button>
       </div>
     </div>
   </main>
 
-  <!-- Shared helpers (created earlier) -->
+  <!-- Shared helpers (existing) -->
   <script src="./js/onb.common.js"></script>
 
-  <!-- Onboarding flow (logic unchanged) -->
+  <!-- EXACT header brand from landing (your double mirrored G) -->
+  <style>
+    /* (kept near script for clarity; uses same knobs as landing) */
+    .site-header .brand{
+      display:flex; align-items:center;
+      --icon-w: 36px;        /* logo size */
+      --brand-gap: 10px;
+      gap: var(--brand-gap);
+    }
+  </style>
+  <script>
+  (function(){
+    const brand = document.querySelector('.site-header .brand');
+    if(!brand) return;
+
+    const icon = `
+<svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <!-- Your exact single-G outline -->
+    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
+      <path id="gPath" d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
+    </symbol>
+
+    <!-- Inside fill (subtle cool gray-blue) -->
+    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#ECF4FF"/>
+      <stop offset="0.55" stop-color="#CFE0F3"/>
+      <stop offset="1"   stop-color="#AEBED2"/>
+    </linearGradient>
+
+    <!-- Mostly white stroke with slight shimmer -->
+    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9F0F8"/>
+    </linearGradient>
+
+    <!-- Lighting: halo behind + diagonal sheen across -->
+    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%">
+      <stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ggSheen" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
+      <stop offset="0"   stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.46" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.54" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1"   stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Subtle depth (shadow) -->
+    <filter id="ggSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#000" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#9ED8FF" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Ambient halo behind the mark -->
+  <g pointer-events="none">
+    <circle cx="32" cy="33" r="21" fill="url(#ggHalo)"/>
+  </g>
+
+  <!-- RIGHT (primary) G -->
+  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#ggSoftGlow);">
+    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
+    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
+  </g>
+
+  <!-- LEFT (reflection) G — slightly dimmed -->
+  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#ggSoftGlow); opacity: var(--left-dim);">
+    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
+    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
+  </g>
+</svg>`;
+
+    const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
+    brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
+    brand.setAttribute('aria-label','Galactly');
+  })();
+  </script>
+
+  <!-- Page logic (unchanged except minor title/domain hint wiring) -->
   <script>
   (function(){
     const dots = [...document.querySelectorAll("[data-step-dot]")];
@@ -276,6 +328,7 @@
     const phoneEl = document.getElementById("phone");
     const nameEl  = document.getElementById("name");
     const siteChip = document.getElementById("siteChip");
+    const domainTag = document.getElementById("domainTag");
 
     const state = {
       step: 0,               // 0: role, 1: step2a, 2: step2b
@@ -308,8 +361,9 @@
 
     function updateSiteChip(){
       const h = state.host || "yourcompany.com";
-      siteChip.textContent = h;
-      emailHint.textContent = state.host ? ("We’ll use your domain: @" + h) : "";
+      if (siteChip) siteChip.textContent = h;
+      if (domainTag) domainTag.textContent = "@"+h;
+      if (emailHint) emailHint.textContent = state.host ? ("We’ll use your domain: @" + h) : "";
     }
 
     function setHost(raw){
@@ -317,12 +371,12 @@
       if (!h) return;
       state.host = h;
       const v = emailEl.value.trim();
-      const hasAt = v.includes("@");
+      const at = v.indexOf("@");
       if (!state.userEditedEmailDomain){
-        if (!hasAt && v){
+        if (at < 0 && v){
           emailEl.value = v + "@" + h;
-        }else if (hasAt){
-          const local = v.split("@")[0];
+        }else if (at >= 0){
+          const local = v.slice(0,at);
           emailEl.value = local + "@" + h;
         }
       }
@@ -335,13 +389,13 @@
       return d || "";
     }
 
-    // Role chips
+    // Role cards
     optSupplier?.addEventListener("click", ()=> setRole("supplier"));
     optBuyer?.addEventListener("click", ()=> setRole("buyer"));
     optSupplier?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("supplier"); }});
     optBuyer?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("buyer"); }});
 
-    // Email behaviors
+    // Email typing: keep domain logic identical to your current flow
     emailEl?.addEventListener("input", ()=>{
       const v = emailEl.value;
       const at = v.indexOf("@");
@@ -381,8 +435,8 @@
       }
     });
 
-    // Step 2B actions
-    document.getElementById("confirmSite")?.addEventListener("click", ()=>{
+    // Step 2B
+    confirmBtn?.addEventListener("click", ()=>{
       const seed = ONB.writeSeed({
         role: state.role,
         host: state.host,
@@ -391,7 +445,7 @@
       ONB.goToStep3(seed, "step3.html");
     });
 
-    document.getElementById("changeSite")?.addEventListener("click", ()=>{
+    changeBtn?.addEventListener("click", ()=>{
       show(1);
       emailEl.focus();
       const v = emailEl.value; const at = v.indexOf("@");
@@ -404,12 +458,11 @@
       const tag = (e.target && e.target.tagName) || "";
       if(e.key==="Enter" && !["INPUT","TEXTAREA","BUTTON","A","SELECT"].includes(tag)){
         e.preventDefault();
-        if (state.step === 2){ document.getElementById("confirmSite").click(); }
-        else { nextBtn.click(); }
+        if (state.step === 2){ confirmBtn.click(); } else { nextBtn.click(); }
       }
     });
 
-    // Prefill
+    // Seed + init
     const initial = ONB.readSeed?.() || {};
     setRole(initial.role || "supplier");
     if (initial.host){ setHost(initial.host); }
@@ -426,77 +479,5 @@
     show(0);
   })();
   </script>
-
-  <!-- ===== Galactly — double mirrored G (landing header logo) ===== -->
-  <style>
-    .site-header .brand{
-      display:flex; align-items:center;
-      --icon-w: 24px;        /* header logo size here */
-      --brand-gap: 10px;
-      gap: var(--brand-gap);
-    }
-    .brand-icon{
-      --gg-gap-x: 10px;      /* spacing between the two Gs (0 = touch, negative = interlock) */
-      --left-dim: 0.65;      /* opacity for the LEFT mirrored G */
-      --stroke-w: 3.0;       /* white stroke thickness around each G */
-    }
-    .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
-    .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
-    .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
-  </style>
-  <script>
-  (function(){
-    const brand = document.querySelector('.site-header .brand');
-    if(!brand) return;
-
-    const icon = `
-<svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
-      <path id="gPath" d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
-    </symbol>
-    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"   stop-color="#ECF4FF"/>
-      <stop offset="0.55" stop-color="#CFE0F3"/>
-      <stop offset="1"   stop-color="#AEBED2"/>
-    </linearGradient>
-    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E9F0F8"/>
-    </linearGradient>
-    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%">
-      <stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="ggSheen" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
-      <stop offset="0"   stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.46" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.54" stop-color="#FFFFFF" stop-opacity="0.35"/>
-      <stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="1"   stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <filter id="ggSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#000" flood-opacity="0.22"/>
-      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#9ED8FF" flood-opacity="0.15"/>
-    </filter>
-  </defs>
-  <g pointer-events="none"><circle cx="32" cy="33" r="21" fill="url(#ggHalo)"/></g>
-  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#ggSoftGlow);">
-    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
-    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
-  </g>
-  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#ggSoftGlow); opacity: var(--left-dim);">
-    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
-    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
-  </g>
-</svg>`;
-    const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
-    brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
-    brand.setAttribute('aria-label','Galactly');
-  })();
-  </script>
-  <!-- ===== /landing header logo ===== -->
 </body>
 </html>
