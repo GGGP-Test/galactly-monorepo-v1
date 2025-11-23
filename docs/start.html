@@ -173,11 +173,11 @@
         <!-- STEP 2A — same logic, title font updated, bullets removed -->
         <section class="step" id="step2a" hidden>
           <div class="pill">Step 2 of 3</div>
-          <h2 class="title">Tell us who you are</h2>
+          <h2 class="title">Tell us about you</h2>
 
           <div class="chipsRow">
             <span class="chip">Verification</span>
-            <span class="chip">We’ll use your domain: <span id="domainTag">@yourcompany.com</span></span>
+            <span class="chip">We’ll use this domain: <span id="domainTag">@yourcompany.com</span></span>
           </div>
 
           <div class="grid2">
@@ -363,7 +363,7 @@
       const h = state.host || "yourcompany.com";
       if (siteChip) siteChip.textContent = h;
       if (domainTag) domainTag.textContent = "@"+h;
-      if (emailHint) emailHint.textContent = state.host ? ("We’ll use your domain: @" + h) : "";
+      if (emailHint) emailHint.textContent = state.host ? ("We’ll use this domain: @" + h) : "";
     }
 
     function setHost(raw){
