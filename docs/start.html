@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Galactly — Onboarding</title>
 
   <!-- Jakarta for headings -->
@@ -14,6 +14,8 @@
       /* layout */
       --content-w: min(960px, 92vw);
       --title-fs: clamp(28px, 5.6vw, 58px);
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
 
       /* pressed glass controls (Step 2) */
       --ctl-h: 46px;                /* control height */
@@ -61,7 +63,7 @@
     }
 
     /* ====================== BASE / BACKDROP ===================== */
-    html,body{height:100%;margin:0}
+    html,body{height:100%;margin:0; background-color:#0c1020;}
     body{
       color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -84,18 +86,15 @@
 
     /* top chrome */
     .topbar{
-      position:fixed; top:16px; left:0; right:0; z-index:10;
+      position:fixed; top: calc(8px + var(--safe-top)); left:0; right:0; z-index:10;
       display:flex; align-items:center; justify-content:space-between;
       padding:0 18px;
     }
     .brand{
       display:flex; align-items:center; gap:10px;
       color:var(--fg); text-decoration:none;
-      padding:8px 10px; border-radius:12px;
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.14);
-      backdrop-filter: blur(6px);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      padding:0; border-radius:0;
+      background:transparent; border:0; box-shadow:none; backdrop-filter:none;
     }
     .brand img{height:22px; width:auto}
     .brand span{
@@ -103,12 +102,17 @@
       letter-spacing:.2px;
     }
     .home-link{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 12px; border-radius:12px; color:var(--fg); text-decoration:none;
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.14);
-      backdrop-filter: blur(6px);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      display:inline-flex; align-items:center; justify-content:center;
+      width:36px; height:36px; padding:0; border-radius:999px;
+      color:var(--fg); text-decoration:none;
+      background:transparent; border:0; box-shadow:none; backdrop-filter:none;
+    }
+    .home-link:hover{ opacity:.85; transform:none; }
+    .home-link svg{ width:18px; height:18px; }
+    
+    @media (min-width:1024px){
+      .home-link{ width:42px; height:42px; }
+      .home-link svg{ width:22px; height:22px; }
     }
     .home-link svg{width:16px;height:16px}
 
@@ -426,7 +430,13 @@
 
     /* desktop: keep everything perfectly centered, no scroll */
     @media (min-width: 900px){
-      .wrap{ padding:24px 16px; }
+        .wrap{
+          min-height:100dvh; display:grid; place-items:center;
+          padding: calc(72px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+        }
+        @supports (height: 100svh){
+          .wrap{ min-height:100svh; }
+        }
     }
 
     /* Hard-hide validation blocks so they never push layout */
@@ -508,7 +518,6 @@
     </a>
     <a class="home-link" href="index.html" aria-label="Back to home">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11L12 3l9 8"/><path d="M9 22V12h6v10"/></svg>
-      <span>Home</span>
     </a>
   </div>
 
