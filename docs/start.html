@@ -9,44 +9,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
 
   <style>
-    /* ========================== KNOBS ========================== */
+    /* =============== KNOBS =============== */
     :root{
-      /* layout */
       --content-w: min(960px, 92vw);
       --title-fs: clamp(28px, 5.6vw, 58px);
 
-      /* pressed glass controls (Step 2) */
-      --ctl-h: 46px;                /* control height */
-      --ctl-r: 16px;                /* border radius */
-      --rim-w: 1.5px;               /* thin inner rim */
-
-      /* animation + borders (from your snippet) */
-      --anim-time: 400ms;
-      --anim-ease: cubic-bezier(0.25, 1, 0.5, 1);
-      --border-width: clamp(1px, 0.0625em, 4px);
-
-      /* conic ring start angles */
-      --angle-1: -75deg;
-      --angle-2: -45deg;
+      /* glass controls */
+      --ctl-h: 44px;
+      --ctl-r: 14px;
+      --rim-w: 1.2px;
+      --bevel-light: rgba(255,255,255,.28);
+      --bevel-dark: rgba(0,0,0,.58);
+      --pane-bg-2: rgba(0,0,0,.22);
+      --ring-alpha: .34;
+      --ring-speed: 900ms;
 
       /* colors */
       --fg: #e9ecf3;
       --muted: #a9b2c2;
-      --error: #ff6b6b;
 
       /* background */
       --bg-1: #0c1020;
       --bg-2: #0c1326;
-
-      /* for OKLCH conversions (used by conic/linear insets) */
-      --background: oklch(14.5% 0 0);
-      --foreground: oklch(98.5% 0 0);
-      --ring: oklch(70.8% 0 0);
-      --border: oklch(92.2% 0 0);
     }
 
-    /* ====================== BASE / BACKDROP ===================== */
-    html,body{height:100%;margin:0}
+    /* ============ BASE / BACKDROP ============ */
+    html,body{height:100%;margin:0;overflow-x:hidden}
     body{
       color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -61,7 +49,7 @@
     .wrap{min-height:100dvh; display:grid; place-items:center; padding:96px 16px 40px}
     .stage{ width:var(--content-w); }
 
-    /* top chrome */
+    /* ============ top chrome ============ */
     .topbar{
       position:fixed; top:16px; left:0; right:0; z-index:10;
       display:flex; align-items:center; justify-content:space-between;
@@ -77,10 +65,7 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
     }
     .brand img{height:22px; width:auto}
-    .brand span{
-      font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui;
-      letter-spacing:.2px;
-    }
+    .brand span{font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui; letter-spacing:.2px}
     .home-link{
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px; border-radius:12px; color:var(--fg); text-decoration:none;
@@ -95,12 +80,11 @@
       font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui;
       margin:0 0 18px 0;
       text-shadow:0 1px 0 rgba(0,0,0,.35);
-      text-align:center;
     }
     .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
     .center { display:grid; gap:16px; place-items:center; }
 
-    /* ===================== STEP 1 (unchanged) ===================== */
+    /* ============ STEP 1 (unchanged) ============ */
     .cardless{ max-width:860px; margin-inline:auto; }
     .step{ display:none; }
     .step.active{ display:block; }
@@ -146,110 +130,121 @@
     .btn-icon:hover{ transform: translateY(-1px); border-color:rgba(255,255,255,.26); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 16px 38px rgba(0,0,0,.28); }
     .btn-icon svg{ width:20px; height:20px; }
 
-    /* ===================== STEP 2 (pressed glass; matched to snippet) ===================== */
+    /* ============ STEP 2 (glass from signup.tsx) ============ */
+
+    /* custom props used by the conic-rim + sweep */
+    @property --angle-1 { syntax: "<angle>"; inherits: false; initial-value: -75deg; }
+    @property --angle-2 { syntax: "<angle>"; inherits: false; initial-value: -45deg; }
+
     .hr{ width:min(560px, 86vw); height:1px; margin:14px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
     .muted{ color:var(--muted); font-size:14px; text-align:center }
 
-    .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
-
-    /* base look for both chips and the field – pressed in, inner shadows */
-    .chip,
-    .pressed{
-      -webkit-tap-highlight-color: transparent;
+    /* -------- Glass Button (wrap + button + text) -------- */
+    .chip{ /* wrapper from GlassButton */
+      --anim-time: 400ms; --anim-ease: cubic-bezier(0.25, 1, 0.5, 1); --border-width: clamp(1px, 0.0625em, 4px);
+      position:relative; z-index:2; transform-style:preserve-3d; cursor:pointer;
+      display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
+      height:40px; padding:0 18px; border-radius:9999px; text-decoration:none; color:var(--fg); font-weight:600;
+    }
+    .chip::before{ /* the button body (glass) */
+      content:""; position:absolute; inset:0; border-radius:inherit; z-index:0;
       backdrop-filter: blur(clamp(1px, 0.125em, 4px));
-      transition: all var(--anim-time) var(--anim-ease);
-      background: linear-gradient(-75deg,
-        oklch(from var(--background) l c h / 5%),
-        oklch(from var(--background) l c h / 20%),
-        oklch(from var(--background) l c h / 5%));
+      background: linear-gradient(-75deg, oklch(from var(--bg-2) l c h / 5%), oklch(from var(--bg-2) l c h / 20%), oklch(from var(--bg-2) l c h / 5%));
       box-shadow:
-        inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%),
-        inset 0 -0.125em 0.125em oklch(from var(--background) l c h / 50%),
-        0 0.25em 0.125em -0.125em oklch(from var(--foreground) l c h / 20%),
-        0 0 0.1em 0.25em inset oklch(from var(--background) l c h / 20%),
-        0 0 0 0 oklch(from var(--background) l c h);
-      border:1px solid oklch(from var(--border) l c h / 60%);
-      outline-color: var(--ring);
+        inset 0 0.125em 0.125em oklch(from var(--fg) l c h / 5%),
+        inset 0 -0.125em 0.125em oklch(from var(--bg-2) l c h / 50%),
+        0 0.15em 0.05em -0.1em oklch(from var(--fg) l c h / 25%),
+        0 0 0.05em 0.1em inset oklch(from var(--bg-2) l c h / 50%);
+      transition: all var(--anim-time) var(--anim-ease);
     }
-
-    /* chips (Google / GitHub) */
-    .chip{
-      position:relative; display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
-      height:var(--ctl-h); padding:0 18px; border-radius:calc(var(--ctl-r) + 4px);
-      color:var(--fg); text-decoration:none; font-weight:600;
-      transform-style: preserve-3d;
-    }
-    .chip svg{ width:20px; height:20px; display:block; }
-    .chip::before{
-      content:""; position:absolute; z-index:1; inset:0; border-radius:9999px;
+    .chip::after{ /* conic rim */
+      content:""; position:absolute; inset:0; border-radius:inherit; z-index:1;
       width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width));
-      top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2);
+      top: calc(0% - var(--border-width)/2); left: calc(0% - var(--border-width)/2);
       padding: var(--border-width); box-sizing: border-box;
-      background:
-        conic-gradient(from var(--angle-1) at 50% 50%,
-          oklch(from var(--foreground) l c h / 50%) 0%,
-          transparent 5% 40%,
-          oklch(from var(--foreground) l c h / 50%) 50%,
-          transparent 60% 95%,
-          oklch(from var(--foreground) l c h / 50%) 100%),
-        linear-gradient(180deg, oklch(from var(--background) l c h / 50%), oklch(from var(--background) l c h / 50%));
+      background: conic-gradient(from var(--angle-1) at 50% 50%, oklch(from var(--fg) l c h / 50%) 0%, transparent 5% 40%, oklch(from var(--fg) l c h / 50%) 50%, transparent 60% 95%, oklch(from var(--fg) l c h / 50%) 100%),
+                  linear-gradient(180deg, oklch(from var(--bg-2) l c h / 50%), oklch(from var(--bg-2) l c h / 50%));
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      box-shadow: inset 0 0 0 calc(var(--border-width)/2) oklch(from var(--bg-2) l c h / 50%);
+      pointer-events:none;
       transition: all var(--anim-time) var(--anim-ease), --angle-1 500ms ease;
-      box-shadow: inset 0 0 0 calc(var(--border-width) / 2) oklch(from var(--background) l c h / 50%);
-      pointer-events: none;
-      opacity:.65;
     }
-    .chip:hover::before{ --angle-1: calc(var(--angle-1) + 180deg); opacity:.9; }
-    .chip:active{ transform: translateY(0.5px); }
+    .chip:hover{ transform: translateY(-1px) }
+    .chip:hover::after{ --angle-1: -125deg; }
 
-    /* email field: narrow, single container, pressed in, animated rim */
-    :root{ --field-w: 360px; } /* ≈ half width */
-    .field-wrap{ width:min(var(--field-w), 86vw); margin: 6px auto 0 auto; position:relative; }
-    .pressed{
-      position:relative; display:grid; grid-template-columns: 26px 1fr; align-items:center;
-      height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px;
+    .chip svg{ width:20px; height:20px; position:relative; z-index:2 }
+    .chip span{ position:relative; z-index:2; }
+
+    /* -------- Pressed input (glass-input) -------- */
+    .field-wrap{ width:min(360px, 86vw); margin: 6px auto 0 auto; position:relative; }
+    .glass-input-wrap{ position:relative; z-index:2; transform-style:preserve-3d; border-radius:9999px; }
+    .glass-input{
+      display:flex; position:relative; width:100%; align-items:center; gap:.5rem; border-radius:9999px; padding:.25rem;
+      height:var(--ctl-h);
+      backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+      background: linear-gradient(-75deg, oklch(from var(--bg-2) l c h / 5%), oklch(from var(--bg-2) l c h / 20%), oklch(from var(--bg-2) l c h / 5%));
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -3px 6px var(--bevel-dark),
+        inset 0 12px 26px var(--pane-bg-2);
+      transition: all 400ms cubic-bezier(0.25, 1, 0.5, 1);
     }
-    .pressed::before{
-      content:""; position:absolute; z-index:1; inset:0; border-radius:9999px;
-      width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width));
-      top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2);
-      padding: var(--border-width); box-sizing: border-box;
-      background:
-        conic-gradient(from var(--angle-1) at 50% 50%,
-          oklch(from var(--foreground) l c h / 40%) 0%,
-          transparent 12% 38%,
-          oklch(from var(--foreground) l c h / 40%) 52%,
-          transparent 60% 96%,
-          oklch(from var(--foreground) l c h / 40%) 100%),
-        linear-gradient(180deg, oklch(from var(--background) l c h / 50%), oklch(from var(--background) l c h / 50%));
+    .glass-input::after{ /* thin animated rim */
+      content:""; position:absolute; inset:0; border-radius:9999px; z-index:1;
+      width: calc(100% + clamp(1px, 0.0625em, 4px)); height: calc(100% + clamp(1px, 0.0625em, 4px));
+      top: calc(0% - clamp(1px, 0.0625em, 4px)/2); left: calc(0% - clamp(1px, 0.0625em, 4px)/2);
+      padding: clamp(1px, 0.0625em, 4px); box-sizing: border-box;
+      background: conic-gradient(from var(--angle-1) at 50% 50%, oklch(from var(--fg) l c h / 50%) 0%, transparent 5% 40%, oklch(from var(--fg) l c h / 50%) 50%, transparent 60% 95%, oklch(from var(--fg) l c h / 50%) 100%),
+                  linear-gradient(180deg, oklch(from var(--bg-2) l c h / 50%), oklch(from var(--bg-2) l c h / 50%));
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
-      transition: all var(--anim-time) var(--anim-ease), --angle-1 500ms ease;
-      box-shadow: inset 0 0 0 calc(var(--border-width) / 2) oklch(from var(--background) l c h / 50%);
-      pointer-events: none;
-      opacity:.55;
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      box-shadow: inset 0 0 0 calc(clamp(1px, 0.0625em, 4px)/2) oklch(from var(--bg-2) l c h / 50%);
+      pointer-events:none;
+      transition: all 400ms cubic-bezier(0.25, 1, 0.5, 1), --angle-1 500ms ease;
     }
-    .pressed:hover::before,
-    .pressed:has(input:focus)::before{ --angle-1: calc(var(--angle-1) + 180deg); opacity:.9; }
+    .glass-input-wrap:focus-within .glass-input::after{ --angle-1: -125deg; }
 
-    .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
+    .glass-input-text-area{ position:absolute; inset:0; border-radius:9999px; pointer-events:none; }
+    .glass-input-text-area::after{
+      content:""; display:block; position:absolute; border-radius:9999px; overflow:clip;
+      width: calc(100% - clamp(1px, 0.0625em, 4px)); height: calc(100% - clamp(1px, 0.0625em, 4px));
+      top: calc(0% + clamp(1px, 0.0625em, 4px)/2); left: calc(0% + clamp(1px, 0.0625em, 4px)/2);
+      background: linear-gradient(var(--angle-2), transparent 0%, oklch(from var(--bg-2) l c h / 50%) 40% 50%, transparent 55%);
+      mix-blend-mode:screen; background-size:200% 200%; background-position:0% 50%;
+      transition: background-position calc(400ms * 1.25) cubic-bezier(0.25, 1, 0.5, 1), --angle-2 calc(400ms * 1.25) cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .glass-input-wrap:focus-within .glass-input-text-area::after{ background-position:25% 50%; }
+
+    .left-icon{display:inline-grid; place-items:center; width:26px; color:#e7e7e7; opacity:.9; position:relative; z-index:2}
     input{
       min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
       font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
-      -webkit-appearance: none; appearance: none;
+      position:relative; z-index:2; flex:1;
     }
     input::placeholder{ color:rgba(233,236,243,.62); }
-
-    /* kill iOS autofill and white overlay buttons */
+    /* kill iOS autofill overlays */
     input::-webkit-contacts-auto-fill-button,
     input::-webkit-credentials-auto-fill-button{ visibility:hidden; display:none !important; pointer-events:none; }
     input:-webkit-autofill,
     input:-webkit-autofill:hover,
     input:-webkit-autofill:focus{ -webkit-box-shadow:0 0 0 1000px transparent inset !important; -webkit-text-fill-color: var(--fg) !important; }
 
-    /* single centered back arrow under field */
-    .single-action{ display:grid; place-items:center; margin-top: 14px; }
+    .trail{ width:0; overflow:hidden; transition:width .3s ease; }
+    .show-go .trail{ width:40px; }
+    .go{
+      width:36px; height:36px; border-radius:999px; border:0; cursor:pointer;
+      display:grid; place-items:center; color:var(--fg);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 4px var(--bevel-dark),
+        0 6px 16px rgba(0,0,0,.30);
+    }
+    .go svg{width:18px;height:18px}
+
+    .single-action{ display:grid; place-items:center; margin-top:14px }
   </style>
 </head>
 <body>
@@ -310,22 +305,27 @@
         </div>
       </section>
 
-      <!-- ================ STEP 2 (pressed glass, minimal) ================ -->
+      <!-- ================= STEP 2 (glassy, mined from signup.tsx) ================= -->
       <section id="step2" class="step" aria-labelledby="s2-title">
-        <div class="title-row">
-          <h1 id="s2-title">Get started with Us</h1>
-          <p class="subtitle">Continue with</p>
-        </div>
-
-        <!-- chips -->
         <div class="center">
-          <div class="chip-row">
+          <div class="title-row" style="text-align:center">
+            <h1 id="s2-title" style="font-family:'Plus Jakarta Sans', Inter, system-ui">Get started with Us</h1>
+            <p class="subtitle">Continue with</p>
+          </div>
+
+          <!-- chips -->
+          <div class="center" style="gap:18px">
             <a class="chip" href="#" aria-label="Continue with Google">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="#EA4335" d="M12 10.2v3.8h5.3c-.2 1.2-1.6 3.6-5.3 3.6A6.2 6.2 0 1 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12S6.8 21.5 12 21.5c7 0 9.7-4.8 9-9.2H12z"/>
-                <path fill="#34A853" d="M3.7 7.4l3.1 2.3A6 6 0 0 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 8.7 2.5 5.8 4.3 3.7 7.4z"/>
-                <path fill="#FBBC05" d="M12 21.5c3.2 0 5.9-1.1 7.8-3l-3-2.4c-1 .7-2.2 1.2-4.8 1.2a6.2 6.2 0 0 1-5.8-4l-3 2.3A9.5 9.5 0 0 0 12 21.5z"/>
-                <path fill="#4285F4" d="M21 12c0-.7-.1-1.3-.2-1.9H12v3.8h5.3a4.6 4.6 0 0 1-2 3l3 2.4C20.3 17.6 21 14.9 21 12z"/>
+              <!-- Google icon -->
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <g fill-rule="evenodd" fill="none">
+                  <g fill-rule="nonzero" transform="translate(3, 2)">
+                    <path fill="#4285F4" d="M57.8123233,30.1515267 C57.8123233,27.7263183 57.6155321,25.9565533 57.1896408,24.1212666 L29.4960833,24.1212666 L29.4960833,35.0674653 L45.7515771,35.0674653 C45.4239683,37.7877475 43.6542033,41.8844383 39.7213169,44.6372555 L39.6661883,45.0037254 L48.4223791,51.7870338 L49.0290201,51.8475849 C54.6004021,46.7020943 57.8123233,39.1313952 57.8123233,30.1515267"></path>
+                    <path fill="#34A853" d="M29.4960833,58.9921667 C37.4599129,58.9921667 44.1456164,56.3701671 49.0290201,51.8475849 L39.7213169,44.6372555 C37.2305867,46.3742596 33.887622,47.5868638 29.4960833,47.5868638 C21.6960582,47.5868638 15.0758763,42.4415991 12.7159637,35.3297782 L12.3700541,35.3591501 L3.26524241,42.4054492 L3.14617358,42.736447 C7.9965904,52.3717589 17.959737,58.9921667 29.4960833,58.9921667"></path>
+                    <path fill="#FBBC05" d="M12.7159637,35.3297782 C12.0932812,33.4944915 11.7329116,31.5279353 11.7329116,29.4960833 C11.7329116,27.4640054 12.0932812,25.4976752 12.6832029,23.6623884 L12.6667095,23.2715173 L3.44779955,16.1120237 L3.14617358,16.2554937 C1.14708246,20.2539019 0,24.7439491 0,29.4960833 C0,34.2482175 1.14708246,38.7380388 3.14617358,42.736447 L12.7159637,35.3297782"></path>
+                    <path fill="#EB4335" d="M29.4960833,11.4050769 C35.0347044,11.4050769 38.7707997,13.7975244 40.9011602,15.7968415 L49.2255853,7.66898166 C44.1130815,2.91684746 37.4599129,0 29.4960833,0 C17.959737,0 7.9965904,6.62018183 3.14617358,16.2554937 L12.6832029,23.6623884 C15.0758763,16.5505675 21.6960582,11.4050769 29.4960833,11.4050769"></path>
+                  </g>
+                </g>
               </svg>
               <span>Google</span>
             </a>
@@ -341,15 +341,25 @@
           <div class="hr" aria-hidden="true"></div>
           <div class="muted">OR</div>
 
-          <!-- single, smaller email field -->
+          <!-- single, narrow email field -->
           <div class="field-wrap">
-            <div class="pressed" id="emailBox">
-              <span class="left-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/>
-                </svg>
-              </span>
-              <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
+            <div class="glass-input-wrap" id="emailWrap">
+              <div class="glass-input">
+                <span class="glass-input-text-area"></span>
+                <span class="left-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/>
+                  </svg>
+                </span>
+                <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
+                <span class="trail">
+                  <button type="button" id="emailGo" class="go" aria-label="Continue with email">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                  </button>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -364,29 +374,11 @@
         </div>
       </section>
 
-      <!-- Validation messages (kept, hidden by default) -->
-      <div id="emailError" class="error hide">
-        <span>Check your email.</span>
-        <span class="learn" id="learnTrigger">Learn more
-          <span class="tooltip" role="tooltip">
-            <strong>What can block progress?</strong>
-            <ul>
-              <li>Personal domains (gmail.com, yahoo.com, outlook.com...).</li>
-              <li>Website not reachable from the public internet.</li>
-              <li>Your domain forwards to another site or a holding page.</li>
-              <li>Domain doesn’t match your website.</li>
-            </ul>
-          </span>
-        </span>
-      </div>
-      <div id="domainMismatch" class="error hide">Your business email domain must match your website.</div>
-      <div id="siteUnreachable" class="error hide">Your website looks unreachable or misconfigured.</div>
-
     </div>
   </main>
 
   <script>
-    /* ---------- logo loader (same list) ---------- */
+    /* ---- logo loader ---- */
     (function tryLogo(){
       const candidates = [
         "/assets/logo/galactly-logo.svg",
@@ -410,7 +402,7 @@
       })();
     })();
 
-    /* ---------- helpers ---------- */
+    /* ---- helpers ---- */
     const byId = (id)=>document.getElementById(id);
     const qs = (sel,root=document)=>root.querySelector(sel);
     const qsa = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
@@ -419,9 +411,8 @@
     const step2 = byId("step2");
     const s1Next = byId("s1-next");
     const s2Back = byId("s2-back");
-    const emailInput = byId("email");
 
-    /* ---------- STEP 1 select role (unchanged) ---------- */
+    /* STEP 1 */
     let role = null;
     qsa(".choice", step1).forEach(el=>{
       const r = el.getAttribute("data-role");
@@ -432,7 +423,6 @@
           c.setAttribute("aria-selected", c === el ? "true" : "false");
         });
         s1Next.disabled = false;
-        if(window.onboarding?.setRole) window.onboarding.setRole(role);
       };
       el.addEventListener("click", pick);
       el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
@@ -442,85 +432,45 @@
       if(!role) return;
       step1.classList.remove("active");
       step2.classList.add("active");
-      emailInput.focus();
-      if(window.onboarding?.goTo) window.onboarding.goTo(2);
+      byId("email").focus();
     });
 
-    /* ---------- Step 2 small helpers ---------- */
+    /* STEP 2: exact glass-input behavior */
+    const email = byId("email");
+    const emailWrap = byId("emailWrap");
+    const emailGo = byId("emailGo");
+
     const personal = new Set(["gmail.com","yahoo.com","outlook.com","hotmail.com","live.com","aol.com","icloud.com","proton.me","protonmail.com","yandex.com","gmx.com","mail.com","pm.me"]);
     const domainOf = v => (String(v||'').match(/@([A-Za-z0-9.-]+\.[A-Za-z]{2,})$/)||[])[1]?.toLowerCase() || "";
-    const looksValidEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v||'').trim()) && !personal.has(domainOf(v));
+    const looksValid = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v||'').trim()) && !personal.has(domainOf(v));
 
-    emailInput.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter' && !looksValidEmail(emailInput.value)) e.preventDefault();
+    function updateTrail(){
+      const ok = looksValid(email.value);
+      emailWrap.classList.toggle('show-go', ok);
+    }
+
+    email.addEventListener('input', updateTrail);
+    email.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        if(looksValid(email.value)) emailGo.click();
+      }
+    });
+
+    emailGo.addEventListener('click', ()=>{
+      // do your thing here (navigate, call API, etc.)
+      console.log('Email OK ->', email.value);
+      // example: location.href = 'step3.html';
     });
 
     s2Back.addEventListener("click", ()=>{
       step2.classList.remove("active");
       step1.classList.add("active");
-      if(window.onboarding?.goTo) window.onboarding.goTo(1);
     });
+
+    // keep s1-next disabled until role chosen
+    s1Next.disabled = true;
   </script>
 
-  <!-- ===== Optionally render your mirrored-G logo into the .topbar brand ===== -->
-  <style>
-    .site-header .brand,
-    .topbar .brand{
-      display:flex; align-items:center;
-      --icon-w: 36px; --brand-gap: 10px; gap: var(--brand-gap);
-    }
-    .brand-icon{
-      --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0;
-    }
-    .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
-    .brand-word{
-      font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
-      -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
-    }
-    .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
-    .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
-  </style>
-
-  <script>
-  (function(){
-    const brand = document.querySelector('.topbar .brand') || document.querySelector('.site-header .brand');
-    if(!brand) return;
-
-    const icon = `
-<svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
-      <path id="gPath" d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
-    </symbol>
-    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ECF4FF"/><stop offset="0.55" stop-color="#CFE0F3"/><stop offset="1" stop-color="#AEBED2"/></linearGradient>
-    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9F0F8"/></linearGradient>
-    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/><stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/></radialGradient>
-    <linearGradient id="ggSheen" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.46" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.54" stop-color="#FFFFFF" stop-opacity="0.35"/><stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <filter id="ggSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#000" flood-opacity="0.22"/>
-      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#9ED8FF" flood-opacity="0.15"/>
-    </filter>
-  </defs>
-  <g pointer-events="none"><circle cx="32" cy="33" r="21" fill="url(#ggHalo)"/></g>
-  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#ggSoftGlow);">
-    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
-    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
-  </g>
-  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#ggSoftGlow); opacity: var(--left-dim);">
-    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
-    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
-  </g>
-</svg>`;
-    const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
-    brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
-    brand.setAttribute('aria-label','Galactly');
-  })();
-  </script>
-  <!-- ===== /logo ===== -->
 </body>
 </html>
