@@ -85,17 +85,42 @@
     .stage{ width:var(--content-w); }
 
     /* top chrome */
+    /* ===== topbar + item padding knobs ===== */
+    :root{
+      --topbar-pad-x: 20px;  /* left/right gap from viewport edge */
+      --topbar-pad-y: 10px;  /* gap below the iOS bar (additive with safe-area) */
+    
+      --brand-pad-x: 8px;    /* inner padding of the left logo link */
+      --brand-pad-y: 6px;
+    
+      --home-pad-x: 8px;     /* inner padding of the right home link */
+      --home-pad-y: 6px;
+    
+      --home-ic-m: 22px;     /* home icon size (mobile) */
+      --home-ic-d: 28px;     /* home icon size (desktop) */
+    }
+    
     .topbar{
-      position:fixed; top: calc(8px + var(--safe-top)); left:0; right:0; z-index:10;
+      position:fixed;
+      top: calc(var(--safe-top) + var(--topbar-pad-y));
+      left:0; right:0; z-index:10;
       display:flex; align-items:center; justify-content:space-between;
-      padding:0 18px;
+      padding:0 var(--topbar-pad-x);
     }
     .brand{
       display:flex; align-items:center; gap:10px;
       color:var(--fg); text-decoration:none;
-      padding:0; border-radius:0;
+      padding: var(--brand-pad-y) var(--brand-pad-x);
+      border-radius:12px;
       background:transparent; border:0; box-shadow:none; backdrop-filter:none;
     }
+
+    /* final, single source of truth for home icon size */
+    .topbar .home-link svg{ width:var(--home-ic-m); height:var(--home-ic-m); display:block; }
+    @media (min-width:1024px){
+      .topbar .home-link svg{ width:var(--home-ic-d); height:var(--home-ic-d); }
+    }
+
     .brand img{height:22px; width:auto}
     .brand span{
       font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui;
@@ -104,8 +129,10 @@
    /* icon-only home link */
     .home-link{
       display:inline-flex; align-items:center; justify-content:center;
-      padding:0; background:none; border:0; box-shadow:none; backdrop-filter:none;
-      line-height:0; /* avoid extra vertical box */
+      padding: var(--home-pad-y) var(--home-pad-x);
+      background:none; border:0; box-shadow:none; backdrop-filter:none;
+      line-height:0;
+      color: var(--fg); /* ensure anchor color stays white */
     }
     .home-link:hover{ opacity:.85; transform:none; }
 
@@ -521,8 +548,13 @@
       <img alt="Galactly" src="" id="brandLogo"/>
       <span>MyWebApp</span>
     </a>
-    <a class="home-link" href="index.html" aria-label="Back to home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11L12 3l9 8"/><path d="M9 22V12h6v10"/></svg>
+    <a class="home-link" href="index.html" aria-label="Home">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Apple-ish, rounded house outline; hard-white stroke so it never turns purple -->
+        <path d="M3 11l9-8 9 8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 10v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 22V13h6v9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </a>
   </div>
 
