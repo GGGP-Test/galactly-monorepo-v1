@@ -631,7 +631,19 @@
       if(!role) return;
       step1.classList.remove("active");
       step2.classList.add("active");
-      emailInput?.focus();
+    
+      // do NOT auto-focus the email field; clear any current focus
+      if (document.activeElement && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur();
+      }
+    
+      // move focus to the step title (keeps keyboard users happy, no pressed styles)
+      const t = document.getElementById("s2-title");
+      if (t) {
+        if (!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1");
+        t.focus({ preventScroll: true });
+      }
+    
       if(window.onboarding?.goTo) window.onboarding.goTo(2);
     });
 
