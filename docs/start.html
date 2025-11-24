@@ -71,13 +71,14 @@
         linear-gradient(180deg, var(--bg-2), var(--bg-1));
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
+      overflow: hidden;
     }
 
     .wrap{
-      min-height:100dvh;
+      height:100svh;           /* true full viewport height (mobile-safe) */
       display:grid;
-      place-items:center;
-      padding:24px 16px;           /* tighter so desktop doesn’t scroll */
+      place-items:center;      /* exact center */
+      padding:0 16px;          /* no extra vertical padding */
     }
     .stage{ width:var(--content-w); }
 
