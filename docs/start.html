@@ -82,7 +82,15 @@
       place-items:center;      /* exact center */
       padding:0 16px;          /* no extra vertical padding */
     }
-    .stage{ width:var(--content-w); }
+    /* lift the whole step container without changing layout height */
+    .stage{
+      width:var(--content-w);
+      transform: translateY(var(--stage-lift-m, -22px)); /* mobile/tablet lift */
+      transition: transform .2s ease;
+    }
+    @media (min-width:768px){
+      .stage{ transform: translateY(var(--stage-lift-d, -48px)); } /* desktop lift */
+    }
 
     /* top chrome */
     /* ===== topbar + item padding knobs ===== */
