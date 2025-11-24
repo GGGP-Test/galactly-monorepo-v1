@@ -297,6 +297,71 @@
 
     /* Hard-hide validation blocks so they never push layout */
     .error{ display:none !important; }
+    
+    
+    
+/* Register animatable custom property for the inner reflection angle */
+@property --glare-angle { syntax: "<angle>"; inherits: false; initial-value: -70deg; }
+
+/* === GLASS REFLECTION KNOBS (edit these) === */
+:root{
+  /* direction of reflection (at rest vs hover) */
+  --glare-angle-rest:  -70deg;  /* e.g. top-left to bottom-right */
+  --glare-angle-hover:  20deg;  /* sweep direction on hover */
+
+  /* how strong the bright strip is (0..1) */
+  --glare-strength:        .16; /* at rest */
+  --glare-strength-hover:  .22; /* on hover */
+
+  /* how far inside the pill the reflection sits */
+  --glare-inset: 3px;          /* push in from the edge */
+
+  /* thickness of the bright band (percentage of button) */
+  --glare-band: 28%;
+}
+
+/* make sure chip clips children cleanly */
+.chip{ position:relative; overflow:hidden; }
+
+/* the inner reflection layer */
+.chip .glare{
+  position:absolute;
+  inset: var(--glare-inset);                /* <- offset inside edge */
+  border-radius: calc(9999px - var(--glare-inset));
+  pointer-events:none;
+  mix-blend-mode: screen;                   /* glassy add-light look */
+
+  /* start values (at rest) */
+  --glare-angle: var(--glare-angle-rest);
+
+  /* the reflection itself */
+  background:
+    linear-gradient(
+      var(--glare-angle),
+      transparent 0% calc(50% - var(--glare-band)/2),
+      rgba(255,255,255,var(--glare-strength)) 50%,
+      transparent calc(50% + var(--glare-band)/2)
+    );
+
+  /* keep speed “in family” with your rim/ring animation vars */
+  transition:
+    opacity var(--ring-speed, 900ms) var(--anim-ease, cubic-bezier(.25,1,.5,1)),
+    transform var(--ring-speed, 900ms) var(--anim-ease, cubic-bezier(.25,1,.5,1)),
+    --glare-angle calc(var(--ring-speed, 900ms) * 1.2) var(--anim-ease, cubic-bezier(.25,1,.5,1));
+}
+
+/* hover state: change angle and optionally intensity */
+.chip:hover .glare{
+  --glare-angle:   var(--glare-angle-hover);
+  --glare-strength:var(--glare-strength-hover);
+}
+
+
+
+    
+    
+    
+    
   </style>
 </head>
 <body>
@@ -377,6 +442,7 @@
                 <path fill="#4285F4" d="M21 12c0-.7-.1-1.3-.2-1.9H12v3.8h5.3a4.6 4.6 0 0 1-2 3l3 2.4C20.3 17.6 21 14.9 21 12z"/>
               </svg>
               <span>Google</span>
+              <span class="glare" aria-hidden="true"></span>
             </a>
           </div>
 
