@@ -120,6 +120,8 @@
     }
     .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
     .center { display:grid; gap:16px; place-items:center; }
+    /* Step 2: take manual control of spacing */
+    #step2 .center { gap: 0; }
 
     /* ===================== STEP 1 (unchanged) ===================== */
     .cardless{ max-width:860px; margin-inline:auto; }
@@ -218,6 +220,46 @@
         border-color .15s ease,
         --chip-sheen-ang .45s ease; /* animate the inner reflection angle */
     }
+    
+    
+    /* ----- Step 2 spacing knobs (mobile-first) ----- */
+    :root{
+      /* from top “edge” to H1 */
+      --s2-gap-edge-title: 56px;
+    
+      /* between elements */
+      --s2-gap-title-subtitle: 10px;   /* H1 -> “Continue with” */
+      --s2-gap-subtitle-chips: 14px;   /* “Continue with” -> Google button row */
+      --s2-gap-chips-hr: 18px;         /* Google button row -> divider line */
+      --s2-gap-hr-or: 10px;            /* divider line -> “OR” */
+      --s2-gap-or-field: 18px;         /* “OR” -> email field */
+      --s2-gap-field-arrow: 12px;      /* email field -> back arrow */
+      --s2-gap-bottom-edge: 56px;      /* back arrow -> bottom “edge” */
+    }
+    
+    /* Desktop tweaks */
+    @media (min-width: 768px){
+      :root{
+        --s2-gap-edge-title: 80px;
+        --s2-gap-title-subtitle: 12px;
+        --s2-gap-subtitle-chips: 16px;
+        --s2-gap-chips-hr: 22px;
+        --s2-gap-hr-or: 12px;
+        --s2-gap-or-field: 22px;
+        --s2-gap-field-arrow: 16px;
+        --s2-gap-bottom-edge: 80px;
+      }
+    }
+    
+    /* Apply the knobs to Step 2 elements (specific selectors to override defaults) */
+    #step2 .title-row       { margin-top: var(--s2-gap-edge-title); margin-bottom: 0; }
+    #step2 .title-row h1    { margin: 0 0 var(--s2-gap-title-subtitle) 0; }
+    #step2 .subtitle        { margin: 0 0 var(--s2-gap-subtitle-chips) 0; text-align: center; }
+    #step2 .chip-row        { margin: 0 0 var(--s2-gap-chips-hr) 0; }
+    #step2 .hr              { margin: 0 auto var(--s2-gap-hr-or) auto; }
+    #step2 .muted           { margin: 0 0 var(--s2-gap-or-field) 0; }
+    #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
+    #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
     
     /* hover: tip the inner reflection just a bit, do not go wild */
     .chip:hover{
