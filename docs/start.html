@@ -19,15 +19,15 @@
       --ctl-h: 46px;                /* control height */
       --ctl-r: 16px;                /* border radius */
       --rim-w: 1.5px;               /* thin inner rim */
-      --bevel-light: rgba(255,255,255,.35);
-      --bevel-dark: rgba(0,0,0,.55);
-      --pane-bg-2: rgba(0,0,0,.16); /* inner deepening */
-      --outer-shadow: 0 4px 14px rgba(0,0,0,.22);
 
-      /* ring animation around rim */
-      --ring-alpha: .34;
-      --ring-speed: 900ms;
-      --ring-size: 110%;
+      /* animation + borders (from your snippet) */
+      --anim-time: 400ms;
+      --anim-ease: cubic-bezier(0.25, 1, 0.5, 1);
+      --border-width: clamp(1px, 0.0625em, 4px);
+
+      /* conic ring start angles */
+      --angle-1: -75deg;
+      --angle-2: -45deg;
 
       /* colors */
       --fg: #e9ecf3;
@@ -37,6 +37,12 @@
       /* background */
       --bg-1: #0c1020;
       --bg-2: #0c1326;
+
+      /* for OKLCH conversions (used by conic/linear insets) */
+      --background: oklch(14.5% 0 0);
+      --foreground: oklch(98.5% 0 0);
+      --ring: oklch(70.8% 0 0);
+      --border: oklch(92.2% 0 0);
     }
 
     /* ====================== BASE / BACKDROP ===================== */
@@ -89,6 +95,7 @@
       font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui;
       margin:0 0 18px 0;
       text-shadow:0 1px 0 rgba(0,0,0,.35);
+      text-align:center;
     }
     .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
     .center { display:grid; gap:16px; place-items:center; }
@@ -139,224 +146,110 @@
     .btn-icon:hover{ transform: translateY(-1px); border-color:rgba(255,255,255,.26); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 16px 38px rgba(0,0,0,.28); }
     .btn-icon svg{ width:20px; height:20px; }
 
-    /* ===================== STEP 2 (pressed glass) ===================== */
-    .title-row{ text-align:center; margin-bottom:8px }
-    .title-row h1{ font-family:"Plus Jakarta Sans", Inter, system-ui }
-
+    /* ===================== STEP 2 (pressed glass; matched to snippet) ===================== */
     .hr{ width:min(560px, 86vw); height:1px; margin:14px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
     .muted{ color:var(--muted); font-size:14px; text-align:center }
 
-    /* chips */
     .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
-    .chip{
-      --local-h: var(--ctl-h);
-      position:relative; display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
-      height:var(--local-h); padding:0 18px; border-radius:calc(var(--ctl-r) + 4px);
-      color:var(--fg); text-decoration:none; font-weight:600;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)),
-        radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.18));
-      border:1px solid rgba(255,255,255,.16);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 4px var(--bevel-dark),
-        inset 0 8px 18px var(--pane-bg-2),
-        0 2px 8px rgba(0,0,0,.25);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-    }
-    .chip:hover{
-      transform: translateY(-1px);
-      border-color: rgba(255,255,255,.22);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 4px var(--bevel-dark),
-        inset 0 10px 20px var(--pane-bg-2),
-        0 6px 18px rgba(0,0,0,.32);
-    }
-    .chip:active{
-      transform: translateY(0);
-      box-shadow:
-        inset 0 2px 3px rgba(0,0,0,.5),
-        inset 0 -1px 1px rgba(255,255,255,.05),
-        inset 0 12px 24px rgba(0,0,0,.22),
-        0 2px 8px rgba(0,0,0,.30);
-    }
-    .chip::before,
-    .chip::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
-    .chip::before{
-      padding:var(--rim-w);
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
-      opacity:.9;
-    }
-    .chip::after{
-      --ang: 0deg;
-      background: conic-gradient(from var(--ang),
-        rgba(255,255,255,0) 0deg,
-        rgba(255,255,255,var(--ring-alpha)) 14deg,
-        rgba(255,255,255,0) 40deg);
-      filter: blur(0.6px); mix-blend-mode:screen; opacity:0;
-      transform: scale(var(--ring-size));
-      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude;
-      border-radius:inherit;
-      transition: opacity .2s ease;
-    }
-    .chip:hover::after, .chip:focus-visible::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
 
-    @keyframes ring{ to{ --ang: 360deg; } }
-    .chip svg{ width:20px; height:20px; display:block; }
-
-    /* pressed input + website */
-    .field-wrap{ width:min(560px, 86vw); margin: 6px auto 0 auto; position:relative; }
+    /* base look for both chips and the field – pressed in, inner shadows */
+    .chip,
     .pressed{
-      position:relative; display:grid; grid-template-columns: 26px 1fr auto; align-items:center;
-      height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)),
-        radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.18));
-      border:1px solid rgba(255,255,255,.16);
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+      transition: all var(--anim-time) var(--anim-ease);
+      background: linear-gradient(-75deg,
+        oklch(from var(--background) l c h / 5%),
+        oklch(from var(--background) l c h / 20%),
+        oklch(from var(--background) l c h / 5%));
       box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 5px var(--bevel-dark),
-        inset 0 10px 24px var(--pane-bg-2),
-        var(--outer-shadow);
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-      transition: box-shadow .15s ease, border-color .15s ease;
+        inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%),
+        inset 0 -0.125em 0.125em oklch(from var(--background) l c h / 50%),
+        0 0.25em 0.125em -0.125em oklch(from var(--foreground) l c h / 20%),
+        0 0 0.1em 0.25em inset oklch(from var(--background) l c h / 20%),
+        0 0 0 0 oklch(from var(--background) l c h);
+      border:1px solid oklch(from var(--border) l c h / 60%);
+      outline-color: var(--ring);
+    }
+
+    /* chips (Google / GitHub) */
+    .chip{
+      position:relative; display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
+      height:var(--ctl-h); padding:0 18px; border-radius:calc(var(--ctl-r) + 4px);
+      color:var(--fg); text-decoration:none; font-weight:600;
+      transform-style: preserve-3d;
+    }
+    .chip svg{ width:20px; height:20px; display:block; }
+    .chip::before{
+      content:""; position:absolute; z-index:1; inset:0; border-radius:9999px;
+      width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width));
+      top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2);
+      padding: var(--border-width); box-sizing: border-box;
+      background:
+        conic-gradient(from var(--angle-1) at 50% 50%,
+          oklch(from var(--foreground) l c h / 50%) 0%,
+          transparent 5% 40%,
+          oklch(from var(--foreground) l c h / 50%) 50%,
+          transparent 60% 95%,
+          oklch(from var(--foreground) l c h / 50%) 100%),
+        linear-gradient(180deg, oklch(from var(--background) l c h / 50%), oklch(from var(--background) l c h / 50%));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      transition: all var(--anim-time) var(--anim-ease), --angle-1 500ms ease;
+      box-shadow: inset 0 0 0 calc(var(--border-width) / 2) oklch(from var(--background) l c h / 50%);
+      pointer-events: none;
+      opacity:.65;
+    }
+    .chip:hover::before{ --angle-1: calc(var(--angle-1) + 180deg); opacity:.9; }
+    .chip:active{ transform: translateY(0.5px); }
+
+    /* email field: narrow, single container, pressed in, animated rim */
+    :root{ --field-w: 360px; } /* ≈ half width */
+    .field-wrap{ width:min(var(--field-w), 86vw); margin: 6px auto 0 auto; position:relative; }
+    .pressed{
+      position:relative; display:grid; grid-template-columns: 26px 1fr; align-items:center;
+      height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px;
     }
     .pressed::before{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:var(--rim-w);
+      content:""; position:absolute; z-index:1; inset:0; border-radius:9999px;
+      width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width));
+      top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2);
+      padding: var(--border-width); box-sizing: border-box;
+      background:
+        conic-gradient(from var(--angle-1) at 50% 50%,
+          oklch(from var(--foreground) l c h / 40%) 0%,
+          transparent 12% 38%,
+          oklch(from var(--foreground) l c h / 40%) 52%,
+          transparent 60% 96%,
+          oklch(from var(--foreground) l c h / 40%) 100%),
+        linear-gradient(180deg, oklch(from var(--background) l c h / 50%), oklch(from var(--background) l c h / 50%));
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
-      pointer-events:none;
+      mask-composite: exclude;
+      transition: all var(--anim-time) var(--anim-ease), --angle-1 500ms ease;
+      box-shadow: inset 0 0 0 calc(var(--border-width) / 2) oklch(from var(--background) l c h / 50%);
+      pointer-events: none;
+      opacity:.55;
     }
-    .pressed::after{
-      content:""; position:absolute; inset:0; border-radius:inherit; transform: scale(var(--ring-size));
-      background: conic-gradient(from var(--ang,0deg),
-        rgba(255,255,255,0) 0deg,
-        rgba(255,255,255,var(--ring-alpha)) 16deg,
-        rgba(255,255,255,0) 44deg);
-      filter: blur(.7px); mix-blend-mode:screen; opacity:0;
-      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude;
-      pointer-events:none;
-    }
-    .pressed:hover::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
-    .pressed:has(input:focus)::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
-    .pressed:has(input:focus){
-      border-color: rgba(255,255,255,.24);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 6px var(--bevel-dark),
-        inset 0 12px 26px var(--pane-bg-2),
-        0 8px 22px rgba(0,0,0,.30);
-    }
+    .pressed:hover::before,
+    .pressed:has(input:focus)::before{ --angle-1: calc(var(--angle-1) + 180deg); opacity:.9; }
+
     .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
     input{
       min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
       font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
+      -webkit-appearance: none; appearance: none;
     }
     input::placeholder{ color:rgba(233,236,243,.62); }
 
-    /* kill iOS autofill and “white button” overlays */
+    /* kill iOS autofill and white overlay buttons */
     input::-webkit-contacts-auto-fill-button,
     input::-webkit-credentials-auto-fill-button{ visibility:hidden; display:none !important; pointer-events:none; }
     input:-webkit-autofill,
     input:-webkit-autofill:hover,
     input:-webkit-autofill:focus{ -webkit-box-shadow:0 0 0 1000px transparent inset !important; -webkit-text-fill-color: var(--fg) !important; }
 
-    .go-btn{
-      --local-h: calc(var(--ctl-h) - 8px);
-      width:var(--local-h); height:var(--local-h); border-radius:999px; border:0; cursor:pointer;
-      display:grid; place-items:center; color:var(--fg);
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.18);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 4px var(--bevel-dark),
-        0 6px 16px rgba(0,0,0,.30);
-      opacity:0; transform: translateX(6px) scale(.9);
-      transition: opacity .15s ease, transform .15s ease;
-    }
-    .go-btn svg{width:18px;height:18px}
-    .go-btn.shown{ opacity:1; transform: translateX(0) scale(1); }
-
-    .bigline{ margin:10px 0 6px 4px; font-size:15px; color:var(--muted); text-align:center }
-    .bigline b{ color:var(--fg); font-size: clamp(16px, 2.6vw, 20px); letter-spacing:-0.01em; }
-
-    .hint{ color:var(--muted); font-size:12px; margin:6px 4px 0; text-align:center }
-    .error{ color:var(--error); font-size:13px; margin:8px 4px 0; display:flex; align-items:center; gap:8px; justify-content:center }
-    .hide{ display:none !important; }
-
-    .learn{ position:relative; display:inline-flex; align-items:center; gap:6px; cursor:help; color:#6ad2ff; }
-    .tooltip{ position:absolute; left:50%; transform:translateX(-50%); top:calc(100% + 8px); width:min(88vw, 320px);
-      background:rgba(16,20,36,.96); border:1px solid rgba(255,255,255,.14);
-      color:var(--fg); border-radius:12px; padding:10px 12px; box-shadow:0 24px 60px rgba(0,0,0,.4); display:none; z-index:20; }
-    .tooltip ul{ padding-left:18px; margin:6px 0; }
-    .tooltip li{ margin:6px 0; color:var(--muted); font-size:13px; }
-    .learn.open .tooltip{ display:block; }
-
-    @media (max-width:520px){
-      :root{ --ctl-h: 44px; --ctl-r: 14px }
-      .chip{ padding:0 14px }
-    }
-    
-    
-/* ===== Step 2 overrides (minimal, pressed-in) ===== */
-:root{
-  --field-w: 360px;           /* width of email field (≈ half of before) */
-  --ctl-h: 44px;              /* slightly smaller height */
-  --ctl-r: 14px;              /* radius tuned for tighter look */
-  --rim-w: 1.2px;             /* thinner rim */
-  --bevel-light: rgba(255,255,255,.28);
-  --bevel-dark: rgba(0,0,0,.58);
-  --pane-bg-2: rgba(0,0,0,.22);
-}
-
-.field-wrap--narrow{ width: min(var(--field-w), 86vw); }
-
-/* chips pressed-in (less “pop”, more inset) */
-.chip{
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
-    radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
-  border:1px solid rgba(255,255,255,.16);
-  box-shadow:
-    inset 0 1px 0 var(--bevel-light),
-    inset 0 -2px 5px var(--bevel-dark),
-    inset 0 10px 22px var(--pane-bg-2); /* killed heavy outer shadow */
-}
-
-/* email field pressed-in */
-.pressed{
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
-    radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
-  border:1px solid rgba(255,255,255,.16);
-  box-shadow:
-    inset 0 1px 0 var(--bevel-light),
-    inset 0 -3px 6px var(--bevel-dark),
-    inset 0 12px 26px var(--pane-bg-2); /* no outer drop shadow */
-}
-.pressed::after{ display:none !important; }  /* remove animated rim for the field */
-.pressed::before{
-  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.08)); /* subtle inner rim */
-}
-
-input{ font-size:14px; }
-
-/* center the lone back arrow under field */
-.single-action{
-  display:grid; place-items:center;
-  margin-top: 14px;
-}
-
-
-
+    /* single centered back arrow under field */
+    .single-action{ display:grid; place-items:center; margin-top: 14px; }
   </style>
 </head>
 <body>
@@ -417,76 +310,77 @@ input{ font-size:14px; }
         </div>
       </section>
 
-          <!-- ================ STEP 2 (pressed glass, minimal) ================ -->
-          <section id="step2" class="step" aria-labelledby="s2-title">
-            <div class="title-row">
-              <h1 id="s2-title">Get started with Us</h1>
-              <p class="subtitle">Continue with</p>
-            </div>
-          
-            <!-- chips -->
-            <div class="center">
-              <div class="chip-row">
-                <a class="chip" href="#" aria-label="Continue with Google">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path fill="#EA4335" d="M12 10.2v3.8h5.3c-.2 1.2-1.6 3.6-5.3 3.6A6.2 6.2 0 1 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12S6.8 21.5 12 21.5c7 0 9.7-4.8 9-9.2H12z"/>
-                    <path fill="#34A853" d="M3.7 7.4l3.1 2.3A6 6 0 0 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 8.7 2.5 5.8 4.3 3.7 7.4z"/>
-                    <path fill="#FBBC05" d="M12 21.5c3.2 0 5.9-1.1 7.8-3l-3-2.4c-1 .7-2.2 1.2-4.8 1.2a6.2 6.2 0 0 1-5.8-4l-3 2.3A9.5 9.5 0 0 0 12 21.5z"/>
-                    <path fill="#4285F4" d="M21 12c0-.7-.1-1.3-.2-1.9H12v3.8h5.3a4.6 4.6 0 0 1-2 3l3 2.4C20.3 17.6 21 14.9 21 12z"/>
-                  </svg>
-                  <span>Google</span>
-                </a>
-          
-                <a class="chip" href="#" aria-label="Continue with GitHub">
-                  <svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-                  </svg>
-                  <span>GitHub</span>
-                </a>
-              </div>
-          
-              <div class="hr" aria-hidden="true"></div>
-              <div class="muted">OR</div>
-          
-              <!-- single, smaller email field -->
-              <div class="field-wrap field-wrap--narrow">
-                <div class="pressed" id="emailBox">
-                  <span class="left-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/>
-                    </svg>
-                  </span>
-                  <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
-                </div>
-              </div>
-          
-              <!-- single centered back arrow -->
-              <div class="single-action">
-                <button type="button" id="s2-back" class="btn-icon" aria-label="Back to role">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M15 18l-6-6 6-6"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </section>
-          <!-- Validation messages -->
-          <div id="emailError" class="error hide">
-            <span>Check your email.</span>
-            <span class="learn" id="learnTrigger">Learn more
-              <span class="tooltip" role="tooltip">
-                <strong>What can block progress?</strong>
-                <ul>
-                  <li>Personal domains (gmail.com, yahoo.com, outlook.com...).</li>
-                  <li>Website not reachable from the public internet.</li>
-                  <li>Your domain forwards to another site or a holding page.</li>
-                  <li>Domain doesn’t match your website.</li>
-                </ul>
-              </span>
-            </span>
+      <!-- ================ STEP 2 (pressed glass, minimal) ================ -->
+      <section id="step2" class="step" aria-labelledby="s2-title">
+        <div class="title-row">
+          <h1 id="s2-title">Get started with Us</h1>
+          <p class="subtitle">Continue with</p>
+        </div>
+
+        <!-- chips -->
+        <div class="center">
+          <div class="chip-row">
+            <a class="chip" href="#" aria-label="Continue with Google">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#EA4335" d="M12 10.2v3.8h5.3c-.2 1.2-1.6 3.6-5.3 3.6A6.2 6.2 0 1 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12S6.8 21.5 12 21.5c7 0 9.7-4.8 9-9.2H12z"/>
+                <path fill="#34A853" d="M3.7 7.4l3.1 2.3A6 6 0 0 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 8.7 2.5 5.8 4.3 3.7 7.4z"/>
+                <path fill="#FBBC05" d="M12 21.5c3.2 0 5.9-1.1 7.8-3l-3-2.4c-1 .7-2.2 1.2-4.8 1.2a6.2 6.2 0 0 1-5.8-4l-3 2.3A9.5 9.5 0 0 0 12 21.5z"/>
+                <path fill="#4285F4" d="M21 12c0-.7-.1-1.3-.2-1.9H12v3.8h5.3a4.6 4.6 0 0 1-2 3l3 2.4C20.3 17.6 21 14.9 21 12z"/>
+              </svg>
+              <span>Google</span>
+            </a>
+
+            <a class="chip" href="#" aria-label="Continue with GitHub">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              <span>GitHub</span>
+            </a>
           </div>
-          <div id="domainMismatch" class="error hide">Your business email domain must match your website.</div>
-          <div id="siteUnreachable" class="error hide">Your website looks unreachable or misconfigured.</div>
+
+          <div class="hr" aria-hidden="true"></div>
+          <div class="muted">OR</div>
+
+          <!-- single, smaller email field -->
+          <div class="field-wrap">
+            <div class="pressed" id="emailBox">
+              <span class="left-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/>
+                </svg>
+              </span>
+              <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
+            </div>
+          </div>
+
+          <!-- single centered back arrow -->
+          <div class="single-action">
+            <button type="button" id="s2-back" class="btn-icon" aria-label="Back to role">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Validation messages (kept, hidden by default) -->
+      <div id="emailError" class="error hide">
+        <span>Check your email.</span>
+        <span class="learn" id="learnTrigger">Learn more
+          <span class="tooltip" role="tooltip">
+            <strong>What can block progress?</strong>
+            <ul>
+              <li>Personal domains (gmail.com, yahoo.com, outlook.com...).</li>
+              <li>Website not reachable from the public internet.</li>
+              <li>Your domain forwards to another site or a holding page.</li>
+              <li>Domain doesn’t match your website.</li>
+            </ul>
+          </span>
+        </span>
+      </div>
+      <div id="domainMismatch" class="error hide">Your business email domain must match your website.</div>
+      <div id="siteUnreachable" class="error hide">Your website looks unreachable or misconfigured.</div>
 
     </div>
   </main>
@@ -525,22 +419,7 @@ input{ font-size:14px; }
     const step2 = byId("step2");
     const s1Next = byId("s1-next");
     const s2Back = byId("s2-back");
-    const finish = byId("finish");
-
     const emailInput = byId("email");
-    const websiteInput = byId("website");
-    const emailGo = byId("emailGo");
-    const emailBox = byId("emailBox");
-
-    const derivedLine = byId("derivedLine");
-    const derivedWebsite = byId("derivedWebsite");
-    const emailError = byId("emailError");
-    const domainMismatch = byId("domainMismatch");
-    const siteUnreachable = byId("siteUnreachable");
-
-    const personalDomains = new Set(["gmail.com","yahoo.com","outlook.com","hotmail.com","live.com","aol.com","icloud.com","proton.me","protonmail.com","yandex.com","gmx.com","mail.com","pm.me"]);
-    const urlParams = new URLSearchParams(location.search);
-    const preSite = urlParams.get("site") || localStorage.getItem("gal_site") || "";
 
     /* ---------- STEP 1 select role (unchanged) ---------- */
     let role = null;
@@ -567,77 +446,13 @@ input{ font-size:14px; }
       if(window.onboarding?.goTo) window.onboarding.goTo(2);
     });
 
-    /* ---------- Step 2 visual/behavior ---------- */
-    const looksValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || '').trim());
-    const extractDomainFromEmail = (email) => {
-      const m = /@([A-Za-z0-9.-]+\.[A-Za-z]{2,})$/.exec(String(email).trim());
-      return m ? m[1].toLowerCase() : "";
-    };
-    const normalizeSite = (value)=>{
-      try{
-        let v = (value||"").trim();
-        if(!v) return "";
-        if(!/^https?:\/\//i.test(v)) v = "https://" + v;
-        const u = new URL(v);
-        return u.origin;
-      }catch{ return ""; }
-    };
-
-    function showDerived(domain){
-      if(domain){
-        derivedWebsite.textContent = "https://" + domain;
-        derivedLine.classList.remove("hide");
-      }else{
-        derivedLine.classList.add("hide");
-      }
-    }
-
-    function updateDerivedFromWebsite(){
-      const site = normalizeSite(websiteInput.value);
-      if(site){
-        try{
-          const host = new URL(site).host;
-          showDerived(host);
-        }catch{
-          showDerived("");
-        }
-      }
-    }
-
-    // preload URL param site
-    if(preSite){
-      websiteInput.value = normalizeSite(preSite);
-      updateDerivedFromWebsite();
-    }
-
-    emailInput.addEventListener('input', ()=>{
-      emailError.classList.add('hide');
-      const ok = looksValidEmail(emailInput.value);
-      emailGo.classList.toggle('shown', ok);
-      const domain = extractDomainFromEmail(emailInput.value);
-      showDerived(domain);
-      validateEmailAndWebsite();
-    });
+    /* ---------- Step 2 small helpers ---------- */
+    const personal = new Set(["gmail.com","yahoo.com","outlook.com","hotmail.com","live.com","aol.com","icloud.com","proton.me","protonmail.com","yandex.com","gmx.com","mail.com","pm.me"]);
+    const domainOf = v => (String(v||'').match(/@([A-Za-z0-9.-]+\.[A-Za-z]{2,})$/)||[])[1]?.toLowerCase() || "";
+    const looksValidEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v||'').trim()) && !personal.has(domainOf(v));
 
     emailInput.addEventListener('keydown', (e)=>{
-      if(e.key === "Enter"){
-        e.preventDefault();
-        if(looksValidEmail(emailInput.value)) emailGo.click();
-      }
-    });
-
-    emailGo.addEventListener('click', ()=>{
-      if(!looksValidEmail(emailInput.value)) return;
-      // if no website provided, prefilling with derived domain helps user
-      if(!websiteInput.value && derivedWebsite.textContent){
-        websiteInput.value = derivedWebsite.textContent;
-      }
-      validateEmailAndWebsite(true);
-    });
-
-    websiteInput.addEventListener("input", ()=>{
-      updateDerivedFromWebsite();
-      validateEmailAndWebsite();
+      if(e.key === 'Enter' && !looksValidEmail(emailInput.value)) e.preventDefault();
     });
 
     s2Back.addEventListener("click", ()=>{
@@ -645,91 +460,6 @@ input{ font-size:14px; }
       step1.classList.add("active");
       if(window.onboarding?.goTo) window.onboarding.goTo(1);
     });
-
-    finish.addEventListener("click", async ()=>{
-      const payload = {
-        role,
-        email: emailInput.value.trim(),
-        website: normalizeSite(websiteInput.value)
-      };
-      try{
-        if(window.onboarding?.submit) await window.onboarding.submit(payload);
-        location.href = "step3.html"; // adjust if needed
-      }catch(err){
-        console.error(err);
-        alert("Could not complete onboarding right now.");
-      }
-    });
-
-    function validateEmailAndWebsite(raiseErrors){
-      const emailOk = looksValidEmail(emailInput.value);
-      const site = normalizeSite(websiteInput.value);
-      const siteOk = !!site;
-
-      const emailDomain = extractDomainFromEmail(emailInput.value);
-      const isPersonal = personalDomains.has(emailDomain);
-
-      let host = "";
-      try{ host = site ? new URL(site).host.toLowerCase() : ""; }catch{ host = ""; }
-      const domainMatches = emailDomain && host && (host.endsWith(emailDomain) || emailDomain.endsWith(host));
-
-      // Reset
-      [emailError, domainMismatch, siteUnreachable].forEach(el=>el.classList.add('hide'));
-
-      if(raiseErrors){
-        if(!emailOk || isPersonal) emailError.classList.remove('hide');
-        if(siteOk && !domainMatches) domainMismatch.classList.remove('hide');
-      }
-
-      if(siteOk){
-        tryReach(site).then(reachable => {
-          if(raiseErrors && !reachable) siteUnreachable.classList.remove('hide');
-          finish.disabled = !(emailOk && !isPersonal && domainMatches && reachable);
-        }).catch(()=>{
-          finish.disabled = true;
-          if(raiseErrors) siteUnreachable.classList.remove('hide');
-        });
-      }else{
-        finish.disabled = true;
-      }
-
-      if(!siteOk || !emailOk || isPersonal || !domainMatches){
-        finish.disabled = true;
-      }
-
-      if(window.onboarding?.setEmail) window.onboarding.setEmail(emailInput.value.trim());
-      if(window.onboarding?.setWebsite) window.onboarding.setWebsite(site);
-    }
-
-    async function tryReach(site){
-      try{
-        await fetch(site, { method:"HEAD", mode:"no-cors", cache:"no-store" });
-        return true; // opaque => assume reachable
-      }catch(e){
-        return false;
-      }
-    }
-
-    // tooltips
-    function setupLearn(id){
-      const el = byId(id);
-      if(!el) return;
-      const toggle = (open) => el.classList.toggle("open", open);
-      el.addEventListener("mouseenter", ()=>toggle(true));
-      el.addEventListener("mouseleave", ()=>toggle(false));
-      el.addEventListener("click", ()=>toggle(!el.classList.contains("open")));
-    }
-    setupLearn("learnTrigger");
-
-    // QS role preselect
-    const qsRole = (new URLSearchParams(location.search).get("role")||"").toLowerCase();
-    if(qsRole === "buyer" || qsRole === "supplier"){
-      const target = qs(`.choice[data-role="${qsRole}"]`);
-      if(target) target.click();
-    }
-
-    // keep s1-next disabled until role chosen
-    s1Next.disabled = true;
   </script>
 
   <!-- ===== Optionally render your mirrored-G logo into the .topbar brand ===== -->
@@ -792,78 +522,5 @@ input{ font-size:14px; }
   })();
   </script>
   <!-- ===== /logo ===== -->
-
-
-
-
-<!-- STEP-2 OVERRIDE: paste just before </body> -->
-<script>
-(function(){
-  if (window.__step2OverrideApplied) return; window.__step2OverrideApplied = true;
-
-  const $ = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-
-  const step2 = $('#step2'); if(!step2) return;
-
-  // 1) Keep only ONE email container and make it shorter
-  const emailInput = $('#email', step2);
-  const emailWrap = emailInput ? (emailInput.closest('.glass-input') || emailInput.parentElement) : null;
-  if (emailWrap) {
-    emailWrap.style.maxWidth = '420px';
-    emailWrap.style.width = 'min(92vw, 420px)';
-    emailWrap.style.margin = '20px auto 0';
-  }
-
-  // 2) Remove the second container + extra text
-  const website = $('#website', step2);
-  if (website) (website.closest('.glass-input') || website).style.display = 'none';
-  const kill = sel => { const n = $(sel, step2); if (n) n.remove(); };
-  kill('#derivedLine');
-  kill('#emailHint');
-  kill('#emailError');
-  kill('#domainMismatch');
-  kill('#siteUnreachable');
-
-  // 3) Hide all arrows except the back arrow; center the back arrow under the email field
-  const emailGo = $('#email-go', step2); if (emailGo) emailGo.style.display = 'none';
-  const finish  = $('#finish', step2);  if (finish)  finish.style.display  = 'none';
-
-  const oldRows = $$('.row-actions', step2);
-  let backBtn = $('#s2-back', step2);
-  if (backBtn) {
-    backBtn.style.margin = '0';
-    backBtn.style.transform = 'none';
-  }
-  const holder = document.createElement('div');
-  holder.id = 's2-only-back';
-  holder.style.display = 'flex';
-  holder.style.justifyContent = 'center';
-  holder.style.marginTop = '16px';
-
-  if (emailWrap && backBtn) {
-    emailWrap.insertAdjacentElement('afterend', holder);
-    holder.appendChild(backBtn);
-  }
-  oldRows.forEach(r => { if (r.id !== 's2-only-back') r.style.display = 'none'; });
-
-  // 4) Minimal email gate: block Enter on invalid/personal emails
-  const personal = new Set([
-    "gmail.com","yahoo.com","outlook.com","hotmail.com","live.com","aol.com",
-    "icloud.com","proton.me","protonmail.com","yandex.com","gmx.com","mail.com","pm.me"
-  ]);
-  const domainOf = v => (String(v||'').match(/@([A-Za-z0-9.-]+\.[A-Za-z]{2,})$/)||[])[1]?.toLowerCase() || "";
-  const valid = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v||'').trim()) && !personal.has(domainOf(v));
-
-  if (emailInput) {
-    emailInput.addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter' && !valid(emailInput.value)) e.preventDefault();
-    });
-  }
-})();
-</script>
-
-
-
 </body>
 </html>
