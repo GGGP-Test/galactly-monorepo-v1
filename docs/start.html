@@ -38,6 +38,27 @@
       --bg-1: #0c1020;
       --bg-2: #0c1326;
     }
+    
+    
+    /* === knobs for Google button inner reflection + email rim === */
+    @property --chip-sheen-ang { syntax: "<angle>"; inherits: true; initial-value: -70deg; }
+    
+    :root{
+      /* Google button “at-rest” inner reflection */
+      --chip-sheen-ang: -70deg;           /* angle at rest */
+      --chip-sheen-ang-hover: -110deg;    /* angle on hover */
+      --chip-glare-alpha: .22;            /* strength of the inner reflection band */
+      --chip-glare-soften: .7px;          /* blur of the band */
+    
+      /* Email field rim + inner shadows (all adjustable) */
+      --field-rim-w: 1.2px;               /* rim thickness */
+      --field-rim-top: rgba(255,255,255,.22);
+      --field-rim-bottom: rgba(255,255,255,.10);
+    
+      --field-inset-top: rgba(255,255,255,.22);   /* faint highlight on top edge */
+      --field-inset-bottom: rgba(0,0,0,.58);      /* inner “pressed” bottom */
+      --field-inset-ambient: rgba(0,0,0,.22);     /* soft ambient inside */
+    }
 
     /* ====================== BASE / BACKDROP ===================== */
     html,body{height:100%;margin:0}
@@ -155,25 +176,88 @@
     /* --------- GLASS BUTTON (Google only) ---------- */
     .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
     .chip{
-      --local-h: 40px;
-      position:relative; display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
-      height:var(--local-h); padding:0 18px; border-radius:999px;
-      color:var(--fg); text-decoration:none; font-weight:600;
-
-      /* inside = dark glass bowl */
+      --local-h: var(--ctl-h);
+      position:relative;
+      display:inline-grid;
+      grid-auto-flow:column;
+      align-items:center;
+      gap:10px;
+      height:var(--local-h);
+      padding:0 18px;
+      border-radius:calc(var(--ctl-r) + 4px);
+      color:var(--fg);
+      text-decoration:none;
+      font-weight:600;
+    
+      /* base, plus an inner “sheen band” that lives INSIDE the button */
       background:
-        radial-gradient(140% 120% at 50% 45%, rgba(255,255,255,.06) 0%, rgba(0,0,0,.22) 60%),
-        linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.34));
-      border:1px solid rgba(255,255,255,.18);
+        /* inner reflection band (subtle at rest) */
+        linear-gradient(
+          var(--chip-sheen-ang),
+          transparent 44%,
+          rgba(255,255,255,var(--chip-glare-alpha)) 51%,
+          transparent 58%
+        ),
+        /* faint top → body wash */
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
+        /* depth: center-lit, edge-darkened */
+        radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
+      background-clip: padding-box; /* keep the band inside the border */
+      border:1px solid rgba(255,255,255,.16);
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.35),           /* top bevel */
-        inset 0 -3px 6px rgba(0,0,0,.65),              /* bottom bowl */
-        inset 0 12px 24px rgba(0,0,0,.28);             /* depth */
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 5px var(--bevel-dark),
+        inset 0 10px 22px var(--pane-bg-2),
+        0 2px 8px rgba(0,0,0,.25);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
-      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-      overflow:hidden;
+      transition:
+        transform .15s ease,
+        box-shadow .15s ease,
+        border-color .15s ease,
+        --chip-sheen-ang .45s ease; /* animate the inner reflection angle */
     }
+    
+    /* hover: tip the inner reflection just a bit, do not go wild */
+    .chip:hover{
+      --chip-sheen-ang: var(--chip-sheen-ang-hover);
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,.22);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 5px var(--bevel-dark),
+        inset 0 12px 24px var(--pane-bg-2),
+        0 6px 18px rgba(0,0,0,.32);
+    }
+    
+    /* keep the tiny animated rim you already had */
+    .chip::before,
+    .chip::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
+    .chip::before{
+      padding:var(--rim-w);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
+      opacity:.9;
+    }
+    .chip::after{
+      --ang: 0deg;
+      background:
+        conic-gradient(from var(--ang),
+          rgba(255,255,255,0) 0deg,
+          rgba(255,255,255,.34) 14deg,
+          rgba(255,255,255,0) 40deg);
+      filter: blur(var(--chip-glare-soften));
+      mix-blend-mode:screen;
+      opacity:0;
+      transform: scale(var(--ring-size));
+      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      border-radius:inherit;
+      transition: opacity .2s ease;
+    }
+    .chip:hover::after,
+    .chip:focus-visible::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
     /* thin inner rim */
     .chip::before{
       content:""; position:absolute; inset:0; border-radius:inherit; padding:1.25px;
@@ -230,38 +314,45 @@
     /* pressed input + website (email field you liked) */
     .field-wrap{ width:min(280px, 86vw); margin: 36px auto 0 auto; position:relative; }
     .pressed{
-      position:relative; display:grid; grid-template-columns: 26px 1fr auto; align-items:center;
-      height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)),
-        radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.18));
+      position:relative;
+      display:grid;
+      grid-template-columns: 26px 1fr;
+      align-items:center;
+    
+      height:var(--ctl-h);
+      border-radius:var(--ctl-r);
+      padding:0 14px;
+    
+      /* no fill at all */
+      background: transparent;
+    
+      /* “pressed” look is entirely from inset shadows (knobs above) */
       border:1px solid rgba(255,255,255,.16);
       box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 5px var(--bevel-dark),
-        inset 0 10px 24px var(--pane-bg-2),
-        var(--outer-shadow);
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        inset 0 1px 0 var(--field-inset-top),
+        inset 0 -3px 6px var(--field-inset-bottom),
+        inset 0 12px 26px var(--field-inset-ambient);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
     }
+    
+    /* thin inner rim; thickness = --field-rim-w */
     .pressed::before{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:var(--rim-w);
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:inherit;
+      padding:var(--field-rim-w);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor; mask-composite: exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
+      background: linear-gradient(180deg, var(--field-rim-top), var(--field-rim-bottom));
       pointer-events:none;
     }
-    .pressed::after{
-      content:""; position:absolute; inset:0; border-radius:inherit; transform: scale(var(--ring-size));
-      background: conic-gradient(from var(--ang,0deg),
-        rgba(255,255,255,0) 0deg,
-        rgba(255,255,255,var(--ring-alpha)) 16deg,
-        rgba(255,255,255,0) 44deg);
-      filter: blur(.7px); mix-blend-mode:screen; opacity:0;
-      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude;
-      pointer-events:none;
-    }
+    
+    /* kill any animated rim on the field itself */
+    .pressed::after{ display:none !important; }
+
     .pressed:hover::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
     .pressed:has(input:focus)::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
     .pressed:has(input:focus){
