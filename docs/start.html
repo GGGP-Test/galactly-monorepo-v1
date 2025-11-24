@@ -101,19 +101,13 @@
       font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui;
       letter-spacing:.2px;
     }
-    /* icon-only home link */
+   /* icon-only home link */
     .home-link{
       display:inline-flex; align-items:center; justify-content:center;
       padding:0; background:none; border:0; box-shadow:none; backdrop-filter:none;
+      line-height:0; /* avoid extra vertical box */
     }
     .home-link:hover{ opacity:.85; transform:none; }
-    .home-link svg{ width:128px; height:128px; }
-    
-    @media (min-width:1024px){
-      .home-link{ width:42px; height:42px; }
-      .home-link svg{ width:22px; height:22px; }
-    }
-    .home-link svg{width:16px;height:16px}
 
     h1{
       font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui;
@@ -497,6 +491,18 @@
 .chip:hover .glare{
   --glare-angle:   var(--glare-angle-hover);
   --glare-strength:var(--glare-strength-hover);
+}
+
+
+
+/* ===== Home icon size knobs (final override) ===== */
+:root{
+  --home-ic-m: 22px;  /* mobile */
+  --home-ic-d: 28px;  /* desktop */
+}
+.topbar .home-link svg{ width:var(--home-ic-m); height:var(--home-ic-m); }
+@media (min-width:1024px){
+  .topbar .home-link svg{ width:var(--home-ic-d); height:var(--home-ic-d); }
 }
 
 
