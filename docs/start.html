@@ -1,54 +1,61 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Galactly — Onboarding</title>
 
-  <!-- Jakarta for the hero title -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Jakarta for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
 
   <style>
+    /* ========================== KNOBS ========================== */
     :root{
-      /* Base theme tokens (HSL-ish look via RGB/alpha gradients) */
-      --bg-1: #0a0f1c;
-      --bg-2: #0d1224;
-      --fg-1: #e9ecf3;
-      --fg-2: #9aa3b2;
-      --accent: #f4d06f;
-      --accent-2: #6ad2ff;
+      /* layout */
+      --content-w: min(960px, 92vw);
+      --title-fs: clamp(28px, 5.6vw, 58px);
+
+      /* pressed glass controls (Step 2) */
+      --ctl-h: 46px;                /* control height */
+      --ctl-r: 16px;                /* border radius */
+      --rim-w: 1.5px;               /* thin inner rim */
+      --bevel-light: rgba(255,255,255,.35);
+      --bevel-dark: rgba(0,0,0,.55);
+      --pane-bg-2: rgba(0,0,0,.16); /* inner deepening */
+      --outer-shadow: 0 4px 14px rgba(0,0,0,.22);
+
+      /* ring animation around rim */
+      --ring-alpha: .34;
+      --ring-speed: 900ms;
+      --ring-size: 110%;
+
+      /* colors */
+      --fg: #e9ecf3;
+      --muted: #a9b2c2;
       --error: #ff6b6b;
 
-      /* heading font */
-      --heading-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      /* background */
+      --bg-1: #0c1020;
+      --bg-2: #0c1326;
     }
 
-    html, body{
-      height:100%;
-      margin:0;
-      background:
-        radial-gradient(1200px 800px at 75% 25%, #201437 0%, transparent 55%),
-        radial-gradient(1200px 800px at 25% 75%, #3c1029 0%, transparent 55%),
-        linear-gradient(180deg, var(--bg-2), var(--bg-1));
-      color:var(--fg-1);
+    /* ====================== BASE / BACKDROP ===================== */
+    html,body{height:100%;margin:0}
+    body{
+      color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      background:
+        radial-gradient(1200px 800px at 75% 25%, #2a184f 0%, transparent 55%),
+        radial-gradient(1200px 800px at 25% 75%, #56192f 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg-2), var(--bg-1));
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
     }
 
-    /* Ambient floating blobs */
-    .bg-blob{ position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow:hidden; }
-    .blob{ position:absolute; filter: blur(70px); opacity:.55; mix-blend-mode:screen; }
-    .b1{ width:42vmax; height:42vmax; background:#3a5bd7; top:-10vmax; left:-10vmax; border-radius:45% 55% 60% 40%; animation:float1 18s ease-in-out infinite; }
-    .b2{ width:35vmax; height:35vmax; background:#b33e85; bottom:-8vmax; right:-10vmax; border-radius:50% 50% 45% 55%; animation:float2 22s ease-in-out infinite; }
-    .b3{ width:26vmax; height:26vmax; background:#f4d06f; top:40%; left:60%; border-radius:60% 40% 50% 50%; opacity:.35; animation:float3 26s ease-in-out infinite; }
-    @keyframes float1{ 0%{transform:translate(0,0)} 50%{transform:translate(-18px,12px)} 100%{transform:translate(0,0)} }
-    @keyframes float2{ 0%{transform:translate(0,0)} 50%{transform:translate(20px,-10px)} 100%{transform:translate(0,0)} }
-    @keyframes float3{ 0%{transform:translate(0,0)} 50%{transform:translate(-14px,-18px)} 100%{transform:translate(0,0)} }
+    .wrap{min-height:100dvh; display:grid; place-items:center; padding:96px 16px 40px}
+    .stage{ width:var(--content-w); }
 
-    /* Top chrome (brand left, home right) */
+    /* top chrome */
     .topbar{
       position:fixed; top:16px; left:0; right:0; z-index:10;
       display:flex; align-items:center; justify-content:space-between;
@@ -56,152 +63,57 @@
     }
     .brand{
       display:flex; align-items:center; gap:10px;
-      color:var(--fg-1); text-decoration:none;
+      color:var(--fg); text-decoration:none;
       padding:8px 10px; border-radius:12px;
-      backdrop-filter: blur(6px);
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.12);
-    }
-    .brand img{ height:22px; width:auto; display:block; }
-    .brand span{ font-weight:800; letter-spacing:-0.01em; font-size:14px; opacity:.95; }
-
-    .home-link{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:36px; height:36px; border-radius:10px;
       background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
       border:1px solid rgba(255,255,255,.14);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 25px rgba(0,0,0,.2);
-      color: var(--fg-1); text-decoration:none;
       backdrop-filter: blur(6px);
-      transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
     }
-    .home-link:hover{ transform:translateY(-1px); border-color:rgba(255,255,255,.22); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 14px 32px rgba(0,0,0,.25); }
-    .home-link svg{ width:18px; height:18px; }
-
-    /* Center the stages perfectly (minus topbar height) */
-    .wrap{
-      position:relative; z-index:1;
-      min-height:100dvh;
-      display:flex; align-items:center; justify-content:center;
-      padding: 72px 16px 32px;  /* leaves breathing room for topbar */
+    .brand img{height:22px; width:auto}
+    .brand span{
+      font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui;
+      letter-spacing:.2px;
     }
-    .stage{ width:min(980px, 92vw); margin-inline:auto; }
-
-    /* Title (Jakarta) */
-    .title{
-      font-family: var(--heading-family);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      font-size: clamp(32px, 6vw, 64px);
-      line-height: 1.06;
-      margin: 0 0 18px 0;
-      text-shadow: 0 1px 0 rgba(0,0,0,.35);
-      text-align:center;
-    }
-    .subtitle{ color:var(--fg-2); margin:0 0 22px 0; text-align:center; }
-
-    /* ==== GLASS SYSTEM (buttons + inputs) ==== */
-    @property --angle-1 { syntax:"<angle>"; inherits:false; initial-value:-75deg; }
-    @property --angle-2 { syntax:"<angle>"; inherits:false; initial-value:-45deg; }
-
-    .glass-wrap{ position:relative; z-index:2; transform-style:preserve-3d; }
-    .glass-shadow{
-      --cut: 2em;
-      position:absolute; inset: calc(-1 * var(--cut) / 2);
-      filter: blur(10px); pointer-events:none; z-index:0;
-    }
-    .glass-shadow::after{
-      content:""; position:absolute; inset:0; border-radius:9999px;
-      background: linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,.10));
-      width: calc(100% - var(--cut)); height: calc(100% - var(--cut));
-      top: calc(var(--cut) - .5em); left: calc(var(--cut) - .875em);
-      padding:.125em; box-sizing:border-box;
-      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude; opacity:1;
-      transition: all .4s cubic-bezier(.25,1,.5,1);
-      border-radius:9999px;
-    }
-
-    /* Button */
-    .btn{
-      position:relative; display:inline-flex; align-items:center; justify-content:center; gap:10px;
-      border-radius:9999px; padding:12px 18px; font-weight:600; cursor:pointer; user-select:none;
-      color:var(--fg-1); text-decoration:none;
-      background: linear-gradient(-75deg, rgba(255,255,255,.05), rgba(255,255,255,.20), rgba(255,255,255,.05));
-      border:1px solid rgba(255,255,255,.18);
-      box-shadow:
-        inset 0 2px 2px rgba(255,255,255,.08),
-        inset 0 -2px 2px rgba(0,0,0,.35),
-        0 10px 26px rgba(0,0,0,.24);
+    .home-link{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px; border-radius:12px; color:var(--fg); text-decoration:none;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.14);
       backdrop-filter: blur(6px);
-      transform: translateZ(0);
-      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
     }
-    .btn:active{ transform: translateY(1px) scale(.99); }
-    .btn:hover{
-      border-color: rgba(255,255,255,.26);
-      box-shadow:
-        inset 0 2px 2px rgba(255,255,255,.12),
-        inset 0 -2px 2px rgba(0,0,0,.38),
-        0 16px 38px rgba(0,0,0,.28);
-    }
+    .home-link svg{width:16px;height:16px}
 
-    /* Icon-only button (arrows) */
-    .btn-icon{ width:44px; height:44px; padding:0; }
-    .btn[disabled]{ opacity:.45; pointer-events:none; }
-
-    .btn .label{ position:relative; z-index:10; }
-    .btn .icon{ display:inline-flex; width:20px; height:20px; }
-    .btn .icon svg{ width:20px; height:20px; }
-
-    /* Button inner shimmer */
-    .btn::after{
-      content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-      background:
-        conic-gradient(from var(--angle-1) at 50% 50%, rgba(255,255,255,.45) 0%, transparent 5% 40%, rgba(255,255,255,.45) 50%, transparent 60% 95%, rgba(255,255,255,.45) 100%),
-        linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,.25));
-      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
-      padding:1px; box-sizing:border-box;
-      opacity:.35; transition: --angle-1 .5s ease;
+    h1{
+      font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui;
+      margin:0 0 18px 0;
+      text-shadow:0 1px 0 rgba(0,0,0,.35);
     }
-    .btn:hover::after{ --angle-1:-125deg; }
+    .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
+    .center { display:grid; gap:16px; place-items:center; }
 
-    /* Input */
-    .input-wrap{ position:relative; }
-    .input{
-      display:flex; align-items:center; gap:10px; padding:10px 12px;
-      border-radius:999px; border:1px solid rgba(255,255,255,.16);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 26px rgba(0,0,0,.24);
-      backdrop-filter: blur(6px);
-    }
-    .input input{
-      flex:1; min-width:0; background:transparent; border:0; outline:0;
-      color:var(--fg-1); font-size:14px;
-    }
-    .input input::placeholder{ color: rgba(233,236,243,.60); }
-    .hr-line{
-      margin: 12px auto; height:1px; width: min(560px, 90vw);
-      background: rgba(255,255,255,.12);
-    }
-
-    /* Step blocks */
+    /* ===================== STEP 1 (unchanged) ===================== */
+    .cardless{ max-width:860px; margin-inline:auto; }
     .step{ display:none; }
     .step.active{ display:block; }
-    .choices{ display:grid; grid-template-columns:1fr; gap:16px; margin-top:8px; }
+
+    .choices{ display:grid; grid-template-columns: 1fr; gap:16px; }
     @media (min-width:720px){ .choices{ grid-template-columns: 1fr 1fr; } }
 
     .choice{
-      position:relative; border-radius:16px; padding:18px;
+      position:relative; border-radius:16px; padding:18px 18px;
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
       border:1px solid rgba(255,255,255,.15);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25);
-      display:flex; gap:14px; align-items:flex-start; cursor:pointer; user-select:none;
+      cursor:pointer; user-select:none;
+      display:flex; gap:14px; align-items:flex-start;
       transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
     .choice:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 16px 42px rgba(0,0,0,.28); }
-    .choice.selected{ outline:2px solid var(--accent); box-shadow: 0 0 0 6px rgba(244,208,111,.15), 0 14px 40px rgba(244,208,111,.18); }
+    .choice.selected{ outline:2px solid #f4d06f; box-shadow: 0 0 0 6px rgba(244,208,111,.15), 0 14px 40px rgba(244,208,111,.18); }
+    .choice h3{ margin:0 0 6px 0; font-size:18px; font-weight:700; letter-spacing:-0.01em; }
+    .choice p{ margin:0; color:var(--muted); font-size:14px; line-height:1.35; }
     .choice .icon{
       display:inline-flex; align-items:center; justify-content:center;
       width:38px; height:38px; border-radius:12px;
@@ -210,49 +122,210 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 8px 20px rgba(0,0,0,.25);
       flex:0 0 auto;
     }
-    .choice h3{ margin:0 0 6px 0; font-size:18px; font-weight:700; letter-spacing:-0.01em; }
-    .choice p{ margin:0; color:var(--fg-2); font-size:14px; line-height:1.35; }
+    .choice .icon svg{ width:18px; height:18px; }
 
-    .row-actions{ display:flex; justify-content:space-between; gap:12px; margin-top:16px; }
-    .center-row{ display:flex; justify-content:center; gap:12px; }
+    .row-actions{ display:flex; justify-content:space-between; gap:12px; margin-top:14px; }
+    .btn-icon{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:44px; height:44px; border-radius:999px; color:var(--fg);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 10px 26px rgba(0,0,0,.24);
+      backdrop-filter: blur(6px);
+      cursor:pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, opacity .18s ease;
+    }
+    .btn-icon[disabled]{ opacity:.4; pointer-events:none; }
+    .btn-icon:hover{ transform: translateY(-1px); border-color:rgba(255,255,255,.26); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 16px 38px rgba(0,0,0,.28); }
+    .btn-icon svg{ width:20px; height:20px; }
 
-    .text-center{ text-align:center; }
-    .muted{ color:var(--fg-2); font-size:14px; }
-    .hint{ color:var(--fg-2); font-size:12px; margin:6px 4px 0; text-align:center; }
-    .error{ color:var(--error); font-size:13px; margin:10px 0 0; text-align:center; display:none; }
-    .error.show{ display:block; }
+    /* ===================== STEP 2 (pressed glass) ===================== */
+    .title-row{ text-align:center; margin-bottom:8px }
+    .title-row h1{ font-family:"Plus Jakarta Sans", Inter, system-ui }
 
-    .mt-8{ margin-top:8px; } .mt-16{ margin-top:16px; } .mt-24{ margin-top:24px; }
+    .hr{ width:min(560px, 86vw); height:1px; margin:14px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
+    .muted{ color:var(--muted); font-size:14px; text-align:center }
+
+    /* chips */
+    .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
+    .chip{
+      --local-h: var(--ctl-h);
+      position:relative; display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
+      height:var(--local-h); padding:0 18px; border-radius:calc(var(--ctl-r) + 4px);
+      color:var(--fg); text-decoration:none; font-weight:600;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)),
+        radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.18));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 4px var(--bevel-dark),
+        inset 0 8px 18px var(--pane-bg-2),
+        0 2px 8px rgba(0,0,0,.25);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+    .chip:hover{
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,.22);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 4px var(--bevel-dark),
+        inset 0 10px 20px var(--pane-bg-2),
+        0 6px 18px rgba(0,0,0,.32);
+    }
+    .chip:active{
+      transform: translateY(0);
+      box-shadow:
+        inset 0 2px 3px rgba(0,0,0,.5),
+        inset 0 -1px 1px rgba(255,255,255,.05),
+        inset 0 12px 24px rgba(0,0,0,.22),
+        0 2px 8px rgba(0,0,0,.30);
+    }
+    .chip::before,
+    .chip::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
+    .chip::before{
+      padding:var(--rim-w);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
+      opacity:.9;
+    }
+    .chip::after{
+      --ang: 0deg;
+      background: conic-gradient(from var(--ang),
+        rgba(255,255,255,0) 0deg,
+        rgba(255,255,255,var(--ring-alpha)) 14deg,
+        rgba(255,255,255,0) 40deg);
+      filter: blur(0.6px); mix-blend-mode:screen; opacity:0;
+      transform: scale(var(--ring-size));
+      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      border-radius:inherit;
+      transition: opacity .2s ease;
+    }
+    .chip:hover::after, .chip:focus-visible::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
+
+    @keyframes ring{ to{ --ang: 360deg; } }
+    .chip svg{ width:20px; height:20px; display:block; }
+
+    /* pressed input + website */
+    .field-wrap{ width:min(560px, 86vw); margin: 6px auto 0 auto; position:relative; }
+    .pressed{
+      position:relative; display:grid; grid-template-columns: 26px 1fr auto; align-items:center;
+      height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)),
+        radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.18));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 5px var(--bevel-dark),
+        inset 0 10px 24px var(--pane-bg-2),
+        var(--outer-shadow);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+    .pressed::before{
+      content:""; position:absolute; inset:0; border-radius:inherit; padding:var(--rim-w);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
+      pointer-events:none;
+    }
+    .pressed::after{
+      content:""; position:absolute; inset:0; border-radius:inherit; transform: scale(var(--ring-size));
+      background: conic-gradient(from var(--ang,0deg),
+        rgba(255,255,255,0) 0deg,
+        rgba(255,255,255,var(--ring-alpha)) 16deg,
+        rgba(255,255,255,0) 44deg);
+      filter: blur(.7px); mix-blend-mode:screen; opacity:0;
+      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events:none;
+    }
+    .pressed:hover::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
+    .pressed:has(input:focus)::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
+    .pressed:has(input:focus){
+      border-color: rgba(255,255,255,.24);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 6px var(--bevel-dark),
+        inset 0 12px 26px var(--pane-bg-2),
+        0 8px 22px rgba(0,0,0,.30);
+    }
+    .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
+    input{
+      min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
+      font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
+    }
+    input::placeholder{ color:rgba(233,236,243,.62); }
+
+    /* kill iOS autofill and “white button” overlays */
+    input::-webkit-contacts-auto-fill-button,
+    input::-webkit-credentials-auto-fill-button{ visibility:hidden; display:none !important; pointer-events:none; }
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus{ -webkit-box-shadow:0 0 0 1000px transparent inset !important; -webkit-text-fill-color: var(--fg) !important; }
+
+    .go-btn{
+      --local-h: calc(var(--ctl-h) - 8px);
+      width:var(--local-h); height:var(--local-h); border-radius:999px; border:0; cursor:pointer;
+      display:grid; place-items:center; color:var(--fg);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 4px var(--bevel-dark),
+        0 6px 16px rgba(0,0,0,.30);
+      opacity:0; transform: translateX(6px) scale(.9);
+      transition: opacity .15s ease, transform .15s ease;
+    }
+    .go-btn svg{width:18px;height:18px}
+    .go-btn.shown{ opacity:1; transform: translateX(0) scale(1); }
+
+    .bigline{ margin:10px 0 6px 4px; font-size:15px; color:var(--muted); text-align:center }
+    .bigline b{ color:var(--fg); font-size: clamp(16px, 2.6vw, 20px); letter-spacing:-0.01em; }
+
+    .hint{ color:var(--muted); font-size:12px; margin:6px 4px 0; text-align:center }
+    .error{ color:var(--error); font-size:13px; margin:8px 4px 0; display:flex; align-items:center; gap:8px; justify-content:center }
+    .hide{ display:none !important; }
+
+    .learn{ position:relative; display:inline-flex; align-items:center; gap:6px; cursor:help; color:#6ad2ff; }
+    .tooltip{ position:absolute; left:50%; transform:translateX(-50%); top:calc(100% + 8px); width:min(88vw, 320px);
+      background:rgba(16,20,36,.96); border:1px solid rgba(255,255,255,.14);
+      color:var(--fg); border-radius:12px; padding:10px 12px; box-shadow:0 24px 60px rgba(0,0,0,.4); display:none; z-index:20; }
+    .tooltip ul{ padding-left:18px; margin:6px 0; }
+    .tooltip li{ margin:6px 0; color:var(--muted); font-size:13px; }
+    .learn.open .tooltip{ display:block; }
+
+    @media (max-width:520px){
+      :root{ --ctl-h: 44px; --ctl-r: 14px }
+      .chip{ padding:0 14px }
+    }
   </style>
 </head>
 <body>
 
-  <div class="bg-blob" aria-hidden="true">
-    <div class="blob b1"></div>
-    <div class="blob b2"></div>
-    <div class="blob b3"></div>
-  </div>
-
-  <!-- Topbar with brand + home -->
+  <!-- top chrome -->
   <div class="topbar">
     <a class="brand" href="#" aria-label="Galactly">
-      <span class="brand-icon" aria-hidden="true"></span>
-      <span class="brand-word">Galactly</span>
+      <img alt="Galactly" src="" id="brandLogo"/>
+      <span>MyWebApp</span>
     </a>
     <a class="home-link" href="index.html" aria-label="Back to home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 11L12 3l9 8"></path>
-        <path d="M9 22V12h6v10"></path>
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11L12 3l9 8"/><path d="M9 22V12h6v10"/></svg>
+      <span>Home</span>
     </a>
   </div>
 
   <main class="wrap">
-    <div class="stage">
+    <div class="stage cardless">
 
-      <!-- STEP 1: role selection (centered) -->
+      <!-- ================= STEP 1 (unchanged) ================= -->
       <section id="step1" class="step active" aria-labelledby="s1-title">
-        <h1 id="s1-title" class="title">What brings you to Galactly?</h1>
+        <h1 id="s1-title" class="title proc-title">What brings you to Galactly?</h1>
         <p class="subtitle">Pick one to tailor your setup.</p>
 
         <div class="choices" role="listbox" aria-label="Select your role">
@@ -271,8 +344,7 @@
           <div class="choice" data-role="buyer" tabindex="0" role="option" aria-selected="false">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.58L23 6H6"></path>
+                <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.58L23 6H6"></path>
               </svg>
             </div>
             <div>
@@ -282,113 +354,175 @@
           </div>
         </div>
 
-        <div class="row-actions">
-          <button type="button" id="s1-back" class="btn btn-icon" aria-label="Go back" disabled>
-            <span class="icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"></path></svg>
-            </span>
+        <div class="row-actions" style="margin-top:16px">
+          <button type="button" id="s1-back" class="btn-icon" aria-label="Go back" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"></path></svg>
           </button>
-          <button type="button" id="s1-next" class="btn btn-icon" aria-label="Continue" disabled>
-            <span class="icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"></path></svg>
-            </span>
+          <button type="button" id="s1-next" class="btn-icon" aria-label="Continue" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"></path></svg>
           </button>
         </div>
       </section>
 
-      <!-- STEP 2: glossy sign-in UI -->
+      <!-- ================ STEP 2 (pressed glass) ================ -->
       <section id="step2" class="step" aria-labelledby="s2-title">
-        <h1 id="s2-title" class="title">Get started with Us</h1>
-
-        <p class="muted text-center">Continue with</p>
-
-        <div class="center-row">
-          <a class="btn" href="#" aria-label="Continue with Google">
-            <span class="icon">
-              <!-- Google icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-                <g fill="none" fill-rule="evenodd">
-                  <g transform="translate(3,2)">
-                    <path fill="#4285F4" d="M57.81,30.15c0-2.43-0.2-4.2-0.62-6.03H29.5v10.95h16.26c-0.33,2.72-2.1,6.82-6.04,9.57l-0.06,0.37l8.76,6.78l0.61,0.06C54.6,46.7,57.81,39.13,57.81,30.15"></path>
-                    <path fill="#34A853" d="M29.5,58.99c7.96,0,14.64-2.62,19.53-7.14l-9.31-7.21c-2.49,1.74-5.83,2.95-10.22,2.95c-7.8,0-14.42-5.14-16.78-12.26l-0.35,0.03l-9.1,7.05l-0.12,0.33C7.99,52.37,17.96,58.99,29.5,58.99"></path>
-                    <path fill="#FBBC05" d="M12.72,35.33c-0.62-1.84-0.98-3.81-0.98-5.83c0-2.03,0.36-4,0.95-5.83l-0.02-0.39L3.45,16.11l-0.3,0.14C1.15,20.25,0,24.74,0,29.5c0,4.75,1.15,9.24,3.15,13.24l9.57-7.41"></path>
-                    <path fill="#EB4335" d="M29.5,11.41c5.54,0,9.28,2.39,11.41,4.39l8.32-8.13C44.11,2.92,37.46,0,29.5,0C17.96,0,8,6.62,3.15,16.26l9.57,7.41C15.08,16.55,21.7,11.41,29.5,11.41"></path>
-                  </g>
-                </g>
-              </svg>
-            </span>
-            <span class="label">Google</span>
-          </a>
-
-          <a class="btn" href="#" aria-label="Continue with GitHub">
-            <span class="icon">
-              <!-- GitHub icon -->
-              <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-            </span>
-            <span class="label">GitHub</span>
-          </a>
+        <div class="title-row">
+          <h1 id="s2-title">Get started with Us</h1>
+          <p class="subtitle">Continue with</p>
         </div>
 
-        <div class="hr-line"></div>
-        <p class="muted text-center">OR</p>
-
-        <div class="center-row mt-8">
-          <div class="input input-wrap" style="width:min(560px, 90vw)">
-            <span class="icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4h16v16H4z"></path>
-                <path d="M22 6l-10 7L2 6"></path>
+        <!-- chips -->
+        <div class="center">
+          <div class="chip-row">
+            <a class="chip" href="#" aria-label="Continue with Google">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#EA4335" d="M12 10.2v3.8h5.3c-.2 1.2-1.6 3.6-5.3 3.6A6.2 6.2 0 1 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12S6.8 21.5 12 21.5c7 0 9.7-4.8 9-9.2H12z"/>
+                <path fill="#34A853" d="M3.7 7.4l3.1 2.3A6 6 0 0 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 8.7 2.5 5.8 4.3 3.7 7.4z"/>
+                <path fill="#FBBC05" d="M12 21.5c3.2 0 5.9-1.1 7.8-3l-3-2.4c-1 .7-2.2 1.2-4.8 1.2a6.2 6.2 0 0 1-5.8-4l-3 2.3A9.5 9.5 0 0 0 12 21.5z"/>
+                <path fill="#4285F4" d="M21 12c0-.7-.1-1.3-.2-1.9H12v3.8h5.3a4.6 4.6 0 0 1-2 3l3 2.4C20.3 17.6 21 14.9 21 12z"/>
               </svg>
+              <span>Google</span>
+            </a>
+
+            <a class="chip" href="#" aria-label="Continue with GitHub">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              <span>GitHub</span>
+            </a>
+          </div>
+
+          <div class="hr" aria-hidden="true"></div>
+          <div class="muted">OR</div>
+
+          <!-- Email -->
+          <div class="field-wrap">
+            <div class="pressed" id="emailBox">
+              <span class="left-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/></svg>
+              </span>
+              <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
+              <button id="emailGo" class="go-btn" aria-label="Continue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Derived website line (from email domain OR manual site) -->
+          <div id="derivedLine" class="bigline hide">Website we’ll use: <b id="derivedWebsite"></b></div>
+
+          <!-- Website field -->
+          <div class="field-wrap">
+            <div class="pressed">
+              <span class="left-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20"/></svg>
+              </span>
+              <input id="website" type="url" inputmode="url" placeholder="Your website (https://example.com)"/>
+              <span style="width:calc(var(--ctl-h) - 8px)"></span>
+            </div>
+          </div>
+
+          <div class="hint">We’ll match your email domain to your website; personal mail (gmail.com, yahoo.com, …) is blocked.</div>
+
+          <!-- Validation messages -->
+          <div id="emailError" class="error hide">
+            <span>Check your email.</span>
+            <span class="learn" id="learnTrigger">Learn more
+              <span class="tooltip" role="tooltip">
+                <strong>What can block progress?</strong>
+                <ul>
+                  <li>Personal domains (gmail.com, yahoo.com, outlook.com...).</li>
+                  <li>Website not reachable from the public internet.</li>
+                  <li>Your domain forwards to another site or a holding page.</li>
+                  <li>Domain doesn’t match your website.</li>
+                </ul>
+              </span>
             </span>
-            <input id="email" type="email" placeholder="Email" autocomplete="email" inputmode="email">
-            <button id="email-go" class="btn btn-icon" aria-label="Continue with email" disabled>
+          </div>
+          <div id="domainMismatch" class="error hide">Your business email domain must match your website.</div>
+          <div id="siteUnreachable" class="error hide">Your website looks unreachable or misconfigured.</div>
+
+          <!-- Back / Finish -->
+          <div class="row-actions" style="margin-top:16px">
+            <button type="button" id="s2-back" class="btn-icon" aria-label="Back to role">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"></path></svg>
+            </button>
+            <button type="button" id="finish" class="btn-icon" aria-label="Finish" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"></path></svg>
             </button>
           </div>
-        </div>
-
-        <p class="hint">Use your company address. Personal domains may be blocked.</p>
-        <p id="emailError" class="error">Check your email format.</p>
-
-        <div class="row-actions mt-16">
-          <button type="button" id="s2-back" class="btn btn-icon" aria-label="Back to role">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"></path></svg>
-          </button>
-          <button type="button" id="finish" class="btn btn-icon" aria-label="Finish" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"></path></svg>
-          </button>
         </div>
       </section>
 
     </div>
   </main>
 
-  <!-- Logic (role flow + simple email gating) -->
   <script>
+    /* ---------- logo loader (same list) ---------- */
+    (function tryLogo(){
+      const candidates = [
+        "/assets/logo/galactly-logo.svg",
+        "/assets/logo/logo.svg",
+        "/assets/brand/galactly-logo.svg",
+        "/assets/branding/galactly-logo.svg",
+        "/img/galactly-logo.svg",
+        "/images/logo.svg",
+        "/logo.svg",
+        "/assets/logo.png",
+        "/images/logo.png"
+      ];
+      const el = document.getElementById("brandLogo");
+      let i = 0;
+      (function next(){
+        if(i>=candidates.length){ try{ el.remove(); }catch{} return; }
+        const src = candidates[i++], img = new Image();
+        img.onload = () => el.src = src;
+        img.onerror = next;
+        img.src = src;
+      })();
+    })();
+
+    /* ---------- helpers ---------- */
     const byId = (id)=>document.getElementById(id);
+    const qs = (sel,root=document)=>root.querySelector(sel);
+    const qsa = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
+
     const step1 = byId("step1");
     const step2 = byId("step2");
     const s1Next = byId("s1-next");
     const s2Back = byId("s2-back");
     const finish = byId("finish");
-    const emailInput = byId("email");
-    const emailGo = byId("email-go");
-    const emailError = byId("emailError");
 
-    /* Step 1 select */
+    const emailInput = byId("email");
+    const websiteInput = byId("website");
+    const emailGo = byId("emailGo");
+    const emailBox = byId("emailBox");
+
+    const derivedLine = byId("derivedLine");
+    const derivedWebsite = byId("derivedWebsite");
+    const emailError = byId("emailError");
+    const domainMismatch = byId("domainMismatch");
+    const siteUnreachable = byId("siteUnreachable");
+
+    const personalDomains = new Set(["gmail.com","yahoo.com","outlook.com","hotmail.com","live.com","aol.com","icloud.com","proton.me","protonmail.com","yandex.com","gmx.com","mail.com","pm.me"]);
+    const urlParams = new URLSearchParams(location.search);
+    const preSite = urlParams.get("site") || localStorage.getItem("gal_site") || "";
+
+    /* ---------- STEP 1 select role (unchanged) ---------- */
     let role = null;
-    document.querySelectorAll("#step1 .choice").forEach(el=>{
+    qsa(".choice", step1).forEach(el=>{
       const r = el.getAttribute("data-role");
       const pick = () => {
         role = r;
-        document.querySelectorAll("#step1 .choice").forEach(c=>{
-          c.classList.toggle("selected", c===el);
-          c.setAttribute("aria-selected", c===el ? "true" : "false");
+        qsa(".choice", step1).forEach(c => {
+          c.classList.toggle("selected", c === el);
+          c.setAttribute("aria-selected", c === el ? "true" : "false");
         });
         s1Next.disabled = false;
+        if(window.onboarding?.setRole) window.onboarding.setRole(role);
       };
       el.addEventListener("click", pick);
-      el.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
+      el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
     });
 
     s1Next.addEventListener("click", ()=>{
@@ -396,70 +530,208 @@
       step1.classList.remove("active");
       step2.classList.add("active");
       emailInput.focus();
+      if(window.onboarding?.goTo) window.onboarding.goTo(2);
+    });
+
+    /* ---------- Step 2 visual/behavior ---------- */
+    const looksValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || '').trim());
+    const extractDomainFromEmail = (email) => {
+      const m = /@([A-Za-z0-9.-]+\.[A-Za-z]{2,})$/.exec(String(email).trim());
+      return m ? m[1].toLowerCase() : "";
+    };
+    const normalizeSite = (value)=>{
+      try{
+        let v = (value||"").trim();
+        if(!v) return "";
+        if(!/^https?:\/\//i.test(v)) v = "https://" + v;
+        const u = new URL(v);
+        return u.origin;
+      }catch{ return ""; }
+    };
+
+    function showDerived(domain){
+      if(domain){
+        derivedWebsite.textContent = "https://" + domain;
+        derivedLine.classList.remove("hide");
+      }else{
+        derivedLine.classList.add("hide");
+      }
+    }
+
+    function updateDerivedFromWebsite(){
+      const site = normalizeSite(websiteInput.value);
+      if(site){
+        try{
+          const host = new URL(site).host;
+          showDerived(host);
+        }catch{
+          showDerived("");
+        }
+      }
+    }
+
+    // preload URL param site
+    if(preSite){
+      websiteInput.value = normalizeSite(preSite);
+      updateDerivedFromWebsite();
+    }
+
+    emailInput.addEventListener('input', ()=>{
+      emailError.classList.add('hide');
+      const ok = looksValidEmail(emailInput.value);
+      emailGo.classList.toggle('shown', ok);
+      const domain = extractDomainFromEmail(emailInput.value);
+      showDerived(domain);
+      validateEmailAndWebsite();
+    });
+
+    emailInput.addEventListener('keydown', (e)=>{
+      if(e.key === "Enter"){
+        e.preventDefault();
+        if(looksValidEmail(emailInput.value)) emailGo.click();
+      }
+    });
+
+    emailGo.addEventListener('click', ()=>{
+      if(!looksValidEmail(emailInput.value)) return;
+      // if no website provided, prefilling with derived domain helps user
+      if(!websiteInput.value && derivedWebsite.textContent){
+        websiteInput.value = derivedWebsite.textContent;
+      }
+      validateEmailAndWebsite(true);
+    });
+
+    websiteInput.addEventListener("input", ()=>{
+      updateDerivedFromWebsite();
+      validateEmailAndWebsite();
     });
 
     s2Back.addEventListener("click", ()=>{
       step2.classList.remove("active");
       step1.classList.add("active");
+      if(window.onboarding?.goTo) window.onboarding.goTo(1);
     });
 
-    /* Email quick validation */
-    function looksValidEmail(v){
-      v = String(v||"").trim();
-      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
-    }
-    emailInput.addEventListener("input", ()=>{
-      const ok = looksValidEmail(emailInput.value);
-      emailGo.disabled = !ok;
-      emailError.classList.toggle("show", !ok && emailInput.value.length>0);
-      finish.disabled = !ok;
-    });
-    emailInput.addEventListener("keydown", e=>{
-      if(e.key==="Enter"){
-        e.preventDefault();
-        if(!emailGo.disabled) emailGo.click();
+    finish.addEventListener("click", async ()=>{
+      const payload = {
+        role,
+        email: emailInput.value.trim(),
+        website: normalizeSite(websiteInput.value)
+      };
+      try{
+        if(window.onboarding?.submit) await window.onboarding.submit(payload);
+        location.href = "step3.html"; // adjust if needed
+      }catch(err){
+        console.error(err);
+        alert("Could not complete onboarding right now.");
       }
     });
-    emailGo.addEventListener("click", ()=>{
-      const ok = looksValidEmail(emailInput.value);
-      emailError.classList.toggle("show", !ok);
-      finish.disabled = !ok;
-    });
-    finish.addEventListener("click", ()=>{
-      // Plug your submit here; temporary redirect:
-      location.href = "step3.html";
-    });
+
+    function validateEmailAndWebsite(raiseErrors){
+      const emailOk = looksValidEmail(emailInput.value);
+      const site = normalizeSite(websiteInput.value);
+      const siteOk = !!site;
+
+      const emailDomain = extractDomainFromEmail(emailInput.value);
+      const isPersonal = personalDomains.has(emailDomain);
+
+      let host = "";
+      try{ host = site ? new URL(site).host.toLowerCase() : ""; }catch{ host = ""; }
+      const domainMatches = emailDomain && host && (host.endsWith(emailDomain) || emailDomain.endsWith(host));
+
+      // Reset
+      [emailError, domainMismatch, siteUnreachable].forEach(el=>el.classList.add('hide'));
+
+      if(raiseErrors){
+        if(!emailOk || isPersonal) emailError.classList.remove('hide');
+        if(siteOk && !domainMatches) domainMismatch.classList.remove('hide');
+      }
+
+      if(siteOk){
+        tryReach(site).then(reachable => {
+          if(raiseErrors && !reachable) siteUnreachable.classList.remove('hide');
+          finish.disabled = !(emailOk && !isPersonal && domainMatches && reachable);
+        }).catch(()=>{
+          finish.disabled = true;
+          if(raiseErrors) siteUnreachable.classList.remove('hide');
+        });
+      }else{
+        finish.disabled = true;
+      }
+
+      if(!siteOk || !emailOk || isPersonal || !domainMatches){
+        finish.disabled = true;
+      }
+
+      if(window.onboarding?.setEmail) window.onboarding.setEmail(emailInput.value.trim());
+      if(window.onboarding?.setWebsite) window.onboarding.setWebsite(site);
+    }
+
+    async function tryReach(site){
+      try{
+        await fetch(site, { method:"HEAD", mode:"no-cors", cache:"no-store" });
+        return true; // opaque => assume reachable
+      }catch(e){
+        return false;
+      }
+    }
+
+    // tooltips
+    function setupLearn(id){
+      const el = byId(id);
+      if(!el) return;
+      const toggle = (open) => el.classList.toggle("open", open);
+      el.addEventListener("mouseenter", ()=>toggle(true));
+      el.addEventListener("mouseleave", ()=>toggle(false));
+      el.addEventListener("click", ()=>toggle(!el.classList.contains("open")));
+    }
+    setupLearn("learnTrigger");
+
+    // QS role preselect
+    const qsRole = (new URLSearchParams(location.search).get("role")||"").toLowerCase();
+    if(qsRole === "buyer" || qsRole === "supplier"){
+      const target = qs(`.choice[data-role="${qsRole}"]`);
+      if(target) target.click();
+    }
+
+    // keep s1-next disabled until role chosen
+    s1Next.disabled = true;
   </script>
 
-  <!-- ===== Double mirrored G brand (integrated at .topbar .brand) ===== -->
+  <!-- ===== Optionally render your mirrored-G logo into the .topbar brand ===== -->
   <style>
-    .brand{ --icon-w: 22px; gap:10px; }
+    .site-header .brand,
+    .topbar .brand{
+      display:flex; align-items:center;
+      --icon-w: 36px; --brand-gap: 10px; gap: var(--brand-gap);
+    }
+    .brand-icon{
+      --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0;
+    }
     .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
     .brand-word{
-      font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
       -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
     }
+    .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+    .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
   </style>
+
   <script>
   (function(){
-    const brand = document.querySelector('.topbar .brand .brand-icon');
+    const brand = document.querySelector('.topbar .brand') || document.querySelector('.site-header .brand');
     if(!brand) return;
-    brand.innerHTML = `
+
+    const icon = `
 <svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
-      <path d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
+      <path id="gPath" d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
     </symbol>
-    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ECF4FF"/><stop offset="0.55" stop-color="#CFE0F3"/><stop offset="1" stop-color="#AEBED2"/>
-    </linearGradient>
-    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9F0F8"/>
-    </linearGradient>
-    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%">
-      <stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/><stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/>
-    </radialGradient>
+    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ECF4FF"/><stop offset="0.55" stop-color="#CFE0F3"/><stop offset="1" stop-color="#AEBED2"/></linearGradient>
+    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9F0F8"/></linearGradient>
+    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/><stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/></radialGradient>
     <linearGradient id="ggSheen" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.46" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.54" stop-color="#FFFFFF" stop-opacity="0.35"/><stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
@@ -469,19 +741,23 @@
     </filter>
   </defs>
   <g pointer-events="none"><circle cx="32" cy="33" r="21" fill="url(#ggHalo)"/></g>
-  <g style="transform: translateX(5px); filter:url(#ggSoftGlow);">
+  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#ggSoftGlow);">
     <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" stroke="url(#ggShimmer)" stroke-width="3" fill="none"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
     <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
   </g>
-  <g style="transform: translateX(-5px) scaleX(-1); filter:url(#ggSoftGlow); opacity:.65;">
+  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#ggSoftGlow); opacity: var(--left-dim);">
     <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
-    <use href="#gSym" width="64" height="64" stroke="url(#ggShimmer)" stroke-width="3" fill="none"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
     <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
   </g>
 </svg>`;
+    const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
+    brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
+    brand.setAttribute('aria-label','Galactly');
   })();
   </script>
-  <!-- ===== /brand ===== -->
+  <!-- ===== /logo ===== -->
+
 </body>
 </html>
