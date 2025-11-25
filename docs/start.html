@@ -82,6 +82,9 @@
       --field-inset-ambient: rgba(0,0,0,.22);
     }
 
+    /* register custom property for smoother angle animation */
+    @property --chip-sheen-ang { syntax: "<angle>"; inherits: true; initial-value: -70deg; }
+
     @media (min-width:768px){
       :root{ --stage-lift-m: -22px; --stage-lift-d: -48px; --cta-d: 40px; }
     }
@@ -394,13 +397,59 @@
     #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
     #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
 
-    /* ===== Intro/Swap animations anchored at the divider line ===== */
-    .s2-anim-top{ animation: s2SlideUp .6s cubic-bezier(.25,1,.5,1) both; }
-    .s2-anim-bottom{ animation: s2SlideDown .6s cubic-bezier(.25,1,.5,1) both; }
-    @keyframes s2SlideUp { from{ opacity:0; transform: translateY(12px); } to{ opacity:1; transform:none; } }
-    @keyframes s2SlideDown { from{ opacity:0; transform: translateY(-12px); } to{ opacity:1; transform:none; } }
+    /* ===== Slower, unique, staggered animations (1.0–1.5s) ===== */
+    :root{
+      --ease-hero: cubic-bezier(.22,1,.36,1);   /* gentle ease-out */
+      --ease-soft: cubic-bezier(.25,.95,.35,1); /* softer ease */
+      --ease-snap: cubic-bezier(.16,.84,.44,1); /* tiny snap */
 
-    /* desktop: keep everything perfectly centered, no scroll */
+      --anim-title-d: 1.25s;
+      --anim-sub-d:   1.40s;
+      --anim-chip-d:  1.10s;
+      --anim-div-d:   1.00s;
+      --anim-below-d: 1.25s;
+      --anim-pwd-d:   1.30s;
+    }
+
+    @keyframes titleRise {
+      0%   { opacity:0; transform: translateY(24px) scale(.985); filter: blur(3px); }
+      60%  { filter: blur(0); }
+      100% { opacity:1; transform: translateY(0) scale(1); }
+    }
+    .anim-title{ animation: titleRise var(--anim-title-d) var(--ease-hero) both; }
+
+    @keyframes subDrift {
+      0%   { opacity:0; transform: translateY(30px); }
+      100% { opacity:1; transform: translateY(0); }
+    }
+    .anim-sub{ animation: subDrift var(--anim-sub-d) var(--ease-soft) both; animation-delay: .12s; }
+
+    @keyframes dividerGrow {
+      0%   { opacity:0; transform: scaleX(.6); }
+      100% { opacity:1; transform: scaleX(1); }
+    }
+    .anim-divider{ transform-origin: 50% 50%; animation: dividerGrow var(--anim-div-d) cubic-bezier(.2,.8,.2,1) both; animation-delay: .10s; }
+
+    @keyframes chipFloat {
+      0%   { opacity:0; transform: translateY(22px) scale(.99); }
+      100% { opacity:1; transform: translateY(0) scale(1); }
+    }
+    .anim-chips{ animation: chipFloat var(--anim-chip-d) var(--ease-soft) both; animation-delay: .22s; }
+
+    @keyframes fieldDrop {
+      0%   { opacity:0; transform: translateY(-24px); }
+      100% { opacity:1; transform: translateY(0); }
+    }
+    .anim-or   { animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .18s; }
+    .anim-field{ animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .26s; }
+    .anim-back { animation: fieldDrop var(--anim-below-d) var(--ease-soft) both; animation-delay: .36s; }
+    .anim-pwd  { animation: fieldDrop var(--anim-pwd-d) var(--ease-snap) both; animation-delay: .10s; }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+    }
+
+    /* desktop container fit */
     @media (min-width: 900px){
       .wrap{
         min-height:100dvh; display:grid; place-items:center;
@@ -602,13 +651,19 @@
 
     const s2TopStart = byId("s2-top-start");
     const s2TopPass  = byId("s2-top-pass");
-    const s2Bottom   = byId("s2-bottom");
     const s2Or       = byId("s2-or");
 
     const emailInput = byId("email");
     const emailBox   = byId("emailBox");
     const emailNext  = byId("emailNext");
     const pwdWrap    = byId("pwdWrap");
+
+    /* tiny helper to retrigger CSS animations */
+    function play(el, cls){
+      if(!el) return;
+      el.classList.remove(cls); void el.offsetWidth;
+      el.classList.add(cls);
+    }
 
     /* ---------- STEP 1 select role ---------- */
     let role = null;
@@ -627,14 +682,28 @@
       el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
     });
 
+    /* animate step 2 intro (slower & staggered) */
     function animateStep2Intro(){
-      // animate both groups from the divider line
-      s2TopStart.classList.remove('s2-anim-top'); s2Bottom.classList.remove('s2-anim-bottom');
-      // next frame to retrigger
-      requestAnimationFrame(()=>{
-        s2TopStart.classList.add('s2-anim-top');
-        s2Bottom.classList.add('s2-anim-bottom');
-      });
+      const divider  = byId('s2-divider');
+      const backRow  = document.querySelector('#step2 .single-action');
+
+      if(!s2TopStart.hidden){
+        const title    = s2TopStart.querySelector('.title-row h1');
+        const subtitle = s2TopStart.querySelector('.title-row .subtitle');
+        const chips    = s2TopStart.querySelector('.chip-row');
+
+        play(title,'anim-title'); play(subtitle,'anim-sub');
+        play(chips,'anim-chips');
+      } else {
+        const pTitle   = s2TopPass.querySelector('.title-row h1');
+        const pSub     = s2TopPass.querySelector('.title-row .subtitle');
+        play(pTitle,'anim-title'); play(pSub,'anim-sub');
+      }
+
+      play(divider,'anim-divider');
+      play(s2Or,'anim-or');
+      play(emailBox?.closest('.field-wrap'),'anim-field');
+      play(backRow,'anim-back');
     }
 
     s1Next.addEventListener("click", ()=>{
@@ -642,7 +711,6 @@
       step1.classList.remove("active");
       step2.classList.add("active");
 
-      // clear focus so pressed styles don't appear
       if (document.activeElement && typeof document.activeElement.blur === "function") {
         document.activeElement.blur();
       }
@@ -695,19 +763,17 @@
 
     /* ---------- Swap to Password stage ---------- */
     function toPasswordStage(){
-      // hide OR (not relevant anymore)
-      s2Or.hidden = true;
+      s2Or.hidden = true;                 // OR not needed now
+      s2TopStart.hidden = true;           // replace top copy
+      s2TopPass.hidden  = false;
 
-      // swap top group
-      s2TopStart.hidden = true;
-      s2TopPass.hidden = false;
-      s2TopPass.classList.remove('s2-anim-top');
-      requestAnimationFrame(()=> s2TopPass.classList.add('s2-anim-top'));
+      play(s2TopPass.querySelector('.title-row h1'),'anim-title');
+      play(s2TopPass.querySelector('.title-row .subtitle'),'anim-sub');
 
-      // reveal password field below line
-      pwdWrap.hidden = false;
-      pwdWrap.classList.remove('s2-anim-bottom');
-      requestAnimationFrame(()=> pwdWrap.classList.add('s2-anim-bottom'));
+      // show password field with matching drop animation
+      const wrap = byId('pwdWrap');
+      wrap.hidden = false;
+      play(wrap,'anim-pwd');
 
       if(window.onboarding?.emailContinue){
         window.onboarding.emailContinue(emailInput.value.trim());
@@ -722,7 +788,7 @@
       if(isBusinessEmail(email)){
         toPasswordStage();
       }else{
-        // subtle “nope” pulse without changing layout (keeps your aesthetic)
+        // subtle pulse for personal domains
         emailBox.style.transition = 'box-shadow 180ms ease';
         const prev = emailBox.style.boxShadow;
         emailBox.style.boxShadow = '0 0 0 2px rgba(255,107,107,.45), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -3px 6px rgba(0,0,0,.6), inset 0 12px 26px rgba(0,0,0,.22)';
@@ -732,8 +798,6 @@
 
     // keep s1-next disabled until role chosen
     s1Next.disabled = true;
-
-    /* ===== Optional mirrored-G brand rendering (unchanged) ===== */
   </script>
 
   <style>
