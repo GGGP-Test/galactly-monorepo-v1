@@ -460,6 +460,53 @@
       }
     }
 
+    /* ===== Website badge (overlay) ===== */
+    .site-badge{
+      position: relative;
+      display: inline-grid;
+      grid-auto-flow: column;
+      align-items: center;
+      gap:10px;
+      margin: 8px auto 6px;
+      padding: 8px 12px;
+      border-radius: 14px;
+      color: var(--fg);
+      font-weight:600; font-size:13px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
+        radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    .site-badge .host{ font-weight:800; letter-spacing:.2px; }
+    .site-badge .info{
+      display:inline-grid; place-items:center;
+      width:18px; height:18px; border-radius:999px; line-height:0;
+      border:1px solid rgba(255,255,255,.18);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+      color:var(--fg); cursor:pointer;
+    }
+    .site-badge .info svg{ width:12px; height:12px; display:block; }
+    .site-badge .tip{
+      position:absolute; top: calc(100% + 8px); left:50%;
+      transform: translateX(-50%);
+      padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap;
+      color:var(--fg); background: rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 6px 18px rgba(0,0,0,.28);
+      opacity:0; pointer-events:none; transition: opacity .2s ease, transform .2s ease;
+    }
+    .site-badge.show-tip .tip{ opacity:1; transform: translate(-50%, -2px); }
+
+    @keyframes badgeUp {
+      0%   { opacity:0; transform: translateY(14px); filter: blur(2px); }
+      60%  { filter: blur(0); }
+      100% { opacity:1; transform: translateY(0); }
+    }
+    .anim-badge{ animation: badgeUp 1.25s var(--ease-hero) both; }
+
     /* hides */
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
@@ -527,6 +574,18 @@
 
       <!-- ================= STEP 2 ================= -->
       <section id="step2" class="step" aria-labelledby="s2-title">
+
+        <!-- Website overlay badge (lives above titles) -->
+        <div id="siteBadge" class="site-badge" hidden>
+          <span>We'll use&nbsp;<span class="host" id="siteHost">—</span></span>
+          <button class="info" id="siteInfo" type="button" aria-label="Why this site?">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 8v.01M12 12v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <span class="tip" id="siteTip" role="tooltip">Privacy: domain match</span>
+        </div>
 
         <!-- Top group (swap between “start” and “password”) -->
         <div id="s2-top-start" class="top-group">
@@ -668,11 +727,38 @@
     const pwdInput   = byId("password");
     const pwdNext    = byId("pwdNext");
 
+    /* website badge refs */
+    const siteBadge  = byId('siteBadge');
+    const siteHostEl = byId('siteHost');
+    const siteInfo   = byId('siteInfo');
+
     /* tiny helper to retrigger CSS animations */
     function play(el, cls){
       if(!el) return;
       el.classList.remove(cls); void el.offsetWidth;
       el.classList.add(cls);
+    }
+
+    /* url/host utils */
+    function cleanHost(raw){
+      if(!raw) return null;
+      let s = String(raw).trim();
+      s = s.replace(/^mailto:/i,'');
+      s = s.replace(/^(https?:)?\/\//i,'');
+      s = s.replace(/^www\./i,'');
+      s = s.split(/[\/?#]/)[0];               // strip path/query/hash
+      s = s.replace(/[^\w.-]/g,'');           // sanitize
+      return s || null;
+    }
+    function extractHostFromEmail(val){
+      const m = String(val||'').trim().match(/@([^@\s>]+)$/);
+      if(!m) return null;
+      const host = cleanHost(m[1]);
+      return host && host.includes('.') ? host.toLowerCase() : null;
+    }
+    function getQueryParam(name){
+      const p = new URLSearchParams(location.search);
+      return p.get(name);
     }
 
     /* ---------- STEP 1 select role ---------- */
@@ -725,6 +811,7 @@
         document.activeElement.blur();
       }
       animateStep2Intro();
+      syncSiteBadge(true); // show prefilled site immediately (with animation)
 
       const t = document.getElementById("s2-title");
       if (t) {
@@ -750,8 +837,8 @@
       emailBox.classList.toggle('show-cta', show);
       emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
-    emailInput.addEventListener('input', updateEmailCTA);
-    emailInput.addEventListener('blur', updateEmailCTA);
+    emailInput.addEventListener('input', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
+    emailInput.addEventListener('blur', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
     emailInput.addEventListener('keydown', (e)=>{
       if(e.key === 'Enter' && looksValidEmail(emailInput.value)){
         e.preventDefault();
@@ -781,10 +868,59 @@
       "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"
     ]);
     const isBusinessEmail = (email)=>{
-      if(!looksValidEmail(email)) return false;
-      const domain = email.trim().split("@").pop().toLowerCase();
-      return !PERSONAL.has(domain);
+      const host = extractHostFromEmail(email);
+      if(!host) return false;
+      return !PERSONAL.has(host.toLowerCase());
     };
+
+    /* ---------- Website badge logic ---------- */
+    function getPrefilledSite(){
+      const cands = [
+        getQueryParam('site'),
+        getQueryParam('website'),
+        getQueryParam('domain'),
+        sessionStorage.getItem('preWebsite'),
+        localStorage.getItem('preWebsite')
+      ];
+      for(const c of cands){
+        const h = cleanHost(c);
+        if(h) return h.toLowerCase();
+      }
+      return null;
+    }
+    let preSiteHost = getPrefilledSite();
+
+    function showSiteBadge(host, animate=false){
+      if(!host) return hideSiteBadge();
+      siteHostEl.textContent = host;
+      const wasHidden = siteBadge.hasAttribute('hidden');
+      siteBadge.removeAttribute('hidden');
+      if(animate || wasHidden) play(siteBadge,'anim-badge');
+    }
+    function hideSiteBadge(){
+      siteBadge.setAttribute('hidden','');
+      siteBadge.classList.remove('show-tip');
+    }
+
+    function syncSiteBadge(animate=false){
+      // Prefer email's business domain if present; otherwise use prefilled site.
+      const emailHost = extractHostFromEmail(emailInput.value);
+      if(emailHost && !PERSONAL.has(emailHost.toLowerCase())){
+        showSiteBadge(emailHost, animate);
+        return;
+      }
+      if(preSiteHost){
+        showSiteBadge(preSiteHost, animate);
+        return;
+      }
+      hideSiteBadge();
+    }
+
+    // Tooltip: hover (desktop) & tap (touch)
+    siteInfo.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
+    siteInfo.addEventListener('mouseleave', ()=> siteBadge.classList.remove('show-tip'));
+    siteInfo.addEventListener('click', (e)=>{ e.stopPropagation(); siteBadge.classList.toggle('show-tip'); });
+    document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
     /* ---------- Swap to Password stage ---------- */
     function toPasswordStage(){
@@ -804,6 +940,9 @@
       play(pwdWrap,'anim-pwd');
       updatePwdCTA();
       pwdInput.focus({ preventScroll:true });
+
+      // keep site badge visible; ensure it's synced to email domain
+      syncSiteBadge(false);
 
       if(window.onboarding?.emailContinue){
         window.onboarding.emailContinue(emailInput.value.trim());
@@ -839,6 +978,9 @@
 
     // keep s1-next disabled until role chosen
     s1Next.disabled = true;
+
+    // If step2 somehow is pre-opened (deep link), sync badge immediately
+    if(step2.classList.contains('active')) syncSiteBadge(true);
   </script>
 
   <style>
