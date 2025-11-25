@@ -481,24 +481,29 @@
     }
     .site-badge .host{ font-weight:800; letter-spacing:.2px; }
     .site-badge .info{
-      display:inline-grid; place-items:center;
-      width:18px; height:18px; border-radius:999px; line-height:0;
-      border:1px solid rgba(255,255,255,.18);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
-      color:var(--fg); cursor:pointer;
+          display:inline-grid; place-items:center;
+          width:20px; height:20px; border-radius:999px; line-height:0;
+          border:1px solid rgba(255,255,255,.18);
+          background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+          color:var(--fg); cursor:pointer;
     }
-    .site-badge .info svg{ width:12px; height:12px; display:block; }
+    .site-badge .info svg{ width:16px; height:16px; display:block; }
     .site-badge .tip{
-      position:absolute; top: calc(100% + 8px); left:50%;
-      transform: translateX(-50%);
-      padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap;
-      color:var(--fg); background: rgba(0,0,0,.55);
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow: 0 6px 18px rgba(0,0,0,.28);
-      opacity:0; pointer-events:none; transition: opacity .2s ease, transform .2s ease;
+          position:absolute; top: calc(100% + 8px); left:50%;
+          transform: translateX(-50%);
+          padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap;
+          color:var(--fg); background: rgba(0,0,0,.55);
+          border:1px solid rgba(255,255,255,.14);
+          box-shadow: 0 6px 18px rgba(0,0,0,.28);
+          opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease;
     }
     .site-badge.show-tip .tip{ opacity:1; transform: translate(-50%, -2px); }
+    
+    .site-badge .tip a{
+      color:inherit; text-decoration:underline;
+    }
+    .site-badge .tip a:hover{ opacity:.9; }
 
     @keyframes badgeUp {
       0%   { opacity:0; transform: translateY(14px); filter: blur(2px); }
@@ -584,7 +589,9 @@
               <path d="M12 8v.01M12 12v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </button>
-          <span class="tip" id="siteTip" role="tooltip">Privacy: domain match</span>
+          <span class="tip" id="siteTip" role="tooltip">
+            Privacy policy: <a id="siteTipLink" class="tip-link" href="/privacy#domain-match" target="_blank" rel="noopener">domain match</a>
+          </span>
         </div>
 
         <!-- Top group (swap between “start” and “password”) -->
