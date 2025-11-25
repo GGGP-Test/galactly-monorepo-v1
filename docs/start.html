@@ -399,9 +399,9 @@
 
     /* ===== Slower, unique, staggered animations (1.0–1.5s) ===== */
     :root{
-      --ease-hero: cubic-bezier(.22,1,.36,1);   /* gentle ease-out */
-      --ease-soft: cubic-bezier(.25,.95,.35,1); /* softer ease */
-      --ease-snap: cubic-bezier(.16,.84,.44,1); /* tiny snap */
+      --ease-hero: cubic-bezier(.22,1,.36,1);
+      --ease-soft: cubic-bezier(.25,.95,.35,1);
+      --ease-snap: cubic-bezier(.16,.84,.44,1);
 
       --anim-title-d: 1.25s;
       --anim-sub-d:   1.40s;
@@ -593,6 +593,12 @@
                 </svg>
               </span>
               <input id="password" type="password" autocomplete="new-password" placeholder="Password (min 6 characters)"/>
+              <!-- inside-field glass NEXT button (appears when >=6) -->
+              <button id="pwdNext" class="field-cta" type="button" aria-label="Next">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"></path>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -656,7 +662,11 @@
     const emailInput = byId("email");
     const emailBox   = byId("emailBox");
     const emailNext  = byId("emailNext");
+
     const pwdWrap    = byId("pwdWrap");
+    const pwdBox     = byId("pwdBox");
+    const pwdInput   = byId("password");
+    const pwdNext    = byId("pwdNext");
 
     /* tiny helper to retrigger CSS animations */
     function play(el, cls){
@@ -749,6 +759,21 @@
       }
     });
 
+    /* ---------- Password -> inside CTA visibility (min 6) ---------- */
+    function updatePwdCTA(){
+      const show = (pwdInput.value.length >= 6);
+      pwdBox.classList.toggle('show-cta', show);
+      pwdNext.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+    pwdInput?.addEventListener('input', updatePwdCTA);
+    pwdInput?.addEventListener('blur', updatePwdCTA);
+    pwdInput?.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && pwdInput.value.length >= 6){
+        e.preventDefault();
+        pwdNext.click();
+      }
+    });
+
     /* ---------- Business email check ---------- */
     const PERSONAL = new Set([
       "gmail.com","googlemail.com","yahoo.com","ymail.com","outlook.com","hotmail.com","live.com","msn.com",
@@ -767,20 +792,25 @@
       s2TopStart.hidden = true;           // replace top copy
       s2TopPass.hidden  = false;
 
+      // Hide the email CTA immediately
+      emailBox.classList.remove('show-cta');
+      emailNext.setAttribute('aria-hidden','true');
+
       play(s2TopPass.querySelector('.title-row h1'),'anim-title');
       play(s2TopPass.querySelector('.title-row .subtitle'),'anim-sub');
 
-      // show password field with matching drop animation
-      const wrap = byId('pwdWrap');
-      wrap.hidden = false;
-      play(wrap,'anim-pwd');
+      // reveal password field and wait for 6+ chars to show CTA
+      pwdWrap.hidden = false;
+      play(pwdWrap,'anim-pwd');
+      updatePwdCTA();
+      pwdInput.focus({ preventScroll:true });
 
       if(window.onboarding?.emailContinue){
         window.onboarding.emailContinue(emailInput.value.trim());
       }
     }
 
-    /* ---------- CTA click ---------- */
+    /* ---------- Email CTA click ---------- */
     emailNext.addEventListener('click', ()=>{
       const email = emailInput.value.trim();
       if(!looksValidEmail(email)) return;
@@ -793,6 +823,17 @@
         const prev = emailBox.style.boxShadow;
         emailBox.style.boxShadow = '0 0 0 2px rgba(255,107,107,.45), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -3px 6px rgba(0,0,0,.6), inset 0 12px 26px rgba(0,0,0,.22)';
         setTimeout(()=>{ emailBox.style.boxShadow = prev; }, 260);
+      }
+    });
+
+    /* ---------- Password CTA click (finalize) ---------- */
+    pwdNext.addEventListener('click', ()=>{
+      const pwd = pwdInput.value;
+      if(pwd.length < 6) return;
+      if(window.onboarding?.passwordContinue){
+        window.onboarding.passwordContinue(pwd);
+      }else{
+        console.log('Password OK:', '*'.repeat(pwd.length));
       }
     });
 
