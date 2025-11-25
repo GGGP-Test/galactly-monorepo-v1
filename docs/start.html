@@ -492,13 +492,21 @@
     .site-badge .tip{
           position:absolute; top: calc(100% + 8px); left:50%;
           transform: translateX(-50%);
+          z-index: 40;
           padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap;
           color:var(--fg); background: rgba(0,0,0,.55);
           border:1px solid rgba(255,255,255,.14);
           box-shadow: 0 6px 18px rgba(0,0,0,.28);
           opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease;
     }
-    .site-badge.show-tip .tip{ opacity:1; transform: translate(-50%, -2px); }
+    /* keep visible while hovering the badge, focusing inside, or when pinned open */
+    .site-badge:hover .tip,
+    .site-badge:focus-within .tip,
+    .site-badge.show-tip .tip{
+      opacity:1;
+      transform: translate(-50%, -2px);
+      pointer-events:auto;
+    }
     
     .site-badge .tip a{
       color:inherit; text-decoration:underline;
@@ -738,6 +746,7 @@
     const siteBadge  = byId('siteBadge');
     const siteHostEl = byId('siteHost');
     const siteInfo   = byId('siteInfo');
+    const siteTip    = byId('siteTip');
 
     /* tiny helper to retrigger CSS animations */
     function play(el, cls){
@@ -923,10 +932,16 @@
       hideSiteBadge();
     }
 
-    // Tooltip: hover (desktop) & tap (touch)
+    // Tooltip: hover (desktop) & tap (touch) — stays open for link click
     siteInfo.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
-    siteInfo.addEventListener('mouseleave', ()=> siteBadge.classList.remove('show-tip'));
+    // no mouseleave here; CSS :hover keeps it visible while cursor is over badge or tip
     siteInfo.addEventListener('click', (e)=>{ e.stopPropagation(); siteBadge.classList.toggle('show-tip'); });
+    
+    // keep open while interacting with the tooltip itself (for hover/click)
+    siteTip?.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
+    siteTip?.addEventListener('click', (e)=> e.stopPropagation());
+    
+    // close when clicking/tapping anywhere outside
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
     /* ---------- Swap to Password stage ---------- */
