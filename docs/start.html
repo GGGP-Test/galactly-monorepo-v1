@@ -40,23 +40,22 @@
       --bg-1: #0c1020;
       --bg-2: #0c1326;
     }
-    
-    
+
     /* === knobs for Google button inner reflection + email rim === */
     @property --chip-sheen-ang { syntax: "<angle>"; inherits: true; initial-value: -70deg; }
-    
+
     :root{
       /* Google button “at-rest” inner reflection */
       --chip-sheen-ang: -70deg;           /* angle at rest */
       --chip-sheen-ang-hover: -110deg;    /* angle on hover */
       --chip-glare-alpha: .22;            /* strength of the inner reflection band */
       --chip-glare-soften: .7px;          /* blur of the band */
-    
+
       /* Email field rim + inner shadows (all adjustable) */
       --field-rim-w: 0.1px;               /* rim thickness */
       --field-rim-top: rgba(255,255,255,.02);
       --field-rim-bottom: rgba(255,255,255,.10);
-    
+
       --field-inset-top: rgba(255,255,255,.02);   /* faint highlight on top edge */
       --field-inset-bottom: rgba(0,0,0,.58);      /* inner “pressed” bottom */
       --field-inset-ambient: rgba(0,0,0,.22);     /* soft ambient inside */
@@ -67,21 +66,15 @@
     body{
       color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    
-      /* 3 lights + base gradient
-         1) AMBER (warm)      — top-right-ish
-         2) CYAN (cool pop)   — bottom-left-ish
-         3) BLOOM (soft white)— subtle forward glow
-      */
+
+      /* 3 lights + base gradient */
       background:
         radial-gradient(1200px 800px at 76% 26%, rgba(240,196,90,.28) 0%, transparent 58%),
         radial-gradient(1200px 800px at 24% 78%, rgba(64,186,255,.24) 0%, transparent 60%),
         radial-gradient(700px 500px at 50% -8%, rgba(255,255,255,.08) 0%, transparent 70%),
         linear-gradient(180deg, #171a17, #0f1210);
-    
-      /* makes the colored lights feel luminous on dark bases */
       background-blend-mode: screen, screen, normal, normal;
-    
+
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overflow: hidden;
@@ -104,21 +97,20 @@
     }
 
     /* top chrome */
-    /* ===== topbar + item padding knobs ===== */
     :root{
-      --topbar-pad-x: 20px;  /* left/right gap from viewport edge */
-      --topbar-pad-y: 10px;  /* gap below the iOS bar (additive with safe-area) */
-    
-      --brand-pad-x: 8px;    /* inner padding of the left logo link */
+      --topbar-pad-x: 20px;
+      --topbar-pad-y: 10px;
+
+      --brand-pad-x: 8px;
       --brand-pad-y: 6px;
-    
-      --home-pad-x: 8px;     /* inner padding of the right home link */
+
+      --home-pad-x: 8px;
       --home-pad-y: 6px;
-    
-      --home-ic-m: 22px;     /* home icon size (mobile) */
-      --home-ic-d: 28px;     /* home icon size (desktop) */
+
+      --home-ic-m: 22px;
+      --home-ic-d: 28px;
     }
-    
+
     .topbar{
       position:fixed;
       top: calc(var(--safe-top) + var(--topbar-pad-y));
@@ -134,7 +126,6 @@
       background:transparent; border:0; box-shadow:none; backdrop-filter:none;
     }
 
-    /* final, single source of truth for home icon size */
     .topbar .home-link svg{ width:var(--home-ic-m); height:var(--home-ic-m); display:block; }
     @media (min-width:1024px){
       .topbar .home-link svg{ width:var(--home-ic-d); height:var(--home-ic-d); }
@@ -145,13 +136,13 @@
       font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui;
       letter-spacing:.2px;
     }
-   /* icon-only home link */
+
     .home-link{
       display:inline-flex; align-items:center; justify-content:center;
       padding: var(--home-pad-y) var(--home-pad-x);
       background:none; border:0; box-shadow:none; backdrop-filter:none;
       line-height:0;
-      color: var(--fg); /* ensure anchor color stays white */
+      color: var(--fg);
     }
     .home-link:hover{ opacity:.85; transform:none; }
 
@@ -163,10 +154,9 @@
     }
     .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
     .center { display:grid; gap:16px; place-items:center; }
-    /* Step 2: take manual control of spacing */
     #step2 .center { gap: 0; }
 
-    /* ===================== STEP 1 (unchanged) ===================== */
+    /* ===================== STEP 1 ===================== */
     .cardless{ max-width:860px; margin-inline:auto; }
     .step{ display:none; }
     .step.active{ display:block; }
@@ -197,7 +187,7 @@
     }
     .choice .icon svg{ width:18px; height:18px; }
 
-    .row-actions{ display:flex; justify-content:space-between; gap:12px; margin-top:14px; }
+    .row-actions{ display:flex; justify-content:flex-end; gap:12px; margin-top:16px; }
     .btn-icon{
       display:inline-flex; align-items:center; justify-content:center;
       width:44px; height:44px; border-radius:999px; color:var(--fg);
@@ -234,21 +224,17 @@
       color:var(--fg);
       text-decoration:none;
       font-weight:600;
-    
-      /* base, plus an inner “sheen band” that lives INSIDE the button */
+
       background:
-        /* inner reflection band (subtle at rest) */
         linear-gradient(
           var(--chip-sheen-ang),
           transparent 44%,
           rgba(255,255,255,var(--chip-glare-alpha)) 51%,
           transparent 58%
         ),
-        /* faint top → body wash */
         linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
-        /* depth: center-lit, edge-darkened */
         radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
-      background-clip: padding-box; /* keep the band inside the border */
+      background-clip: padding-box;
       border:1px solid rgba(255,255,255,.16);
       box-shadow:
         inset 0 1px 0 var(--bevel-light),
@@ -261,26 +247,20 @@
         transform .15s ease,
         box-shadow .15s ease,
         border-color .15s ease,
-        --chip-sheen-ang .45s ease; /* animate the inner reflection angle */
+        --chip-sheen-ang .45s ease;
     }
-    
-    
+
     /* ----- Step 2 spacing knobs (mobile-first) ----- */
     :root{
-      /* from top “edge” to H1 */
       --s2-gap-edge-title: 56px;
-    
-      /* between elements */
-      --s2-gap-title-subtitle: 10px;   /* H1 -> “Continue with” */
-      --s2-gap-subtitle-chips: 14px;   /* “Continue with” -> Google button row */
-      --s2-gap-chips-hr: 18px;         /* Google button row -> divider line */
-      --s2-gap-hr-or: 10px;            /* divider line -> “OR” */
-      --s2-gap-or-field: 18px;         /* “OR” -> email field */
-      --s2-gap-field-arrow: 12px;      /* email field -> back arrow */
-      --s2-gap-bottom-edge: 56px;      /* back arrow -> bottom “edge” */
+      --s2-gap-title-subtitle: 10px;
+      --s2-gap-subtitle-chips: 14px;
+      --s2-gap-chips-hr: 18px;
+      --s2-gap-hr-or: 10px;
+      --s2-gap-or-field: 18px;
+      --s2-gap-field-arrow: 12px;
+      --s2-gap-bottom-edge: 56px;
     }
-    
-    /* Desktop tweaks */
     @media (min-width: 768px){
       :root{
         --s2-gap-edge-title: 80px;
@@ -293,8 +273,6 @@
         --s2-gap-bottom-edge: 80px;
       }
     }
-    
-    /* Apply the knobs to Step 2 elements (specific selectors to override defaults) */
     #step2 .title-row       { margin-top: var(--s2-gap-edge-title); margin-bottom: 0; }
     #step2 .title-row h1    { margin: 0 0 var(--s2-gap-title-subtitle) 0; }
     #step2 .subtitle        { margin: 0 0 var(--s2-gap-subtitle-chips) 0; text-align: center; }
@@ -303,8 +281,7 @@
     #step2 .muted           { margin: 0 0 var(--s2-gap-or-field) 0; }
     #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
     #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
-    
-    /* hover: tip the inner reflection just a bit, do not go wild */
+
     .chip:hover{
       --chip-sheen-ang: var(--chip-sheen-ang-hover);
       transform: translateY(-1px);
@@ -315,8 +292,7 @@
         inset 0 12px 24px var(--pane-bg-2),
         0 6px 18px rgba(0,0,0,.32);
     }
-    
-    /* keep the tiny animated rim you already had */
+
     .chip::before,
     .chip::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
     .chip::before{
@@ -328,11 +304,10 @@
     }
     .chip::after{
       --ang: 0deg;
-      background:
-        conic-gradient(from var(--ang),
-          rgba(255,255,255,0) 0deg,
-          rgba(255,255,255,.34) 14deg,
-          rgba(255,255,255,0) 40deg);
+      background: conic-gradient(from var(--ang),
+        rgba(255,255,255,0) 0deg,
+        rgba(255,255,255,.34) 14deg,
+        rgba(255,255,255,0) 40deg);
       filter: blur(var(--chip-glare-soften));
       mix-blend-mode:screen;
       opacity:0;
@@ -344,28 +319,8 @@
     }
     .chip:hover::after,
     .chip:focus-visible::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
-    /* thin inner rim */
-    .chip::before{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:1.25px;
-      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-      -webkit-mask-composite:xor; mask-composite:exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.1));
-      pointer-events:none;
-    }
-    /* animated rim sparkle (same speed as before) */
-    .chip::after{
-      content:""; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
-      background: conic-gradient(from var(--ang, -75deg),
-        rgba(255,255,255,0) 0deg,
-        rgba(255,255,255,.35) 16deg,
-        rgba(255,255,255,0) 44deg);
-      filter: blur(.6px); mix-blend-mode:screen; opacity:0;
-      transition: opacity .2s ease;
-    }
-    .chip:hover::after{ opacity:1; animation: rim var(--ring-speed) linear infinite; }
     @keyframes rim { to { --ang: 285deg; } }
 
-    /* interior moving sheen */
     .chip > .glare{
       position:absolute; inset:0; border-radius:inherit; pointer-events:none;
       background: linear-gradient(var(--sweep, -45deg),
@@ -377,10 +332,7 @@
       opacity:.0;
       transition: opacity .3s ease, transform .45s cubic-bezier(.25,1,.5,1);
     }
-    .chip:hover > .glare{
-      opacity:.9;
-      transform: translateX(20%);
-    }
+    .chip:hover > .glare{ opacity:.9; transform: translateX(20%); }
     .chip:hover{
       border-color: rgba(255,255,255,.24);
       box-shadow:
@@ -397,22 +349,20 @@
     }
     .chip svg{ width:20px; height:20px; display:block; }
 
-    /* pressed input + website (email field you liked) */
+    /* ===== Email field (pressed) ===== */
     .field-wrap{ width:min(280px, 86vw); margin: 36px auto 0 auto; position:relative; }
     .pressed{
       position:relative;
       display:grid;
       grid-template-columns: 26px 1fr;
       align-items:center;
-    
+
       height:var(--ctl-h);
       border-radius:var(--ctl-r);
       padding:0 14px;
-    
-      /* no fill at all */
+
       background: transparent;
-    
-      /* “pressed” look is entirely from inset shadows (knobs above) */
+
       border:1px solid rgba(255,255,255,.16);
       box-shadow:
         inset 0 1px 0 var(--field-inset-top),
@@ -422,8 +372,6 @@
       -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
     }
-    
-    /* thin inner rim; thickness = --field-rim-w */
     .pressed::before{
       content:"";
       position:absolute;
@@ -435,12 +383,7 @@
       background: linear-gradient(180deg, var(--field-rim-top), var(--field-rim-bottom));
       pointer-events:none;
     }
-    
-    /* kill any animated rim on the field itself */
     .pressed::after{ display:none !important; }
-
-    .pressed:hover::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
-    .pressed:has(input:focus)::after{ opacity:1; animation:ring var(--ring-speed) linear infinite; }
     .pressed:has(input:focus){
       border-color: rgba(255,255,255,.24);
       box-shadow:
@@ -449,114 +392,146 @@
         inset 0 12px 26px var(--pane-bg-2),
         0 8px 22px rgba(0,0,0,.30);
     }
-    @keyframes ring{ to{ --ang: 360deg; } }
+
     .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
+
+    /* extra input right padding so the CTA never overlaps text */
     input{
       min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
       font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
+      padding-right: calc(var(--cta-d, 36px) + 14px); /* <-- room for button */
     }
     input::placeholder{ color:rgba(233,236,243,.62); }
 
-    /* kill iOS autofill and “white button” overlays */
-    input::-webkit-contacts-auto-fill-button,
-    input::-webkit-credentials-auto-fill-button{ visibility:hidden; display:none !important; pointer-events:none; }
-    input:-webkit-autofill,
-    input:-webkit-autofill:hover,
-    input:-webkit-autofill:focus{ -webkit-box-shadow:0 0 0 1000px transparent inset !important; -webkit-text-fill-color: var(--fg) !important; }
+    /* ===== Inside-field GLASS button ===== */
+    :root{ --cta-d: 36px; }                /* diameter (mobile) */
+    @media (min-width:768px){ :root{ --cta-d: 40px; } } /* desktop/tablet */
+
+    .field-cta{
+      position:absolute;
+      right:6px; top:50%;
+      width:var(--cta-d); height:var(--cta-d);
+      transform: translate(10px,-50%) scale(.9); /* start slightly off */
+      opacity:0; pointer-events:none;
+
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background:
+        /* top haze reflection (curved, offset inward) */
+        radial-gradient(140% 90% at 50% -20%, rgba(255,255,255,.22) 0%, rgba(255,255,255,.06) 28%, rgba(255,255,255,0) 60%),
+        /* body depth */
+        radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.45));
+      background-blend-mode: screen, normal;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.25),
+        inset 0 -3px 6px rgba(0,0,0,.6),
+        inset 0 14px 28px rgba(0,0,0,.28),
+        0 4px 14px rgba(0,0,0,.28);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      color:var(--fg);
+      display:grid; place-items:center;
+      cursor:pointer;
+
+      transition:
+        transform var(--ring-speed) cubic-bezier(.25,1,.5,1),
+        opacity   calc(var(--ring-speed) * .7) ease,
+        box-shadow .2s ease, border-color .2s ease;
+    }
+    /* thin inner rim */
+    .field-cta::after{
+      content:"";
+      position:absolute; inset:0; border-radius:inherit; padding:1px;
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude;
+      background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.10));
+      pointer-events:none;
+    }
+    /* show state toggled by JS when email looks valid */
+    .pressed.show-cta .field-cta{
+      opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1);
+    }
+    .field-cta:hover{
+      border-color: rgba(255,255,255,.24);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.38),
+        inset 0 -3px 7px rgba(0,0,0,.7),
+        inset 0 16px 30px rgba(0,0,0,.32),
+        0 8px 22px rgba(0,0,0,.34);
+    }
+    .field-cta:active{
+      transform: translate(0,-50%) scale(.98);
+    }
+    .field-cta svg{ width:18px; height:18px; display:block; }
 
     /* single centered back arrow under field */
     .single-action{ display:grid; place-items:center; margin-top:14px; }
 
     /* desktop: keep everything perfectly centered, no scroll */
     @media (min-width: 900px){
-        .wrap{
-          min-height:100dvh; display:grid; place-items:center;
-          padding: calc(72px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
-        }
-        @supports (height: 100svh){
-          .wrap{ min-height:100svh; }
-        }
+      .wrap{
+        min-height:100dvh; display:grid; place-items:center;
+        padding: calc(72px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+      }
+      @supports (height: 100svh){
+        .wrap{ min-height:100svh; }
+      }
     }
 
     /* Hard-hide validation blocks so they never push layout */
     .error{ display:none !important; }
-    
-    
-    
-/* Register animatable custom property for the inner reflection angle */
-@property --glare-angle { syntax: "<angle>"; inherits: false; initial-value: -70deg; }
 
-/* === GLASS REFLECTION KNOBS (edit these) === */
-:root{
-  /* direction of reflection (at rest vs hover) */
-  --glare-angle-rest:  -70deg;  /* e.g. top-left to bottom-right */
-  --glare-angle-hover:  20deg;  /* sweep direction on hover */
+    /* Register animatable custom property for the inner reflection angle */
+    @property --glare-angle { syntax: "<angle>"; inherits: false; initial-value: -70deg; }
 
-  /* how strong the bright strip is (0..1) */
-  --glare-strength:        .36; /* at rest */
-  --glare-strength-hover:  .22; /* on hover */
+    /* === GLASS REFLECTION KNOBS (edit these) === */
+    :root{
+      --glare-angle-rest:  -70deg;
+      --glare-angle-hover:  20deg;
 
-  /* how far inside the pill the reflection sits */
-  --glare-inset: 3px;          /* push in from the edge */
+      --glare-strength:        .36;
+      --glare-strength-hover:  .22;
 
-  /* thickness of the bright band (percentage of button) */
-  --glare-band: 28%;
-}
+      --glare-inset: 3px;
+      --glare-band: 28%;
+    }
 
-/* make sure chip clips children cleanly */
-.chip{ position:relative; overflow:hidden; }
+    /* make sure chip clips children cleanly */
+    .chip{ position:relative; overflow:hidden; }
 
-/* the inner reflection layer */
-.chip .glare{
-  position:absolute;
-  inset: var(--glare-inset);                /* <- offset inside edge */
-  border-radius: calc(9999px - var(--glare-inset));
-  pointer-events:none;
-  mix-blend-mode: screen;                   /* glassy add-light look */
+    .chip .glare{
+      position:absolute;
+      inset: var(--glare-inset);
+      border-radius: calc(9999px - var(--glare-inset));
+      pointer-events:none;
+      mix-blend-mode: screen;
+      --glare-angle: var(--glare-angle-rest);
+      background:
+        linear-gradient(
+          var(--glare-angle),
+          transparent 0% calc(50% - var(--glare-band)/2),
+          rgba(255,255,255,var(--glare-strength)) 50%
+          , transparent calc(50% + var(--glare-band)/2)
+        );
+      transition:
+        opacity var(--ring-speed, 900ms) cubic-bezier(.25,1,.5,1),
+        transform var(--ring-speed, 900ms) cubic-bezier(.25,1,.5,1),
+        --glare-angle calc(var(--ring-speed, 900ms) * 1.2) cubic-bezier(.25,1,.5,1);
+    }
+    .chip:hover .glare{
+      --glare-angle:   var(--glare-angle-hover);
+      --glare-strength:var(--glare-strength-hover);
+    }
 
-  /* start values (at rest) */
-  --glare-angle: var(--glare-angle-rest);
-
-  /* the reflection itself */
-  background:
-    linear-gradient(
-      var(--glare-angle),
-      transparent 0% calc(50% - var(--glare-band)/2),
-      rgba(255,255,255,var(--glare-strength)) 50%,
-      transparent calc(50% + var(--glare-band)/2)
-    );
-
-  /* keep speed “in family” with your rim/ring animation vars */
-  transition:
-    opacity var(--ring-speed, 900ms) var(--anim-ease, cubic-bezier(.25,1,.5,1)),
-    transform var(--ring-speed, 900ms) var(--anim-ease, cubic-bezier(.25,1,.5,1)),
-    --glare-angle calc(var(--ring-speed, 900ms) * 1.2) var(--anim-ease, cubic-bezier(.25,1,.5,1));
-}
-
-/* hover state: change angle and optionally intensity */
-.chip:hover .glare{
-  --glare-angle:   var(--glare-angle-hover);
-  --glare-strength:var(--glare-strength-hover);
-}
-
-
-
-/* ===== Home icon size knobs (final override) ===== */
-:root{
-  --home-ic-m: 22px;  /* mobile */
-  --home-ic-d: 28px;  /* desktop */
-}
-.topbar .home-link svg{ width:var(--home-ic-m); height:var(--home-ic-m); }
-@media (min-width:1024px){
-  .topbar .home-link svg{ width:var(--home-ic-d); height:var(--home-ic-d); }
-}
-
-
-
-    
-    
-    
-    
+    /* Home icon size knobs (final override) */
+    :root{
+      --home-ic-m: 22px;
+      --home-ic-d: 28px;
+    }
+    .topbar .home-link svg{ width:var(--home-ic-m); height:var(--home-ic-m); }
+    @media (min-width:1024px){
+      .topbar .home-link svg{ width:var(--home-ic-d); height:var(--home-ic-d); }
+    }
   </style>
 </head>
 <body>
@@ -569,7 +544,6 @@
     </a>
     <a class="home-link" href="index.html" aria-label="Home">
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <!-- Apple-ish, rounded house outline; hard-white stroke so it never turns purple -->
         <path d="M3 11l9-8 9 8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M5 10v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M9 22V13h6v9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -580,7 +554,7 @@
   <main class="wrap">
     <div class="stage cardless">
 
-      <!-- ================= STEP 1 (unchanged) ================= -->
+      <!-- ================= STEP 1 ================= -->
       <section id="step1" class="step active" aria-labelledby="s1-title">
         <h1 id="s1-title" class="title proc-title">What brings you to Galactly?</h1>
         <p class="subtitle">Pick one to tailor your setup.</p>
@@ -627,12 +601,10 @@
           <p class="subtitle">Continue with</p>
         </div>
 
-        <!-- Google only -->
         <div class="center">
           <div class="chip-row">
             <a class="chip" href="#" aria-label="Continue with Google (Work) / Business">
               <span class="glare" aria-hidden="true"></span>
-              <!-- Google icon -->
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#EA4335" d="M12 10.2v3.8h5.3c-.2 1.2-1.6 3.6-5.3 3.6A6.2 6.2 0 1 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12S6.8 21.5 12 21.5c7 0 9.7-4.8 9-9.2H12z"/>
                 <path fill="#34A853" d="M3.7 7.4l3.1 2.3A6 6 0 0 1 12 5.8c1.8 0 3 .7 3.7 1.3l2.5-2.4C16.9 3.3 14.7 2.5 12 2.5 8.7 2.5 5.8 4.3 3.7 7.4z"/>
@@ -647,7 +619,7 @@
           <div class="hr" aria-hidden="true"></div>
           <div class="muted">OR</div>
 
-          <!-- email field (unchanged behavior you liked) -->
+          <!-- email field -->
           <div class="field-wrap">
             <div class="pressed" id="emailBox">
               <span class="left-icon" aria-hidden="true">
@@ -656,6 +628,13 @@
                 </svg>
               </span>
               <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
+
+              <!-- inside-field glass NEXT button (initially hidden) -->
+              <button id="emailNext" class="field-cta" type="button" aria-label="Next">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"></path>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -712,11 +691,12 @@
     const step2 = byId("step2");
     const s1Next = byId("s1-next");
     const s2Back = byId("s2-back");
-    const finish = byId("finish");
 
     const emailInput = byId("email");
+    const emailBox   = byId("emailBox");
+    const emailNext  = byId("emailNext");
 
-    /* ---------- STEP 1 select role (unchanged) ---------- */
+    /* ---------- STEP 1 select role ---------- */
     let role = null;
     qsa(".choice", step1).forEach(el=>{
       const r = el.getAttribute("data-role");
@@ -737,19 +717,18 @@
       if(!role) return;
       step1.classList.remove("active");
       step2.classList.add("active");
-    
+
       // do NOT auto-focus the email field; clear any current focus
       if (document.activeElement && typeof document.activeElement.blur === "function") {
         document.activeElement.blur();
       }
-    
-      // move focus to the step title (keeps keyboard users happy, no pressed styles)
+
       const t = document.getElementById("s2-title");
       if (t) {
         if (!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1");
         t.focus({ preventScroll: true });
       }
-    
+
       if(window.onboarding?.goTo) window.onboarding.goTo(2);
     });
 
@@ -760,20 +739,53 @@
       if(window.onboarding?.goTo) window.onboarding.goTo(1);
     });
 
+    /* ---------- Email logic: show CTA when full domain typed ---------- */
+    const looksValidEmail = (v)=>{
+      // basic: something@something.tld (tld at least 2 chars)
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v.trim());
+    };
+
+    const updateEmailCTA = ()=>{
+      const value = emailInput.value;
+      const show = looksValidEmail(value);
+      emailBox.classList.toggle('show-cta', show);
+      emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
+    };
+
+    emailInput.addEventListener('input', updateEmailCTA);
+    emailInput.addEventListener('blur', updateEmailCTA);
+    // Allow Enter to fire the same action when valid
+    emailInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && looksValidEmail(emailInput.value)){
+        e.preventDefault();
+        emailNext.click();
+      }
+    });
+
+    emailNext.addEventListener('click', ()=>{
+      const email = emailInput.value.trim();
+      if(!looksValidEmail(email)) return; // guard
+      // Hook for your app:
+      if(window.onboarding?.emailContinue){
+        window.onboarding.emailContinue(email);
+      }else{
+        console.log('Email OK:', email);
+        // Do whatever you want here (navigate, show next UI, etc.)
+      }
+    });
+
     // keep s1-next disabled until role chosen
     s1Next.disabled = true;
   </script>
 
-  <!-- ===== Optionally render your mirrored-G logo into the .topbar brand ===== -->
+  <!-- ===== Optional mirrored-G brand rendering (unchanged) ===== -->
   <style>
     .site-header .brand,
     .topbar .brand{
       display:flex; align-items:center;
       --icon-w: 36px; --brand-gap: 10px; gap: var(--brand-gap);
     }
-    .brand-icon{
-      --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0;
-    }
+    .brand-icon{ --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0; }
     .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
     .brand-word{
       font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
