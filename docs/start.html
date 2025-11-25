@@ -524,6 +524,9 @@
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
   </style>
+
+  <!-- Google Identity Services (free sign-in script) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -610,7 +613,7 @@
           </div>
           <div class="center">
             <div class="chip-row">
-              <a class="chip" href="#" aria-label="Continue with Google (Work) / Business">
+              <a class="chip" id="googleBtn" href="#" aria-label="Continue with Google (Work) / Business">
                 <span class="glare" aria-hidden="true"></span>
                 <!-- Google icon -->
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -678,7 +681,7 @@
 
           <!-- single centered back arrow -->
           <div class="single-action">
-            <button type="button" id="s2-back" class="btn-icon" aria-label="Back to role">
+            <button type="button" id="s2-back" class="btn-icon" aria-label="Back">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M15 18l-6-6 6-6"></path>
               </svg>
@@ -747,6 +750,13 @@
     const siteHostEl = byId('siteHost');
     const siteInfo   = byId('siteInfo');
     const siteTip    = byId('siteTip');
+
+    /* Google OAuth wiring (free scopes only) */
+    const googleBtn = byId('googleBtn');
+    const GOOGLE_CLIENT_ID   = 'YOUR_CLIENT_ID.apps.googleusercontent.com'; // <-- set this
+    const GOOGLE_REDIRECT_URI = 'https://yourapp.com/auth/google/callback'; // <-- set this
+
+    let s2Stage = 'start'; // 'start' | 'password'
 
     /* tiny helper to retrigger CSS animations */
     function play(el, cls){
@@ -822,6 +832,7 @@
       if(!role) return;
       step1.classList.remove("active");
       step2.classList.add("active");
+      s2Stage = 'start';
 
       if (document.activeElement && typeof document.activeElement.blur === "function") {
         document.activeElement.blur();
@@ -837,24 +848,44 @@
       if(window.onboarding?.goTo) window.onboarding.goTo(2);
     });
 
-    /* ---------- Back to step 1 ---------- */
+    /* ---------- Back button behavior ---------- */
+    function showStartStage(){
+      s2TopStart.hidden = false;
+      s2TopPass.hidden  = true;
+      s2Or.hidden = false;
+
+      // hide password UI and reset its CTA
+      pwdWrap.hidden = true;
+      pwdInput.value = '';
+      pwdBox.classList.remove('show-cta');
+      updateEmailCTA(); // email CTA may reappear if valid (since pwd is hidden now)
+
+      s2Stage = 'start';
+      animateStep2Intro();
+      syncSiteBadge(false);
+    }
+
     s2Back.addEventListener("click", ()=>{
-      step2.classList.remove("active");
-      step1.classList.add("active");
-      if(window.onboarding?.goTo) window.onboarding.goTo(1);
+      if(!step2.classList.contains('active')) return;
+      if(s2Stage === 'password'){
+        showStartStage();            // back to Step 2 start (Google chip visible)
+      }else{
+        step2.classList.remove("active");
+        step1.classList.add("active"); // back to Step 1
+        if(window.onboarding?.goTo) window.onboarding.goTo(1);
+      }
     });
 
     /* ---------- Email -> inside CTA visibility ---------- */
     const looksValidEmail = (v)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v.trim());
 
-     function updateEmailCTA(){
+    function updateEmailCTA(){
       const v = emailInput.value;
       const valid = looksValidEmail(v);
-    
       // Once the password stage is visible, never show the email CTA.
       const lockEmailCTA = !pwdWrap.hidden;
       const show = valid && !lockEmailCTA;
-    
+
       emailBox.classList.toggle('show-cta', show);
       emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
@@ -863,7 +894,7 @@
     emailInput.addEventListener('keydown', (e)=>{
       if(e.key === 'Enter' && looksValidEmail(emailInput.value)){
         e.preventDefault();
-        emailNext.click();
+        if(pwdWrap.hidden) emailNext.click(); // do nothing if already in password stage
       }
     });
 
@@ -941,11 +972,8 @@
     siteInfo.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
     // no mouseleave here; CSS :hover keeps it visible while cursor is over badge or tip
     siteInfo.addEventListener('click', (e)=>{ e.stopPropagation(); siteBadge.classList.toggle('show-tip'); });
-    
-    // keep open while interacting with the tooltip itself (for hover/click)
     siteTip?.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
     siteTip?.addEventListener('click', (e)=> e.stopPropagation());
-    
     // close when clicking/tapping anywhere outside
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
@@ -971,6 +999,8 @@
       // keep site badge visible; ensure it's synced to email domain
       syncSiteBadge(false);
 
+      s2Stage = 'password';
+
       if(window.onboarding?.emailContinue){
         window.onboarding.emailContinue(emailInput.value.trim());
       }
@@ -980,6 +1010,7 @@
     emailNext.addEventListener('click', ()=>{
       const email = emailInput.value.trim();
       if(!looksValidEmail(email)) return;
+      if(!pwdWrap.hidden) return; // already in password stage; do nothing
 
       if(isBusinessEmail(email)){
         toPasswordStage();
@@ -1008,6 +1039,50 @@
 
     // If step2 somehow is pre-opened (deep link), sync badge immediately
     if(step2.classList.contains('active')) syncSiteBadge(true);
+
+    /* ---------- Google sign-in (free scopes) ---------- */
+    let googleCodeClient = null;
+
+    window.addEventListener('load', () => {
+      if (window.google?.accounts?.oauth2) {
+        googleCodeClient = google.accounts.oauth2.initCodeClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: 'openid email profile',
+          ux_mode: 'popup', // switch to 'redirect' if you prefer
+          redirect_uri: GOOGLE_REDIRECT_URI,
+          state: btoa(JSON.stringify({
+            step: 2,
+            role: role || null,
+            from: location.href,
+            intent: 'business-only'
+          })),
+          prompt: 'select_account'
+        });
+      }
+    });
+
+    googleBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (googleCodeClient) {
+        googleCodeClient.requestCode();
+      } else {
+        // Fallback: direct OAuth redirect (still free)
+        const params = new URLSearchParams({
+          client_id: GOOGLE_CLIENT_ID,
+          redirect_uri: GOOGLE_REDIRECT_URI,
+          response_type: 'code',
+          scope: 'openid email profile',
+          prompt: 'select_account',
+          state: btoa(JSON.stringify({
+            step: 2,
+            role: role || null,
+            from: location.href,
+            intent: 'business-only'
+          }))
+        });
+        location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      }
+    });
   </script>
 
   <style>
