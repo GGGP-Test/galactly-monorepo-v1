@@ -847,9 +847,14 @@
     /* ---------- Email -> inside CTA visibility ---------- */
     const looksValidEmail = (v)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v.trim());
 
-    function updateEmailCTA(){
+     function updateEmailCTA(){
       const v = emailInput.value;
-      const show = looksValidEmail(v);
+      const valid = looksValidEmail(v);
+    
+      // Once the password stage is visible, never show the email CTA.
+      const lockEmailCTA = !pwdWrap.hidden;
+      const show = valid && !lockEmailCTA;
+    
       emailBox.classList.toggle('show-cta', show);
       emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
