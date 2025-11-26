@@ -248,36 +248,8 @@
         inset 0 12px 24px var(--pane-bg-2),
         0 6px 18px rgba(0,0,0,.32);
     }
-    .chip::before,
-    .chip::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
-    .chip::before{
-      padding:var(--rim-w);
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
-      opacity:.9;
-    }
-    .chip::after{
-      --ang: -75deg;
-      background: conic-gradient(from var(--ang), rgba(255,255,255,0) 0deg, rgba(255,255,255,.35) 16deg, rgba(255,255,255,0) 44deg);
-      filter: blur(.6px); mix-blend-mode:screen; opacity:0;
-      transition: opacity .2s ease;
-    }
-    .chip:hover::after{ opacity:1; animation: rim var(--ring-speed) linear infinite; }
-    @keyframes rim { to { --ang: 285deg; } }
 
-    .chip > .glare{
-      position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-      background: linear-gradient(var(--sweep, -45deg), transparent 0% 35%, rgba(255,255,255,.18) 50%, transparent 65% 100%);
-      mix-blend-mode:screen;
-      transform: translateX(-30%);
-      opacity:.0;
-      transition: opacity .3s ease, transform .45s cubic-bezier(.25,1,.5,1);
-    }
-    .chip:hover > .glare{ opacity:.9; transform: translateX(20%); }
-    .chip svg{ width:20px; height:20px; display:block; }
-
-    /* Inline error under the Google button */
+    /* Inline error/info */
     .inline-error{
       width:min(560px, 86vw);
       margin: 8px auto 0;
@@ -289,6 +261,19 @@
       background: rgba(255,107,107,.12);
       color: #ffd7d7;
     }
+    .inline-note{
+      width:min(560px, 86vw);
+      margin: 8px auto 0;
+      font-size: 13px;
+      line-height: 1.35;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color: var(--fg);
+    }
+    .small-row{ display:flex; gap:10px; justify-content:center; margin-top:8px; font-size:12px; color:var(--muted); }
+    .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
     /* ===== Email/Password fields (pressed) ===== */
     .field-wrap{ width:min(280px, 86vw); margin: 24px auto 0 auto; position:relative; }
@@ -310,21 +295,17 @@
       -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
     }
-    .pressed::before{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:var(--field-rim-w);
+    .pressed::before{ content:""; position:absolute; inset:0; border-radius:inherit; padding:0.1px;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor; mask-composite: exclude;
-      background: linear-gradient(180deg, var(--field-rim-top), var(--field-rim-bottom));
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.10));
       pointer-events:none;
     }
-    .pressed:has(input:focus){
-      border-color: rgba(255,255,255,.24);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 6px var(--bevel-dark),
-        inset 0 12px 26px var(--pane-bg-2),
-        0 8px 22px rgba(0,0,0,.30);
-    }
+    .pressed:has(input:focus){ border-color: rgba(255,255,255,.24); box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.25),
+      inset 0 -2px 6px rgba(0,0,0,.6),
+      inset 0 12px 26px rgba(0,0,0,.22),
+      0 8px 22px rgba(0,0,0,.30); }
 
     .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
 
@@ -356,24 +337,7 @@
       color:var(--fg); display:grid; place-items:center; cursor:pointer;
       transition: transform var(--ring-speed) cubic-bezier(.25,1,.5,1), opacity calc(var(--ring-speed)*.7) ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .field-cta::after{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
-      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-      -webkit-mask-composite:xor; mask-composite:exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.10));
-      pointer-events:none;
-    }
     .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
-    .field-cta:hover{
-      border-color: rgba(255,255,255,.24);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.38),
-        inset 0 -3px 7px rgba(0,0,0,.7),
-        inset 0 16px 30px rgba(0,0,0,.32),
-        0 8px 22px rgba(0,0,0,.34);
-    }
-    .field-cta:active{ transform: translate(0,-50%) scale(.98); }
-    .field-cta svg{ width:18px; height:18px; display:block; }
 
     /* Back arrow row */
     .single-action{ display:grid; place-items:center; margin-top:14px; }
@@ -393,7 +357,6 @@
       --ease-hero: cubic-bezier(.22,1,.36,1);
       --ease-soft: cubic-bezier(.25,.95,.35,1);
       --ease-snap: cubic-bezier(.16,.84,.44,1);
-
       --anim-title-d: 1.25s;
       --anim-sub-d:   1.40s;
       --anim-chip-d:  1.10s;
@@ -403,33 +366,23 @@
     }
     @keyframes titleRise { 0%{ opacity:0; transform: translateY(24px) scale(.985); filter: blur(3px); } 60%{ filter: blur(0); } 100%{ opacity:1; transform: translateY(0) scale(1); } }
     .anim-title{ animation: titleRise var(--anim-title-d) var(--ease-hero) both; }
-
     @keyframes subDrift { 0%{ opacity:0; transform: translateY(30px); } 100%{ opacity:1; transform: translateY(0); } }
     .anim-sub{ animation: subDrift var(--anim-sub-d) var(--ease-soft) both; animation-delay: .12s; }
-
     @keyframes dividerGrow { 0%{ opacity:0; transform: scaleX(.6); } 100%{ opacity:1; transform: scaleX(1); } }
     .anim-divider{ transform-origin: 50% 50%; animation: dividerGrow var(--anim-div-d) cubic-bezier(.2,.8,.2,1) both; animation-delay: .10s; }
-
-    @keyframes chipFloat { 0%{ opacity:0; transform: translateY(22px) scale(.99); } 100%{ opacity:1; transform: translateY(0) scale(1); } }
-    .anim-chips{ animation: chipFloat var(--anim-chip-d) var(--ease-soft) both; animation-delay: .22s; }
-
     @keyframes fieldDrop { 0%{ opacity:0; transform: translateY(-24px); } 100%{ opacity:1; transform: translateY(0); } }
     .anim-or   { animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .18s; }
     .anim-field{ animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .26s; }
     .anim-back { animation: fieldDrop var(--anim-below-d) var(--ease-soft) both; animation-delay: .36s; }
-    .anim-pwd  { animation: fieldDrop var(--anim-pwd-d) var(--ease-snap) both; animation-delay: .10s; }
 
     @media (prefers-reduced-motion: reduce){
       *{ animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition: none !important; }
     }
-    
-    
-    /* ==== start.html: page-leave transition ==== */
+
+    /* ==== page-leave ==== */
     :root{ --leave-ms: 1500ms; }
     body.leaving .stage{
-      opacity: 0;
-      transform: translateY(12px) scale(.985);
-      filter: blur(2px);
+      opacity: 0; transform: translateY(12px) scale(.985); filter: blur(2px);
       transition: transform var(--leave-ms) cubic-bezier(.22,1,.36,1),
                   opacity   var(--leave-ms) ease,
                   filter    var(--leave-ms) ease;
@@ -440,56 +393,16 @@
       pointer-events:none; opacity:0; transition: opacity var(--leave-ms) ease;
     }
     body.leaving::after{ opacity:1; }
-    
-    
-    
 
     /* ===== Website badge (overlay) ===== */
-    .site-badge{
-      position: relative;
-      display: inline-grid;
-      grid-auto-flow: column;
-      align-items: center;
-      gap:10px;
-      margin: 8px auto 6px;
-      padding: 8px 12px;
-      border-radius: 14px;
-      color: var(--fg);
-      font-weight:600; font-size:13px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
-        radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
-      border:1px solid rgba(255,255,255,.16);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25);
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    }
+    .site-badge{ position: relative; display: inline-grid; grid-auto-flow: column; align-items: center; gap:10px; margin: 8px auto 6px; padding: 8px 12px; border-radius: 14px; color: var(--fg); font-weight:600; font-size:13px; background:
+      linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
+      radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
+      border:1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
     .site-badge .host{ font-weight:800; letter-spacing:.2px; }
-    .site-badge .info{
-      display:inline-grid; place-items:center;
-      width:20px; height:20px; border-radius:999px; line-height:0;
-      border:1px solid rgba(255,255,255,.18);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
-      color:var(--fg); cursor:pointer;
-    }
-    .site-badge .info svg{ width:16px; height:16px; display:block; }
-    .site-badge .tip{
-      position:absolute; top: calc(100% + 8px); left:50%;
-      transform: translateX(-50%);
-      z-index: 40;
-      padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap;
-      color:var(--fg); background: rgba(0,0,0,.55);
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow: 0 6px 18px rgba(0,0,0,.28);
-      opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease;
-    }
-    .site-badge:hover .tip,
-    .site-badge:focus-within .tip,
-    .site-badge.show-tip .tip{
-      opacity:1;
-      transform: translate(-50%, -2px);
-      pointer-events:auto;
-    }
+    .site-badge .info{ display:inline-grid; place-items:center; width:20px; height:20px; border-radius:999px; line-height:0; border:1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); color:var(--fg); cursor:pointer; }
+    .site-badge .tip{ position:absolute; top: calc(100% + 8px); left:50%; transform: translateX(-50%); z-index: 40; padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap; color:var(--fg); background: rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.14); box-shadow: 0 6px 18px rgba(0,0,0,.28); opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease; }
+    .site-badge:hover .tip, .site-badge:focus-within .tip, .site-badge.show-tip .tip{ opacity:1; transform: translate(-50%, -2px); pointer-events:auto; }
 
     /* hides */
     .error{ display:none !important; }
@@ -498,6 +411,10 @@
 
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Firebase (for email link verification; free tier) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -562,7 +479,7 @@
       <!-- ================= STEP 2 ================= -->
       <section id="step2" class="step" aria-labelledby="s2-title">
 
-        <!-- Website overlay badge (lives above titles) -->
+        <!-- Website overlay badge -->
         <div id="siteBadge" class="site-badge" hidden>
           <span>We'll use&nbsp;<span class="host" id="siteHost">—</span></span>
           <button class="info" id="siteInfo" type="button" aria-label="Why this site?">
@@ -598,7 +515,7 @@
               </a>
             </div>
 
-            <!-- Inline rejection message lives right below the button -->
+            <!-- Inline rejection message -->
             <div id="googleInlineError" class="inline-error" role="alert" hidden></div>
           </div>
         </div>
@@ -610,7 +527,7 @@
           </div>
         </div>
 
-        <!-- Divider line (animation anchor) -->
+        <!-- Divider -->
         <div class="hr" id="s2-divider" aria-hidden="true"></div>
 
         <!-- Below-line group -->
@@ -635,7 +552,18 @@
             </div>
           </div>
 
-          <!-- password field (initially hidden, appears after business email) -->
+          <!-- verification panel (appears after sending link) -->
+          <div id="verifyPanel" class="inline-note" hidden>
+            <div id="verifyMsg">We sent a verification link to <strong id="vEmail">—</strong>. Open it on this device to continue.</div>
+            <div class="small-row">
+              <a id="resendLink">Resend</a>
+              <span>·</span>
+              <a id="changeEmail">Use a different email</a>
+              <span id="devSim" hidden>· <a id="simulateVerify">Simulate verification</a></span>
+            </div>
+          </div>
+
+          <!-- password field (only after verified) -->
           <div class="field-wrap" id="pwdWrap" hidden>
             <div class="pressed" id="pwdBox">
               <span class="left-icon" aria-hidden="true">
@@ -644,7 +572,6 @@
                 </svg>
               </span>
               <input id="password" type="password" autocomplete="new-password" placeholder="Password (min 6 characters)"/>
-              <!-- inside-field glass NEXT button (appears when >=6) -->
               <button id="pwdNext" class="field-cta" type="button" aria-label="Next">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 18l6-6-6-6"></path>
@@ -664,7 +591,7 @@
         </div>
       </section>
 
-      <!-- Validation blocks kept but hard-hidden so layout never shifts -->
+      <!-- Validation placeholders -->
       <div id="emailError" class="error hide"></div>
       <div id="domainMismatch" class="error hide"></div>
       <div id="siteUnreachable" class="error hide"></div>
@@ -714,6 +641,13 @@
     const emailBox   = byId("emailBox");
     const emailNext  = byId("emailNext");
 
+    const verifyPanel = byId("verifyPanel");
+    const vEmail      = byId("vEmail");
+    const resendLink  = byId("resendLink");
+    const changeEmail = byId("changeEmail");
+    const devSimWrap  = byId("devSim");
+    const devSimBtn   = byId("simulateVerify");
+
     const pwdWrap    = byId("pwdWrap");
     const pwdBox     = byId("pwdBox");
     const pwdInput   = byId("password");
@@ -744,8 +678,8 @@
       s = s.replace(/^mailto:/i,'');
       s = s.replace(/^(https?:)?\/\//i,'');
       s = s.replace(/^www\./i,'');
-      s = s.split(/[\/?#]/)[0];               // strip path/query/hash
-      s = s.replace(/[^\w.-]/g,'');           // sanitize
+      s = s.split(/[\/?#]/)[0];
+      s = s.replace(/[^\w.-]/g,'');
       return s || null;
     }
     function extractHostFromEmail(val){
@@ -765,7 +699,7 @@
       const r = el.getAttribute("data-role");
       const pick = () => {
         role = r;
-        window.role = role; // expose to goToBridge()
+        window.role = role;
         qsa(".choice", step1).forEach(c => {
           c.classList.toggle("selected", c === el);
           c.setAttribute("aria-selected", c === el ? "true" : "false");
@@ -777,7 +711,7 @@
       el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
     });
 
-    /* animate step 2 intro (slower & staggered) */
+    /* animate step 2 intro */
     function animateStep2Intro(){
       const divider  = byId('s2-divider');
       const backRow  = document.querySelector('#step2 .single-action');
@@ -787,8 +721,7 @@
         const subtitle = s2TopStart.querySelector('.title-row .subtitle');
         const chips    = s2TopStart.querySelector('.chip-row');
 
-        play(title,'anim-title'); play(subtitle,'anim-sub');
-        play(chips,'anim-chips');
+        play(title,'anim-title'); play(subtitle,'anim-sub'); play(chips,'anim-chips');
       } else {
         const pTitle   = s2TopPass.querySelector('.title-row h1');
         const pSub     = s2TopPass.querySelector('.title-row .subtitle');
@@ -807,17 +740,12 @@
       step2.classList.add("active");
       s2Stage = 'start';
 
-      if (document.activeElement && typeof document.activeElement.blur === "function") {
-        document.activeElement.blur();
-      }
+      document.activeElement?.blur?.();
       animateStep2Intro();
-      syncSiteBadge(true); // show prefilled site immediately (with animation)
+      syncSiteBadge(true);
 
       const t = document.getElementById("s2-title");
-      if (t) {
-        if (!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1");
-        t.focus({ preventScroll: true });
-      }
+      if (t) { if (!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1"); t.focus({ preventScroll: true }); }
       if(window.onboarding?.goTo) window.onboarding.goTo(2);
     });
 
@@ -827,12 +755,13 @@
       s2TopPass.hidden  = true;
       s2Or.hidden = false;
 
-      // hide password UI and reset its CTA
+      verifyPanel.hidden = true;
+
       pwdWrap.hidden = true;
       pwdInput.value = '';
       pwdBox.classList.remove('show-cta');
-      updateEmailCTA(); // email CTA may reappear if valid (since pwd is hidden now)
 
+      updateEmailCTA();
       s2Stage = 'start';
       animateStep2Intro();
       syncSiteBadge(false);
@@ -858,7 +787,6 @@
       const valid = looksValidEmail(v);
       const lockEmailCTA = !pwdWrap.hidden; // once password stage is visible, keep email CTA hidden
       const show = valid && !lockEmailCTA;
-
       emailBox.classList.toggle('show-cta', show);
       emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
@@ -871,7 +799,7 @@
       }
     });
 
-    /* ---------- Password -> inside CTA visibility (min 6) ---------- */
+    /* ---------- Password CTA visibility ---------- */
     function updatePwdCTA(){
       const show = (pwdInput.value.length >= 6);
       pwdBox.classList.toggle('show-cta', show);
@@ -884,13 +812,6 @@
         e.preventDefault();
         pwdNext.click();
       }
-    });
-    
-    /* ---------- Password CTA click (finalize) ---------- */
-    pwdNext?.addEventListener('click', ()=>{
-      const pwd = pwdInput.value;
-      if (pwd.length < 6) return;
-      goToBridge('password');
     });
 
     /* ---------- Business email check ---------- */
@@ -905,19 +826,11 @@
       return !PERSONAL.has(host.toLowerCase());
     };
 
-    /* ---------- Website badge logic ---------- */
+    /* ---------- Website badge ---------- */
     function getPrefilledSite(){
-      const cands = [
-        getQueryParam('site'),
-        getQueryParam('website'),
-        getQueryParam('domain'),
-        sessionStorage.getItem('preWebsite'),
-        localStorage.getItem('preWebsite')
-      ];
-      for(const c of cands){
-        const h = cleanHost(c);
-        if(h) return h.toLowerCase();
-      }
+      const cands = [ getQueryParam('site'), getQueryParam('website'), getQueryParam('domain'),
+        sessionStorage.getItem('preWebsite'), localStorage.getItem('preWebsite') ];
+      for(const c of cands){ const h = cleanHost(c); if(h) return h.toLowerCase(); }
       return null;
     }
     let preSiteHost = getPrefilledSite();
@@ -933,31 +846,76 @@
       siteBadge.setAttribute('hidden','');
       siteBadge.classList.remove('show-tip');
     }
-
     function syncSiteBadge(animate=false){
       const emailHost = extractHostFromEmail(emailInput.value);
-      if(emailHost && !PERSONAL.has(emailHost.toLowerCase())){
-        showSiteBadge(emailHost, animate);
-        return;
-      }
-      if(preSiteHost){
-        showSiteBadge(preSiteHost, animate);
-        return;
-      }
+      if(emailHost && !PERSONAL.has(emailHost.toLowerCase())){ showSiteBadge(emailHost, animate); return; }
+      if(preSiteHost){ showSiteBadge(preSiteHost, animate); return; }
       hideSiteBadge();
     }
-
     siteInfo.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
     siteInfo.addEventListener('click', (e)=>{ e.stopPropagation(); siteBadge.classList.toggle('show-tip'); });
     siteTip?.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
     siteTip?.addEventListener('click', (e)=> e.stopPropagation());
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
-    /* ---------- Swap to Password stage ---------- */
+    /* ---------- Firebase (email-link verification) ---------- */
+    const FIREBASE_CONFIG = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID",
+    };
+    let fb=null, auth=null;
+    try{
+      fb = firebase.initializeApp(FIREBASE_CONFIG);
+      auth = firebase.auth();
+    }catch(e){ /* if keys not set yet, we’ll just show a friendly error on send */ }
+
+    const EMAIL_KEY = 'gg_pending_email';
+    const VERIFIED_KEY = 'gg_email_verified';
+    const DEV_MODE = (new URLSearchParams(location.search).get('dev') === '1') || localStorage.getItem('galactlyDev') === '1';
+
+    function showInlineError(msg){
+      googleErr.textContent = msg || "We couldn't continue.";
+      googleErr.hidden = false;
+    }
+    function hideGoogleError(){ googleErr.hidden = true; googleErr.textContent = ""; }
+
+    async function sendVerifyLink(email){
+      if(!auth){ showInlineError("Email verification is temporarily unavailable. Add Firebase keys."); return false; }
+      const url = location.origin + location.pathname + "?verify=1"; // continue URL back to this page
+      const settings = { url, handleCodeInApp: true };
+      await auth.sendSignInLinkToEmail(email, settings);
+      localStorage.setItem(EMAIL_KEY, email);
+      return true;
+    }
+
+    async function completeEmailLinkIfPresent(){
+      if(!auth) return;
+      if(auth.isSignInWithEmailLink(location.href) || /[?&]verify=1\b/.test(location.search)){
+        let em = localStorage.getItem(EMAIL_KEY) || prompt("Confirm your email to finish sign-in:");
+        if(!em){ return; }
+        try{
+          await auth.signInWithEmailLink(em, location.href);
+          localStorage.removeItem(EMAIL_KEY);
+          sessionStorage.setItem(VERIFIED_KEY, '1');
+          // clean URL
+          history.replaceState({}, "", location.pathname);
+          // advance
+          toPasswordStage();
+        }catch(e){
+          showInlineError("That verification link is invalid or expired. Resend and try again.");
+        }
+      }
+    }
+
+    /* ---------- Swap to Password stage (only after verified) ---------- */
     function toPasswordStage(){
       s2Or.hidden = true;
       s2TopStart.hidden = true;
       s2TopPass.hidden  = false;
+
+      verifyPanel.hidden = true;
 
       emailBox.classList.remove('show-cta');
       emailNext.setAttribute('aria-hidden','true');
@@ -973,23 +931,54 @@
       syncSiteBadge(false);
 
       s2Stage = 'password';
-
-      if(window.onboarding?.emailContinue){
-        window.onboarding.emailContinue(emailInput.value.trim());
-      }
+      if(window.onboarding?.emailContinue){ window.onboarding.emailContinue(emailInput.value.trim()); }
     }
 
     /* ---------- Email CTA click ---------- */
-    emailNext.addEventListener('click', ()=>{
+    emailNext.addEventListener('click', async ()=>{
+      hideGoogleError();
       const email = emailInput.value.trim();
       if(!looksValidEmail(email) || !pwdWrap.hidden) return;
 
-      if(isBusinessEmail(email)){
-        toPasswordStage();
-      }else{
+      // Allow dev override to test with personal addresses
+      const business = isBusinessEmail(email) || DEV_MODE;
+      if(!business){
         pulseEmail();
-        showGoogleError("Use a work email (not a personal domain) to continue.");
+        showInlineError("Use a work email (not a personal domain) to continue.");
+        return;
       }
+
+      // Send email-link verification
+      try{
+        const ok = DEV_MODE ? true : await sendVerifyLink(email);
+        if(ok){
+          verifyPanel.hidden = false;
+          vEmail.textContent = email;
+          localStorage.setItem(EMAIL_KEY, email);
+          if(DEV_MODE){ devSimWrap.hidden = false; }
+        }
+      }catch(e){
+        showInlineError("We couldn’t send the verification email. Check the address and try again.");
+      }
+    });
+
+    // resend / change / simulate
+    resendLink.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      hideGoogleError();
+      const email = localStorage.getItem(EMAIL_KEY) || emailInput.value.trim();
+      if(!email) return;
+      try{ if(!DEV_MODE) await sendVerifyLink(email); }catch{}
+    });
+    changeEmail.addEventListener('click', (e)=>{
+      e.preventDefault();
+      verifyPanel.hidden = true;
+      emailInput.focus();
+    });
+    devSimBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      sessionStorage.setItem(VERIFIED_KEY,'1');
+      toPasswordStage();
     });
 
     function pulseEmail(){
@@ -999,23 +988,21 @@
       setTimeout(()=>{ emailBox.style.boxShadow = prev; }, 260);
     }
 
-    function showGoogleError(msg){
-      googleErr.textContent = msg || "We couldn't sign you in with that Google account.";
-      googleErr.hidden = false;
-    }
-    function hideGoogleError(){ googleErr.hidden = true; googleErr.textContent = ""; }
+    /* ---------- Password CTA click (finalize) ---------- */
+    pwdNext?.addEventListener('click', ()=>{
+      const pwd = pwdInput.value;
+      if (pwd.length < 6) return;
+      goToBridge('password');
+    });
 
     // keep s1-next disabled until role chosen
     s1Next.disabled = true;
 
-    // If step2 somehow is pre-opened (deep link), sync badge immediately
+    // If step2 is already visible (deep link)
     if(step2.classList.contains('active')) syncSiteBadge(true);
 
-    /* ---------- GOOGLE SIGN-IN (popup + inline errors) ---------- */
-
-    // Replace this with your real Client ID
+    /* ---------- GOOGLE SIGN-IN (unchanged) ---------- */
     const GOOGLE_CLIENT_ID = "384891834378-4df25ijskgn206becb84o240td6d7eek.apps.googleusercontent.com";
-
     let tokenClient = null;
 
     function ensureTokenClient(){
@@ -1025,7 +1012,6 @@
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'openid email profile',
-        // callback is set per request to capture dynamic state
         callback: (resp)=>{}
       });
       return tokenClient;
@@ -1036,7 +1022,7 @@
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       if(!res.ok) throw new Error('userinfo_failed');
-      return await res.json(); // { email, email_verified, hd?, ... }
+      return await res.json();
     }
 
     googleBtn?.addEventListener('click', (e) => {
@@ -1045,15 +1031,14 @@
 
       const client = ensureTokenClient();
       if(!client){
-        showGoogleError("Google Sign-In is loading. Try again in a second.");
+        showInlineError("Google Sign-In is loading. Try again in a second.");
         return;
       }
 
       client.callback = async (response) => {
         try{
-          // user closed or denied
           if(response.error){
-            if(response.error !== 'access_denied'){ showGoogleError("Sign-in was interrupted. Please try again."); }
+            if(response.error !== 'access_denied'){ showInlineError("Sign-in was interrupted. Please try again."); }
             return;
           }
           const info = await fetchUserInfo(response.access_token);
@@ -1061,7 +1046,7 @@
           const domain = (email.split("@")[1]||"").toLowerCase();
 
           if(!email || PERSONAL.has(domain)){
-            showGoogleError("Please use a work email (Gmail/Outlook/Yahoo are not allowed).");
+            showInlineError("Please use a work email (Gmail/Outlook/Yahoo are not allowed).");
             pulseEmail();
             return;
           }
@@ -1072,14 +1057,15 @@
           goToBridge('google');
 
         }catch(err){
-          showGoogleError("We couldn't complete Google sign-in. Check your connection and try again.");
+          showInlineError("We couldn't complete Google sign-in. Check your connection and try again.");
         }
       };
 
-      // Force account chooser popup each time
       client.requestAccessToken({ prompt: 'consent' });
     });
 
+    /* ----- deep-link complete (email verification) ----- */
+    completeEmailLinkIfPresent();
   </script>
 
   <style>
@@ -1138,8 +1124,7 @@
     brand.setAttribute('aria-label','Galactly');
   })();
   </script>
-  
-  
+
 <script>
 (function(){
   const p = new URLSearchParams(location.search);
@@ -1152,9 +1137,6 @@
 })();
 </script>
 
-  
-  
-  
 <script>
   // ==== start.html -> bridge.html handoff ====
   function goToBridge(from){
