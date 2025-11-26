@@ -11,83 +11,47 @@
   <!-- Primary: SVG favicon -->
   <link rel="icon" type="image/svg+xml" sizes="any"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-24 -24 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='-24' x2='0' y2='24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23E6EEF7'/%3E%3Cstop offset='1' stop-color='%23F2DCA0'/%3E%3C/linearGradient%3E%3ClinearGradient id='dim' x1='24' y1='24' x2='-24' y2='-24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%230e1420' stop-opacity='.48'/%3E%3Cstop offset='.6' stop-color='%230e1420' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='0' cy='0' r='22' fill='%230e1420'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 -12 A12 12 0 1 0 5 12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M2 0 H12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M5 12 A12 12 0 0 1 8 10' stroke='url(%23dim)' stroke-width='6.6'/%3E%3C/g%3E%3C/svg%3E" />
-  
-  <!-- PNG fallbacks (place these files next to index.html in docs/, workflow copies them to site root) -->
+  <!-- PNG fallbacks -->
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=3">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=3">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
   <link rel="manifest" href="site.webmanifest?v=3">
   <link rel="shortcut icon" href="favicon.ico?v=3">
-    
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-
-
 
   <style>
     /* ========================== KNOBS ========================== */
     :root{
-      /* layout */
       --content-w: min(960px, 92vw);
       --title-fs: clamp(28px, 5.6vw, 58px);
       --safe-top: env(safe-area-inset-top);
       --safe-bottom: env(safe-area-inset-bottom);
-
       /* pressed glass controls (Step 2) */
-      --ctl-h: 46px;
-      --ctl-r: 16px;
-      --rim-w: 1.5px;
-      --bevel-light: rgba(255,255,255,.35);
-      --bevel-dark: rgba(0,0,0,.55);
-      --pane-bg-2: rgba(0,0,0,.16);
-      --outer-shadow: 0 4px 14px rgba(0,0,0,.22);
-
-      /* ring animation around rim */
-      --ring-alpha: .34;
-      --ring-speed: 900ms;
-      --ring-size: 110%;
-
+      --ctl-h: 46px; --ctl-r: 16px; --rim-w: 1.5px;
+      --bevel-light: rgba(255,255,255,.35); --bevel-dark: rgba(0,0,0,.55);
+      --pane-bg-2: rgba(0,0,0,.16); --outer-shadow: 0 4px 14px rgba(0,0,0,.22);
+      /* ring animation */
+      --ring-alpha: .34; --ring-speed: 900ms; --ring-size: 110%;
       /* colors */
-      --fg: #e9ecf3;
-      --muted: #a9b2c2;
-      --error: #ff6b6b;
-
+      --fg: #e9ecf3; --muted: #a9b2c2; --error: #ff6b6b;
       /* background */
-      --bg-1: #0c1020;
-      --bg-2: #0c1326;
-
+      --bg-1: #0c1020; --bg-2: #0c1326;
       /* spacing knobs for Step 2 (mobile-first) */
-      --s2-gap-edge-title: 56px;
-      --s2-gap-title-subtitle: 10px;
-      --s2-gap-subtitle-chips: 14px;
-      --s2-gap-chips-hr: 18px;
-      --s2-gap-hr-or: 10px;
-      --s2-gap-or-field: 18px;
-      --s2-gap-field-arrow: 12px;
-      --s2-gap-bottom-edge: 56px;
-
+      --s2-gap-edge-title: 56px; --s2-gap-title-subtitle: 10px;
+      --s2-gap-subtitle-chips: 14px; --s2-gap-chips-hr: 18px;
+      --s2-gap-hr-or: 10px; --s2-gap-or-field: 18px;
+      --s2-gap-field-arrow: 12px; --s2-gap-bottom-edge: 56px;
       /* topbar spacing & sizes */
-      --topbar-pad-x: 20px;
-      --topbar-pad-y: 10px;
-      --brand-pad-x: 8px;
-      --brand-pad-y: 6px;
-      --home-pad-x: 8px;
-      --home-pad-y: 6px;
-      --home-ic-m: 22px;
-      --home-ic-d: 28px;
-
+      --topbar-pad-x: 20px; --topbar-pad-y: 10px;
+      --brand-pad-x: 8px; --brand-pad-y: 6px;
+      --home-pad-x: 8px; --home-pad-y: 6px;
+      --home-ic-m: 22px; --home-ic-d: 28px;
       /* inside-field CTA size */
       --cta-d: 36px;
-
       /* stage vertical lift */
-      --stage-lift-m: -22px;
-      --stage-lift-d: -48px;
-
+      --stage-lift-m: -22px; --stage-lift-d: -48px;
       /* glass glare controls */
-      --chip-sheen-ang: -70deg;
-      --chip-sheen-ang-hover: -110deg;
-      --chip-glare-alpha: .22;
-      --chip-glare-soften: .7px;
-
+      --chip-sheen-ang: -70deg; --chip-sheen-ang-hover: -110deg;
+      --chip-glare-alpha: .22; --chip-glare-soften: .7px;
       /* field rim/shadow controls */
       --field-rim-w: 0.1px;
       --field-rim-top: rgba(255,255,255,.02);
@@ -96,23 +60,14 @@
       --field-inset-bottom: rgba(0,0,0,.58);
       --field-inset-ambient: rgba(0,0,0,.22);
     }
-
-    /* register custom property for smoother angle animation */
     @property --chip-sheen-ang { syntax: "<angle>"; inherits: true; initial-value: -70deg; }
-
+    @media (min-width:768px){ :root{ --stage-lift-m:-22px; --stage-lift-d:-48px; --cta-d:40px; } }
     @media (min-width:768px){
-      :root{ --stage-lift-m: -22px; --stage-lift-d: -48px; --cta-d: 40px; }
-    }
-    @media (min-width: 768px){
       :root{
-        --s2-gap-edge-title: 80px;
-        --s2-gap-title-subtitle: 12px;
-        --s2-gap-subtitle-chips: 16px;
-        --s2-gap-chips-hr: 22px;
-        --s2-gap-hr-or: 12px;
-        --s2-gap-or-field: 22px;
-        --s2-gap-field-arrow: 16px;
-        --s2-gap-bottom-edge: 80px;
+        --s2-gap-edge-title: 80px; --s2-gap-title-subtitle: 12px;
+        --s2-gap-subtitle-chips: 16px; --s2-gap-chips-hr: 22px;
+        --s2-gap-hr-or: 12px; --s2-gap-or-field: 22px;
+        --s2-gap-field-arrow: 16px; --s2-gap-bottom-edge: 80px;
       }
     }
 
@@ -121,426 +76,229 @@
     body{
       color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
-      /* 3 lights + base gradient */
       background:
         radial-gradient(1200px 800px at 76% 26%, rgba(240,196,90,.28) 0%, transparent 58%),
         radial-gradient(1200px 800px at 24% 78%, rgba(64,186,255,.24) 0%, transparent 60%),
         radial-gradient(700px 500px at 50% -8%, rgba(255,255,255,.08) 0%, transparent 70%),
         linear-gradient(180deg, #171a17, #0f1210);
       background-blend-mode: screen, screen, normal, normal;
-
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
       overflow: hidden;
     }
-
-    .wrap{
-      height:100svh;
-      display:grid;
-      place-items:center;
-      padding:0 16px;
-    }
-    .stage{
-      width:var(--content-w);
-      transform: translateY(var(--stage-lift-m));
-      transition: transform .2s ease;
-    }
-    @media (min-width:768px){
-      .stage{ transform: translateY(var(--stage-lift-d)); }
-    }
+    .wrap{ height:100svh; display:grid; place-items:center; padding:0 16px; }
+    .stage{ width:var(--content-w); transform:translateY(var(--stage-lift-m)); transition: transform .2s ease; }
+    @media (min-width:768px){ .stage{ transform:translateY(var(--stage-lift-d)); } }
 
     /* top chrome */
-    .topbar{
-      position:fixed;
-      top: calc(var(--safe-top) + var(--topbar-pad-y));
-      left:0; right:0; z-index:10;
-      display:flex; align-items:center; justify-content:space-between;
-      padding:0 var(--topbar-pad-x);
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-      color:var(--fg); text-decoration:none;
-      padding: var(--brand-pad-y) var(--brand-pad-x);
-      border-radius:12px;
-      background:transparent; border:0; box-shadow:none; backdrop-filter:none;
-    }
+    .topbar{ position:fixed; top:calc(var(--safe-top) + var(--topbar-pad-y)); left:0; right:0; z-index:10;
+      display:flex; align-items:center; justify-content:space-between; padding:0 var(--topbar-pad-x); }
+    .brand{ display:flex; align-items:center; gap:10px; color:var(--fg); text-decoration:none;
+      padding:var(--brand-pad-y) var(--brand-pad-x); border-radius:12px; background:transparent; border:0; box-shadow:none; }
     .brand img{height:22px; width:auto}
     .brand span{ font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui; letter-spacing:.2px; }
-
-    .home-link{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding: var(--home-pad-y) var(--home-pad-x);
-      background:none; border:0; box-shadow:none; backdrop-filter:none;
-      line-height:0; color: var(--fg);
-    }
+    .home-link{ display:inline-flex; align-items:center; justify-content:center; padding:var(--home-pad-y) var(--home-pad-x);
+      background:none; border:0; box-shadow:none; line-height:0; color:var(--fg); }
     .topbar .home-link svg{ width:var(--home-ic-m); height:var(--home-ic-m); display:block; }
-    @media (min-width:1024px){
-      .topbar .home-link svg{ width:var(--home-ic-d); height:var(--home-ic-d); }
-    }
+    @media (min-width:1024px){ .topbar .home-link svg{ width:var(--home-ic-d); height:var(--home-ic-d); } }
     .home-link:hover{ opacity:.85; transform:none; }
 
-    h1{
-      font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui;
-      margin:0 0 18px 0;
-      text-shadow:0 1px 0 rgba(0,0,0,.35);
-      text-align:center;
-    }
+    h1{ font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui; margin:0 0 18px 0; text-shadow:0 1px 0 rgba(0,0,0,.35); text-align:center; }
     .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
     .center { display:grid; gap:16px; place-items:center; }
     #step2 .center { gap: 0; }
 
     /* ===================== STEP 1 ===================== */
     .cardless{ max-width:860px; margin-inline:auto; }
-    .step{ display:none; }
-    .step.active{ display:block; }
-
+    .step{ display:none; } .step.active{ display:block; }
     .choices{ display:grid; grid-template-columns: 1fr; gap:16px; }
     @media (min-width:720px){ .choices{ grid-template-columns: 1fr 1fr; } }
-
-    .choice{
-      position:relative; border-radius:16px; padding:18px 18px;
+    .choice{ position:relative; border-radius:16px; padding:18px 18px;
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
       border:1px solid rgba(255,255,255,.15);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25);
-      cursor:pointer; user-select:none;
-      display:flex; gap:14px; align-items:flex-start;
-      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-    }
+      cursor:pointer; user-select:none; display:flex; gap:14px; align-items:flex-start;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
     .choice:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 16px 42px rgba(0,0,0,.28); }
     .choice.selected{ outline:2px solid #f4d06f; box-shadow: 0 0 0 6px rgba(244,208,111,.15), 0 14px 40px rgba(244,208,111,.18); }
     .choice h3{ margin:0 0 6px 0; font-size:18px; font-weight:700; letter-spacing:-0.01em; }
     .choice p{ margin:0; color:var(--muted); font-size:14px; line-height:1.35; }
-    .choice .icon{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:38px; height:38px; border-radius:12px;
+    .choice .icon{ display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:12px;
       background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
-      border:1px solid rgba(255,255,255,.18);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 8px 20px rgba(0,0,0,.25);
-      flex:0 0 auto;
-    }
+      border:1px solid rgba(255,255,255,.18); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 8px 20px rgba(0,0,0,.25); flex:0 0 auto; }
     .choice .icon svg{ width:18px; height:18px; }
 
     .row-actions{ display:flex; justify-content:flex-end; gap:12px; margin-top:16px; }
-    .btn-icon{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:44px; height:44px; border-radius:999px; color:var(--fg);
+    .btn-icon{ display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:999px; color:var(--fg);
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
       border:1px solid rgba(255,255,255,.18);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 10px 26px rgba(0,0,0,.24);
-      backdrop-filter: blur(6px);
-      cursor:pointer;
-      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, opacity .18s ease;
-    }
+      backdrop-filter: blur(6px); cursor:pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, opacity .18s ease; }
     .btn-icon[disabled]{ opacity:.4; pointer-events:none; }
     .btn-icon:hover{ transform: translateY(-1px); border-color:rgba(255,255,255,.26); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 16px 38px rgba(0,0,0,.28); }
     .btn-icon svg{ width:20px; height:20px; }
 
-    /* ===================== STEP 2 (pressed glass) ===================== */
+    /* ===================== STEP 2 ===================== */
     .title-row{ text-align:center; margin-bottom:8px }
     .title-row h1{ font-family:"Plus Jakarta Sans", Inter, system-ui }
 
     .hr{ width:min(560px, 86vw); height:1px; margin:14px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
     .muted{ color:var(--muted); font-size:14px; text-align:center }
 
-    /* --------- GLASS BUTTON (Google only) ---------- */
+    /* Glass Google button */
     .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
     .chip{
       --local-h: var(--ctl-h);
-      position:relative;
-      display:inline-grid;
-      grid-auto-flow:column;
-      align-items:center;
-      gap:10px;
-      height:var(--local-h);
-      padding:0 18px;
-      border-radius:calc(var(--ctl-r) + 4px);
-      color:var(--fg);
-      text-decoration:none;
-      font-weight:600;
-
+      position:relative; display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
+      height:var(--local-h); padding:0 18px; border-radius:calc(var(--ctl-r) + 4px);
+      color:var(--fg); text-decoration:none; font-weight:600;
       background:
-        linear-gradient(var(--chip-sheen-ang), transparent 44%, rgba(255,255,255,var(--chip-glare-alpha)) 51%, transparent 58%),
+        linear-gradient(var(--chip-sheen-ang), transparent 44%, rgba(255,255,255,.18) 51%, transparent 58%),
         linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
         radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
-      background-clip: padding-box;
-      border:1px solid rgba(255,255,255,.16);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 5px var(--bevel-dark),
-        inset 0 10px 22px var(--pane-bg-2),
-        0 2px 8px rgba(0,0,0,.25);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background-clip: padding-box; border:1px solid rgba(255,255,255,.16);
+      box-shadow: inset 0 1px 0 var(--bevel-light), inset 0 -2px 5px var(--bevel-dark),
+                  inset 0 10px 22px var(--pane-bg-2), 0 2px 8px rgba(0,0,0,.25);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, --chip-sheen-ang .45s ease;
     }
     .chip:hover{
       --chip-sheen-ang: var(--chip-sheen-ang-hover);
-      transform: translateY(-1px);
-      border-color: rgba(255,255,255,.22);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 5px var(--bevel-dark),
-        inset 0 12px 24px var(--pane-bg-2),
-        0 6px 18px rgba(0,0,0,.32);
+      transform: translateY(-1px); border-color: rgba(255,255,255,.22);
+      box-shadow: inset 0 1px 0 var(--bevel-light), inset 0 -2px 5px var(--bevel-dark),
+                  inset 0 12px 24px var(--pane-bg-2), 0 6px 18px rgba(0,0,0,.32);
     }
-
-    .chip::before,
-    .chip::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
-    .chip::before{
-      padding:var(--rim-w);
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
-      opacity:.9;
-    }
-    .chip::after{
-      --ang: -75deg;
+    .chip::before, .chip::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
+    .chip::before{ padding:var(--rim-w); -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10)); opacity:.9; }
+    .chip::after{ --ang: -75deg;
       background: conic-gradient(from var(--ang), rgba(255,255,255,0) 0deg, rgba(255,255,255,.35) 16deg, rgba(255,255,255,0) 44deg);
-      filter: blur(.6px); mix-blend-mode:screen; opacity:0;
-      transition: opacity .2s ease;
-    }
+      filter: blur(.6px); mix-blend-mode:screen; opacity:0; transition: opacity .2s ease; }
     .chip:hover::after{ opacity:1; animation: rim var(--ring-speed) linear infinite; }
     @keyframes rim { to { --ang: 285deg; } }
-
-    .chip > .glare{
-      position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    .chip > .glare{ position:absolute; inset:0; border-radius:inherit; pointer-events:none;
       background: linear-gradient(var(--sweep, -45deg), transparent 0% 35%, rgba(255,255,255,.18) 50%, transparent 65% 100%);
-      mix-blend-mode:screen;
-      transform: translateX(-30%);
-      opacity:.0;
-      transition: opacity .3s ease, transform .45s cubic-bezier(.25,1,.5,1);
-    }
+      mix-blend-mode:screen; transform: translateX(-30%); opacity:.0;
+      transition: opacity .3s ease, transform .45s cubic-bezier(.25,1,.5,1); }
     .chip:hover > .glare{ opacity:.9; transform: translateX(20%); }
     .chip svg{ width:20px; height:20px; display:block; }
 
-    /* ===== Email/Password fields (pressed) ===== */
+    /* Fields (pressed) */
     .field-wrap{ width:min(280px, 86vw); margin: 36px auto 0 auto; position:relative; }
     .pressed{
-      position:relative;
-      display:grid;
-      grid-template-columns: 26px 1fr;
-      align-items:center;
-      height:var(--ctl-h);
-      border-radius:var(--ctl-r);
-      padding:0 14px;
-      background: transparent;
+      position:relative; display:grid; grid-template-columns: 26px 1fr; align-items:center;
+      height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px; background: transparent;
       border:1px solid rgba(255,255,255,.16);
-      box-shadow:
-        inset 0 1px 0 var(--field-inset-top),
-        inset 0 -3px 6px var(--field-inset-bottom),
-        inset 0 12px 26px var(--field-inset-ambient);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      box-shadow: inset 0 1px 0 var(--field-inset-top), inset 0 -3px 6px var(--field-inset-bottom),
+                  inset 0 12px 26px var(--field-inset-ambient);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
     }
-    .pressed::before{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:var(--field-rim-w);
+    .pressed::before{ content:""; position:absolute; inset:0; border-radius:inherit; padding:var(--field-rim-w);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor; mask-composite: exclude;
-      background: linear-gradient(180deg, var(--field-rim-top), var(--field-rim-bottom));
-      pointer-events:none;
-    }
+      background: linear-gradient(180deg, var(--field-rim-top), var(--field-rim-bottom)); pointer-events:none; }
     .pressed:has(input:focus){
       border-color: rgba(255,255,255,.24);
-      box-shadow:
-        inset 0 1px 0 var(--bevel-light),
-        inset 0 -2px 6px var(--bevel-dark),
-        inset 0 12px 26px var(--pane-bg-2),
-        0 8px 22px rgba(0,0,0,.30);
+      box-shadow: inset 0 1px 0 var(--bevel-light), inset 0 -2px 6px var(--bevel-dark),
+                  inset 0 12px 26px var(--pane-bg-2), 0 8px 22px rgba(0,0,0,.30);
     }
-
     .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
-
-    input{
-      min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
+    input{ min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
       font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
-      padding-right: calc(var(--cta-d) + 14px); /* room for CTA */
-    }
+      padding-right: calc(var(--cta-d) + 14px); }
     input::placeholder{ color:rgba(233,236,243,.62); }
 
-    /* inside-field GLASS CTA */
+    /* inside-field CTA */
     .field-cta{
-      position:absolute; right:6px; top:50%;
-      width:var(--cta-d); height:var(--cta-d);
-      transform: translate(10px,-50%) scale(.9);
-      opacity:0; pointer-events:none;
-      border-radius:999px;
+      position:absolute; right:6px; top:50%; width:var(--cta-d); height:var(--cta-d);
+      transform: translate(10px,-50%) scale(.9); opacity:0; pointer-events:none; border-radius:999px;
       border:1px solid rgba(255,255,255,.16);
       background:
         radial-gradient(140% 90% at 50% -20%, rgba(255,255,255,.22) 0%, rgba(255,255,255,.06) 28%, rgba(255,255,255,0) 60%),
         radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.45));
       background-blend-mode: screen, normal;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.25),
-        inset 0 -3px 6px rgba(0,0,0,.6),
-        inset 0 14px 28px rgba(0,0,0,.28),
-        0 4px 14px rgba(0,0,0,.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -3px 6px rgba(0,0,0,.6),
+                  inset 0 14px 28px rgba(0,0,0,.28), 0 4px 14px rgba(0,0,0,.28);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       color:var(--fg); display:grid; place-items:center; cursor:pointer;
       transition: transform var(--ring-speed) cubic-bezier(.25,1,.5,1), opacity calc(var(--ring-speed)*.7) ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .field-cta::after{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+    .field-cta::after{ content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
       -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
       -webkit-mask-composite:xor; mask-composite:exclude;
-      background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.10));
-      pointer-events:none;
-    }
+      background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.10)); pointer-events:none; }
     .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
-    .field-cta:hover{
-      border-color: rgba(255,255,255,.24);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.38),
-        inset 0 -3px 7px rgba(0,0,0,.7),
-        inset 0 16px 30px rgba(0,0,0,.32),
-        0 8px 22px rgba(0,0,0,.34);
-    }
+    .field-cta:hover{ border-color: rgba(255,255,255,.24);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.38), inset 0 -3px 7px rgba(0,0,0,.7),
+                   inset 0 16px 30px rgba(0,0,0,.32), 0 8px 22px rgba(0,0,0,.34); }
     .field-cta:active{ transform: translate(0,-50%) scale(.98); }
     .field-cta svg{ width:18px; height:18px; display:block; }
 
     /* Back arrow row */
     .single-action{ display:grid; place-items:center; margin-top:14px; }
 
-    /* Step 2 spacing use knobs */
-    #step2 .title-row       { margin-top: var(--s2-gap-edge-title); margin-bottom: 0; }
-    #step2 .title-row h1    { margin: 0 0 var(--s2-gap-title-subtitle) 0; }
-    #step2 .subtitle        { margin: 0 0 var(--s2-gap-subtitle-chips) 0; text-align: center; }
-    #step2 .chip-row        { margin: 0 0 var(--s2-gap-chips-hr) 0; }
-    #step2 .hr              { margin: 0 auto var(--s2-gap-hr-or) auto; }
-    #step2 .muted           { margin: 0 0 var(--s2-gap-or-field) 0; }
-    #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
-    #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
+    /* Step 2 spacing */
+    #step2 .title-row{ margin-top: var(--s2-gap-edge-title); margin-bottom:0; }
+    #step2 .title-row h1{ margin: 0 0 var(--s2-gap-title-subtitle) 0; }
+    #step2 .subtitle{ margin: 0 0 var(--s2-gap-subtitle-chips) 0; text-align:center; }
+    #step2 .chip-row{ margin: 0 0 var(--s2-gap-chips-hr) 0; }
+    #step2 .hr{ margin: 0 auto var(--s2-gap-hr-or) auto; }
+    #step2 .muted{ margin: 0 0 var(--s2-gap-or-field) 0; }
+    #step2 .field-wrap{ margin: 0 auto var(--s2-gap-field-arrow) auto; }
+    #step2 .single-action{ margin: 0 0 var(--s2-gap-bottom-edge) 0; }
 
-    /* ===== Slower, unique, staggered animations (1.0–1.5s) ===== */
+    /* Animations */
     :root{
       --ease-hero: cubic-bezier(.22,1,.36,1);
       --ease-soft: cubic-bezier(.25,.95,.35,1);
       --ease-snap: cubic-bezier(.16,.84,.44,1);
-
-      --anim-title-d: 1.25s;
-      --anim-sub-d:   1.40s;
-      --anim-chip-d:  1.10s;
-      --anim-div-d:   1.00s;
-      --anim-below-d: 1.25s;
-      --anim-pwd-d:   1.30s;
+      --anim-title-d:1.25s; --anim-sub-d:1.40s; --anim-chip-d:1.10s;
+      --anim-div-d:1.00s; --anim-below-d:1.25s; --anim-pwd-d:1.30s;
     }
-
-    @keyframes titleRise {
-      0%   { opacity:0; transform: translateY(24px) scale(.985); filter: blur(3px); }
-      60%  { filter: blur(0); }
-      100% { opacity:1; transform: translateY(0) scale(1); }
-    }
-    .anim-title{ animation: titleRise var(--anim-title-d) var(--ease-hero) both; }
-
-    @keyframes subDrift {
-      0%   { opacity:0; transform: translateY(30px); }
-      100% { opacity:1; transform: translateY(0); }
-    }
-    .anim-sub{ animation: subDrift var(--anim-sub-d) var(--ease-soft) both; animation-delay: .12s; }
-
-    @keyframes dividerGrow {
-      0%   { opacity:0; transform: scaleX(.6); }
-      100% { opacity:1; transform: scaleX(1); }
-    }
-    .anim-divider{ transform-origin: 50% 50%; animation: dividerGrow var(--anim-div-d) cubic-bezier(.2,.8,.2,1) both; animation-delay: .10s; }
-
-    @keyframes chipFloat {
-      0%   { opacity:0; transform: translateY(22px) scale(.99); }
-      100% { opacity:1; transform: translateY(0) scale(1); }
-    }
-    .anim-chips{ animation: chipFloat var(--anim-chip-d) var(--ease-soft) both; animation-delay: .22s; }
-
-    @keyframes fieldDrop {
-      0%   { opacity:0; transform: translateY(-24px); }
-      100% { opacity:1; transform: translateY(0); }
-    }
-    .anim-or   { animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .18s; }
-    .anim-field{ animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .26s; }
-    .anim-back { animation: fieldDrop var(--anim-below-d) var(--ease-soft) both; animation-delay: .36s; }
-    .anim-pwd  { animation: fieldDrop var(--anim-pwd-d) var(--ease-snap) both; animation-delay: .10s; }
+    @keyframes titleRise{ 0%{opacity:0; transform:translateY(24px) scale(.985); filter:blur(3px);} 60%{filter:blur(0);} 100%{opacity:1; transform:translateY(0) scale(1);} }
+    .anim-title{ animation:titleRise var(--anim-title-d) var(--ease-hero) both; }
+    @keyframes subDrift{ 0%{opacity:0; transform:translateY(30px);} 100%{opacity:1; transform:translateY(0);} }
+    .anim-sub{ animation:subDrift var(--anim-sub-d) var(--ease-soft) both; animation-delay:.12s; }
+    @keyframes dividerGrow{ 0%{opacity:0; transform:scaleX(.6);} 100%{opacity:1; transform:scaleX(1);} }
+    .anim-divider{ transform-origin:50% 50%; animation:dividerGrow var(--anim-div-d) cubic-bezier(.2,.8,.2,1) both; animation-delay:.10s; }
+    @keyframes chipFloat{ 0%{opacity:0; transform:translateY(22px) scale(.99);} 100%{opacity:1; transform:translateY(0) scale(1);} }
+    .anim-chips{ animation:chipFloat var(--anim-chip-d) var(--ease-soft) both; animation-delay:.22s; }
+    @keyframes fieldDrop{ 0%{opacity:0; transform:translateY(-24px);} 100%{opacity:1; transform:translateY(0);} }
+    .anim-or{ animation:fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay:.18s; }
+    .anim-field{ animation:fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay:.26s; }
+    .anim-back{ animation:fieldDrop var(--anim-below-d) var(--ease-soft) both; animation-delay:.36s; }
+    .anim-pwd{ animation:fieldDrop var(--anim-pwd-d) var(--ease-snap) both; animation-delay:.10s; }
 
     @media (prefers-reduced-motion: reduce){
-      *{ animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+      *{ animation-duration:1ms !important; animation-iteration-count:1 !important; transition:none !important; }
     }
 
-    /* desktop container fit */
-    @media (min-width: 900px){
-      .wrap{
-        min-height:100dvh; display:grid; place-items:center;
-        padding: calc(72px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
-      }
-      @supports (height: 100svh){
-        .wrap{ min-height:100svh; }
-      }
-    }
-
-    /* ===== Website badge (overlay) ===== */
-    .site-badge{
-      position: relative;
-      display: inline-grid;
-      grid-auto-flow: column;
-      align-items: center;
-      gap:10px;
-      margin: 8px auto 6px;
-      padding: 8px 12px;
-      border-radius: 14px;
-      color: var(--fg);
-      font-weight:600; font-size:13px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
-        radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
-      border:1px solid rgba(255,255,255,.16);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25);
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    }
+    /* Badge */
+    .site-badge{ position:relative; display:inline-grid; grid-auto-flow:column; align-items:center; gap:10px;
+      margin:8px auto 6px; padding:8px 12px; border-radius:14px; color:var(--fg); font-weight:600; font-size:13px;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
+                  radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
+      border:1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
     .site-badge .host{ font-weight:800; letter-spacing:.2px; }
-    .site-badge .info{
-          display:inline-grid; place-items:center;
-          width:20px; height:20px; border-radius:999px; line-height:0;
-          border:1px solid rgba(255,255,255,.18);
-          background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-          box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
-          color:var(--fg); cursor:pointer;
-    }
+    .site-badge .info{ display:inline-grid; place-items:center; width:20px; height:20px; border-radius:999px; line-height:0;
+      border:1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18); color:var(--fg); cursor:pointer; }
     .site-badge .info svg{ width:16px; height:16px; display:block; }
-    .site-badge .tip{
-          position:absolute; top: calc(100% + 8px); left:50%;
-          transform: translateX(-50%);
-          z-index: 40;
-          padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap;
-          color:var(--fg); background: rgba(0,0,0,.55);
-          border:1px solid rgba(255,255,255,.14);
-          box-shadow: 0 6px 18px rgba(0,0,0,.28);
-          opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease;
-    }
-    /* keep visible while hovering the badge, focusing inside, or when pinned open */
-    .site-badge:hover .tip,
-    .site-badge:focus-within .tip,
-    .site-badge.show-tip .tip{
-      opacity:1;
-      transform: translate(-50%, -2px);
-      pointer-events:auto;
-    }
-    
-    .site-badge .tip a{
-      color:inherit; text-decoration:underline;
-    }
-    .site-badge .tip a:hover{ opacity:.9; }
-
-    @keyframes badgeUp {
-      0%   { opacity:0; transform: translateY(14px); filter: blur(2px); }
-      60%  { filter: blur(0); }
-      100% { opacity:1; transform: translateY(0); }
-    }
-    .anim-badge{ animation: badgeUp 1.25s var(--ease-hero) both; }
+    .site-badge .tip{ position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
+      z-index:40; padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap; color:var(--fg);
+      background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.14); box-shadow:0 6px 18px rgba(0,0,0,.28);
+      opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease; }
+    .site-badge:hover .tip, .site-badge:focus-within .tip, .site-badge.show-tip .tip{ opacity:1; transform:translate(-50%,-2px); pointer-events:auto; }
 
     /* hides */
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
   </style>
 
-  <!-- Google Identity Services (free sign-in script) -->
+  <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -594,7 +352,7 @@
           </div>
         </div>
 
-        <div class="row-actions" style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px">
+        <div class="row-actions">
           <button type="button" id="s1-next" class="btn-icon" aria-label="Continue" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 18l6-6-6-6"></path>
@@ -606,7 +364,7 @@
       <!-- ================= STEP 2 ================= -->
       <section id="step2" class="step" aria-labelledby="s2-title">
 
-        <!-- Website overlay badge (lives above titles) -->
+        <!-- Website overlay badge -->
         <div id="siteBadge" class="site-badge" hidden>
           <span>We'll use&nbsp;<span class="host" id="siteHost">—</span></span>
           <button class="info" id="siteInfo" type="button" aria-label="Why this site?">
@@ -628,7 +386,7 @@
           </div>
           <div class="center">
             <div class="chip-row">
-              <a class="chip" id="googleBtn" href="#" aria-label="Continue with Google (Work) / Business">
+              <a class="chip" id="googleBtn" href="#" aria-label="Continue with Google (Work)">
                 <span class="glare" aria-hidden="true"></span>
                 <!-- Google icon -->
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -651,7 +409,7 @@
           </div>
         </div>
 
-        <!-- Divider line (animation anchor) -->
+        <!-- Divider -->
         <div class="hr" id="s2-divider" aria-hidden="true"></div>
 
         <!-- Below-line group -->
@@ -667,7 +425,6 @@
                 </svg>
               </span>
               <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
-              <!-- inside-field glass NEXT button -->
               <button id="emailNext" class="field-cta" type="button" aria-label="Next">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 18l6-6-6-6"></path>
@@ -676,7 +433,7 @@
             </div>
           </div>
 
-          <!-- password field (initially hidden, appears after business email) -->
+          <!-- password field -->
           <div class="field-wrap" id="pwdWrap" hidden>
             <div class="pressed" id="pwdBox">
               <span class="left-icon" aria-hidden="true">
@@ -685,7 +442,6 @@
                 </svg>
               </span>
               <input id="password" type="password" autocomplete="new-password" placeholder="Password (min 6 characters)"/>
-              <!-- inside-field glass NEXT button (appears when >=6) -->
               <button id="pwdNext" class="field-cta" type="button" aria-label="Next">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 18l6-6-6-6"></path>
@@ -705,7 +461,7 @@
         </div>
       </section>
 
-      <!-- Validation blocks kept but hard-hidden so layout never shifts -->
+      <!-- Validation placeholders (layout stable) -->
       <div id="emailError" class="error hide"></div>
       <div id="domainMismatch" class="error hide"></div>
       <div id="siteUnreachable" class="error hide"></div>
@@ -717,90 +473,43 @@
     /* ---------- logo loader ---------- */
     (function tryLogo(){
       const candidates = [
-        "/assets/logo/galactly-logo.svg",
-        "/assets/logo/logo.svg",
-        "/assets/brand/galactly-logo.svg",
-        "/assets/branding/galactly-logo.svg",
-        "/img/galactly-logo.svg",
-        "/images/logo.svg",
-        "/logo.svg",
-        "/assets/logo.png",
-        "/images/logo.png"
+        "/assets/logo/galactly-logo.svg","/assets/logo/logo.svg","/assets/brand/galactly-logo.svg","/assets/branding/galactly-logo.svg",
+        "/img/galactly-logo.svg","/images/logo.svg","/logo.svg","/assets/logo.png","/images/logo.png"
       ];
       const el = document.getElementById("brandLogo");
       let i = 0;
       (function next(){
         if(i>=candidates.length){ try{ el.remove(); }catch{} return; }
         const src = candidates[i++], img = new Image();
-        img.onload = () => el.src = src;
-        img.onerror = next;
-        img.src = src;
+        img.onload = () => el.src = src; img.onerror = next; img.src = src;
       })();
     })();
 
     /* ---------- helpers ---------- */
     const byId = (id)=>document.getElementById(id);
     const qsa = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
-
-    const step1 = byId("step1");
-    const step2 = byId("step2");
-    const s1Next = byId("s1-next");
-    const s2Back = byId("s2-back");
-
-    const s2TopStart = byId("s2-top-start");
-    const s2TopPass  = byId("s2-top-pass");
-    const s2Or       = byId("s2-or");
-
-    const emailInput = byId("email");
-    const emailBox   = byId("emailBox");
-    const emailNext  = byId("emailNext");
-
-    const pwdWrap    = byId("pwdWrap");
-    const pwdBox     = byId("pwdBox");
-    const pwdInput   = byId("password");
-    const pwdNext    = byId("pwdNext");
-
-    /* website badge refs */
-    const siteBadge  = byId('siteBadge');
-    const siteHostEl = byId('siteHost');
-    const siteInfo   = byId('siteInfo');
-    const siteTip    = byId('siteTip');
-
-    /* Google OAuth wiring (free scopes only) */
+    const step1 = byId("step1"), step2 = byId("step2");
+    const s1Next = byId("s1-next"), s2Back = byId("s2-back");
+    const s2TopStart = byId("s2-top-start"), s2TopPass = byId("s2-top-pass"), s2Or = byId("s2-or");
+    const emailInput = byId("email"), emailBox = byId("emailBox"), emailNext = byId("emailNext");
+    const pwdWrap = byId("pwdWrap"), pwdBox = byId("pwdBox"), pwdInput = byId("password"), pwdNext = byId("pwdNext");
+    const siteBadge = byId('siteBadge'), siteHostEl = byId('siteHost'), siteInfo = byId('siteInfo'), siteTip = byId('siteTip');
     const googleBtn = byId('googleBtn');
-    const GOOGLE_CLIENT_ID   = 'YOUR_CLIENT_ID.apps.googleusercontent.com'; // <-- set this
-    const GOOGLE_REDIRECT_URI = 'https://yourapp.com/auth/google/callback'; // <-- set this
 
     let s2Stage = 'start'; // 'start' | 'password'
 
-    /* tiny helper to retrigger CSS animations */
-    function play(el, cls){
-      if(!el) return;
-      el.classList.remove(cls); void el.offsetWidth;
-      el.classList.add(cls);
-    }
+    function play(el, cls){ if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 
-    /* url/host utils */
     function cleanHost(raw){
-      if(!raw) return null;
-      let s = String(raw).trim();
-      s = s.replace(/^mailto:/i,'');
-      s = s.replace(/^(https?:)?\/\//i,'');
-      s = s.replace(/^www\./i,'');
-      s = s.split(/[\/?#]/)[0];               // strip path/query/hash
-      s = s.replace(/[^\w.-]/g,'');           // sanitize
-      return s || null;
+      if(!raw) return null; let s = String(raw).trim();
+      s = s.replace(/^mailto:/i,'').replace(/^(https?:)?\/\//i,'').replace(/^www\./i,'');
+      s = s.split(/[\/?#]/)[0]; s = s.replace(/[^\w.-]/g,''); return s || null;
     }
     function extractHostFromEmail(val){
-      const m = String(val||'').trim().match(/@([^@\s>]+)$/);
-      if(!m) return null;
-      const host = cleanHost(m[1]);
-      return host && host.includes('.') ? host.toLowerCase() : null;
+      const m = String(val||'').trim().match(/@([^@\s>]+)$/); if(!m) return null;
+      const host = cleanHost(m[1]); return host && host.includes('.') ? host.toLowerCase() : null;
     }
-    function getQueryParam(name){
-      const p = new URLSearchParams(location.search);
-      return p.get(name);
-    }
+    function getQueryParam(name){ return (new URLSearchParams(location.search)).get(name); }
 
     /* ---------- STEP 1 select role ---------- */
     let role = null;
@@ -819,114 +528,62 @@
       el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
     });
 
-    /* animate step 2 intro (slower & staggered) */
     function animateStep2Intro(){
-      const divider  = byId('s2-divider');
-      const backRow  = document.querySelector('#step2 .single-action');
-
+      const divider = byId('s2-divider'), backRow = document.querySelector('#step2 .single-action');
       if(!s2TopStart.hidden){
-        const title    = s2TopStart.querySelector('.title-row h1');
+        const title = s2TopStart.querySelector('.title-row h1');
         const subtitle = s2TopStart.querySelector('.title-row .subtitle');
-        const chips    = s2TopStart.querySelector('.chip-row');
-
-        play(title,'anim-title'); play(subtitle,'anim-sub');
-        play(chips,'anim-chips');
+        const chips = s2TopStart.querySelector('.chip-row');
+        play(title,'anim-title'); play(subtitle,'anim-sub'); play(chips,'anim-chips');
       } else {
-        const pTitle   = s2TopPass.querySelector('.title-row h1');
-        const pSub     = s2TopPass.querySelector('.title-row .subtitle');
+        const pTitle = s2TopPass.querySelector('.title-row h1');
+        const pSub = s2TopPass.querySelector('.title-row .subtitle');
         play(pTitle,'anim-title'); play(pSub,'anim-sub');
       }
-
-      play(divider,'anim-divider');
-      play(s2Or,'anim-or');
-      play(emailBox?.closest('.field-wrap'),'anim-field');
-      play(backRow,'anim-back');
+      play(divider,'anim-divider'); play(s2Or,'anim-or'); play(emailBox.closest('.field-wrap'),'anim-field'); play(backRow,'anim-back');
     }
 
     s1Next.addEventListener("click", ()=>{
       if(!role) return;
-      step1.classList.remove("active");
-      step2.classList.add("active");
-      s2Stage = 'start';
-
-      if (document.activeElement && typeof document.activeElement.blur === "function") {
-        document.activeElement.blur();
-      }
-      animateStep2Intro();
-      syncSiteBadge(true); // show prefilled site immediately (with animation)
-
-      const t = document.getElementById("s2-title");
-      if (t) {
-        if (!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1");
-        t.focus({ preventScroll: true });
-      }
+      step1.classList.remove("active"); step2.classList.add("active"); s2Stage='start';
+      document.activeElement?.blur?.(); animateStep2Intro(); syncSiteBadge(true);
+      const t = byId("s2-title"); if (t){ if(!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1"); t.focus({preventScroll:true}); }
       if(window.onboarding?.goTo) window.onboarding.goTo(2);
     });
 
     /* ---------- Back button behavior ---------- */
     function showStartStage(){
-      s2TopStart.hidden = false;
-      s2TopPass.hidden  = true;
-      s2Or.hidden = false;
-
-      // hide password UI and reset its CTA
-      pwdWrap.hidden = true;
-      pwdInput.value = '';
-      pwdBox.classList.remove('show-cta');
-      updateEmailCTA(); // email CTA may reappear if valid (since pwd is hidden now)
-
-      s2Stage = 'start';
-      animateStep2Intro();
-      syncSiteBadge(false);
+      s2TopStart.hidden=false; s2TopPass.hidden=true; s2Or.hidden=false;
+      pwdWrap.hidden=true; pwdInput.value=''; pwdBox.classList.remove('show-cta');
+      updateEmailCTA(); s2Stage='start'; animateStep2Intro(); syncSiteBadge(false);
     }
-
     s2Back.addEventListener("click", ()=>{
       if(!step2.classList.contains('active')) return;
-      if(s2Stage === 'password'){
-        showStartStage();            // back to Step 2 start (Google chip visible)
-      }else{
-        step2.classList.remove("active");
-        step1.classList.add("active"); // back to Step 1
-        if(window.onboarding?.goTo) window.onboarding.goTo(1);
-      }
+      if(s2Stage==='password'){ showStartStage(); }
+      else{ step2.classList.remove("active"); step1.classList.add("active"); if(window.onboarding?.goTo) window.onboarding.goTo(1); }
     });
 
-    /* ---------- Email -> inside CTA visibility ---------- */
+    /* ---------- Email field CTA visibility ---------- */
     const looksValidEmail = (v)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v.trim());
-
     function updateEmailCTA(){
-      const v = emailInput.value;
-      const valid = looksValidEmail(v);
-      // Once the password stage is visible, never show the email CTA.
-      const lockEmailCTA = !pwdWrap.hidden;
+      const valid = looksValidEmail(emailInput.value);
+      const lockEmailCTA = !pwdWrap.hidden; // once password stage is visible, keep CTA hidden
       const show = valid && !lockEmailCTA;
-
       emailBox.classList.toggle('show-cta', show);
       emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
     emailInput.addEventListener('input', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
-    emailInput.addEventListener('blur', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
+    emailInput.addEventListener('blur',  ()=>{ updateEmailCTA(); syncSiteBadge(false); });
     emailInput.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter' && looksValidEmail(emailInput.value)){
-        e.preventDefault();
-        if(pwdWrap.hidden) emailNext.click(); // do nothing if already in password stage
-      }
+      if(e.key==='Enter' && looksValidEmail(emailInput.value)){ e.preventDefault(); if(pwdWrap.hidden) emailNext.click(); }
     });
 
-    /* ---------- Password -> inside CTA visibility (min 6) ---------- */
-    function updatePwdCTA(){
-      const show = (pwdInput.value.length >= 6);
-      pwdBox.classList.toggle('show-cta', show);
-      pwdNext.setAttribute('aria-hidden', show ? 'false' : 'true');
-    }
-    pwdInput?.addEventListener('input', updatePwdCTA);
-    pwdInput?.addEventListener('blur', updatePwdCTA);
-    pwdInput?.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter' && pwdInput.value.length >= 6){
-        e.preventDefault();
-        pwdNext.click();
-      }
-    });
+    /* ---------- Password field CTA visibility ---------- */
+    function updatePwdCTA(){ const show = (pwdInput.value.length>=6); pwdBox.classList.toggle('show-cta', show);
+      pwdNext.setAttribute('aria-hidden', show ? 'false' : 'true'); }
+    pwdInput.addEventListener('input', updatePwdCTA);
+    pwdInput.addEventListener('blur',  updatePwdCTA);
+    pwdInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && pwdInput.value.length>=6){ e.preventDefault(); pwdNext.click(); } });
 
     /* ---------- Business email check ---------- */
     const PERSONAL = new Set([
@@ -934,102 +591,47 @@
       "icloud.com","me.com","mac.com","aol.com","proton.me","protonmail.com","pm.me","mail.com","yandex.com","yandex.ru",
       "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"
     ]);
-    const isBusinessEmail = (email)=>{
-      const host = extractHostFromEmail(email);
-      if(!host) return false;
-      return !PERSONAL.has(host.toLowerCase());
-    };
+    const isBusinessEmail = (email)=>{ const host = extractHostFromEmail(email); if(!host) return false; return !PERSONAL.has(host.toLowerCase()); };
 
     /* ---------- Website badge logic ---------- */
     function getPrefilledSite(){
-      const cands = [
-        getQueryParam('site'),
-        getQueryParam('website'),
-        getQueryParam('domain'),
-        sessionStorage.getItem('preWebsite'),
-        localStorage.getItem('preWebsite')
-      ];
-      for(const c of cands){
-        const h = cleanHost(c);
-        if(h) return h.toLowerCase();
-      }
-      return null;
+      const cands = [ getQueryParam('site'), getQueryParam('website'), getQueryParam('domain'),
+                      sessionStorage.getItem('preWebsite'), localStorage.getItem('preWebsite') ];
+      for(const c of cands){ const h = cleanHost(c); if(h) return h.toLowerCase(); } return null;
     }
     let preSiteHost = getPrefilledSite();
-
-    function showSiteBadge(host, animate=false){
-      if(!host) return hideSiteBadge();
-      siteHostEl.textContent = host;
-      const wasHidden = siteBadge.hasAttribute('hidden');
-      siteBadge.removeAttribute('hidden');
-      if(animate || wasHidden) play(siteBadge,'anim-badge');
-    }
-    function hideSiteBadge(){
-      siteBadge.setAttribute('hidden','');
-      siteBadge.classList.remove('show-tip');
-    }
-
+    function showSiteBadge(host, animate=false){ if(!host) return hideSiteBadge();
+      siteHostEl.textContent = host; const wasHidden = siteBadge.hasAttribute('hidden');
+      siteBadge.removeAttribute('hidden'); if(animate || wasHidden) play(siteBadge,'anim-badge'); }
+    function hideSiteBadge(){ siteBadge.setAttribute('hidden',''); siteBadge.classList.remove('show-tip'); }
     function syncSiteBadge(animate=false){
-      // Prefer email's business domain if present; otherwise use prefilled site.
       const emailHost = extractHostFromEmail(emailInput.value);
-      if(emailHost && !PERSONAL.has(emailHost.toLowerCase())){
-        showSiteBadge(emailHost, animate);
-        return;
-      }
-      if(preSiteHost){
-        showSiteBadge(preSiteHost, animate);
-        return;
-      }
+      if(emailHost && !PERSONAL.has(emailHost.toLowerCase())){ showSiteBadge(emailHost, animate); return; }
+      if(preSiteHost){ showSiteBadge(preSiteHost, animate); return; }
       hideSiteBadge();
     }
-
-    // Tooltip: hover (desktop) & tap (touch) — stays open for link click
     siteInfo.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
-    // no mouseleave here; CSS :hover keeps it visible while cursor is over badge or tip
     siteInfo.addEventListener('click', (e)=>{ e.stopPropagation(); siteBadge.classList.toggle('show-tip'); });
-    siteTip?.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
-    siteTip?.addEventListener('click', (e)=> e.stopPropagation());
-    // close when clicking/tapping anywhere outside
+    siteTip.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
+    siteTip.addEventListener('click', (e)=> e.stopPropagation());
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
-    /* ---------- Swap to Password stage ---------- */
+    /* ---------- Transition to Password stage ---------- */
     function toPasswordStage(){
-      s2Or.hidden = true;                 // OR not needed now
-      s2TopStart.hidden = true;           // replace top copy
-      s2TopPass.hidden  = false;
-
-      // Hide the email CTA immediately
-      emailBox.classList.remove('show-cta');
-      emailNext.setAttribute('aria-hidden','true');
-
+      s2Or.hidden=true; s2TopStart.hidden=true; s2TopPass.hidden=false;
+      emailBox.classList.remove('show-cta'); emailNext.setAttribute('aria-hidden','true');
       play(s2TopPass.querySelector('.title-row h1'),'anim-title');
       play(s2TopPass.querySelector('.title-row .subtitle'),'anim-sub');
-
-      // reveal password field and wait for 6+ chars to show CTA
-      pwdWrap.hidden = false;
-      play(pwdWrap,'anim-pwd');
-      updatePwdCTA();
-      pwdInput.focus({ preventScroll:true });
-
-      // keep site badge visible; ensure it's synced to email domain
-      syncSiteBadge(false);
-
-      s2Stage = 'password';
-
-      if(window.onboarding?.emailContinue){
-        window.onboarding.emailContinue(emailInput.value.trim());
-      }
+      pwdWrap.hidden=false; play(pwdWrap,'anim-pwd'); updatePwdCTA(); pwdInput.focus({preventScroll:true});
+      syncSiteBadge(false); s2Stage='password';
+      if(window.onboarding?.emailContinue){ window.onboarding.emailContinue(emailInput.value.trim()); }
     }
 
     /* ---------- Email CTA click ---------- */
     emailNext.addEventListener('click', ()=>{
-      const email = emailInput.value.trim();
-      if(!looksValidEmail(email)) return;
-      if(!pwdWrap.hidden) return; // already in password stage; do nothing
-
-      if(isBusinessEmail(email)){
-        toPasswordStage();
-      }else{
+      const email = emailInput.value.trim(); if(!looksValidEmail(email) || !pwdWrap.hidden) return;
+      if(isBusinessEmail(email)){ toPasswordStage(); }
+      else{
         // subtle pulse for personal domains
         emailBox.style.transition = 'box-shadow 180ms ease';
         const prev = emailBox.style.boxShadow;
@@ -1040,79 +642,69 @@
 
     /* ---------- Password CTA click (finalize) ---------- */
     pwdNext.addEventListener('click', ()=>{
-      const pwd = pwdInput.value;
-      if(pwd.length < 6) return;
-      if(window.onboarding?.passwordContinue){
-        window.onboarding.passwordContinue(pwd);
-      }else{
-        console.log('Password OK:', '*'.repeat(pwd.length));
-      }
+      const pwd = pwdInput.value; if(pwd.length < 6) return;
+      if(window.onboarding?.passwordContinue){ window.onboarding.passwordContinue(pwd); }
+      else{ console.log('Password OK:', '*'.repeat(pwd.length)); }
     });
 
-    // keep s1-next disabled until role chosen
     s1Next.disabled = true;
-
-    // If step2 somehow is pre-opened (deep link), sync badge immediately
     if(step2.classList.contains('active')) syncSiteBadge(true);
 
-    /* ---------- Google sign-in (free scopes) ---------- */
-    let googleCodeClient = null;
+    /* ---------- GOOGLE SIGN-IN (GIS ID token flow) ---------- */
 
-    window.addEventListener('load', () => {
-      if (window.google?.accounts?.oauth2) {
-        googleCodeClient = google.accounts.oauth2.initCodeClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'openid email profile',
-          ux_mode: 'popup', // switch to 'redirect' if you prefer
-          redirect_uri: GOOGLE_REDIRECT_URI,
-          state: btoa(JSON.stringify({
-            step: 2,
-            role: role || null,
-            from: location.href,
-            intent: 'business-only'
-          })),
-          prompt: 'select_account'
-        });
-      }
-    });
+    // Replace this exact string with your real Client ID from Google Cloud:
+    const GOOGLE_CLIENT_ID = "INSERT_GOOGLE_CLIENT_ID_HERE";
 
-    googleBtn?.addEventListener('click', (e) => {
+    // Robust base64url → JSON parser for the ID token payload
+    function parseIdTokenPayload(idToken){
+      try{
+        const payload = idToken.split(".")[1] || "";
+        const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+        const json = decodeURIComponent(atob(base64).split("").map(c => '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        return JSON.parse(json);
+      }catch{ return {}; }
+    }
+
+    function handleGoogleClick(e){
       e.preventDefault();
-      if (googleCodeClient) {
-        googleCodeClient.requestCode();
-      } else {
-        // Fallback: direct OAuth redirect (still free)
-        const params = new URLSearchParams({
-          client_id: GOOGLE_CLIENT_ID,
-          redirect_uri: GOOGLE_REDIRECT_URI,
-          response_type: 'code',
-          scope: 'openid email profile',
-          prompt: 'select_account',
-          state: btoa(JSON.stringify({
-            step: 2,
-            role: role || null,
-            from: location.href,
-            intent: 'business-only'
-          }))
-        });
-        location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      if(!(window.google && google.accounts && google.accounts.id)){
+        alert("Google Sign-In is still loading. Please try again in a second.");
+        return;
       }
-    });
+
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: ({ credential }) => {
+          const { email } = parseIdTokenPayload(credential);
+          const domain = (email||"").split("@")[1]?.toLowerCase() || "";
+          if(!email || PERSONAL.has(domain)){
+            alert("Please use your work email.");
+            return;
+          }
+          // Prefill & advance to password
+          emailInput.value = email; updateEmailCTA(); toPasswordStage();
+        },
+        ux_mode: "popup",
+        auto_select: false
+        // Optional domain hint once you move to @galactly.com:
+        // , hd: "galactly.com"
+      });
+
+      // Show the Google account chooser popup
+      google.accounts.id.prompt();
+    }
+
+    googleBtn?.addEventListener('click', handleGoogleClick);
+
+    /* ---------- Brand icon (cosmetic) ---------- */
   </script>
 
   <style>
-    .site-header .brand,
-    .topbar .brand{
-      display:flex; align-items:center;
-      --icon-w: 36px; --brand-gap: 10px; gap: var(--brand-gap);
-    }
-    .brand-icon{ --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0; }
+    .site-header .brand, .topbar .brand{ display:flex; align-items:center; --icon-w:36px; --brand-gap:10px; gap:var(--brand-gap); }
+    .brand-icon{ --gg-gap-x:10px; --left-dim:.65; --stroke-w:3.0; }
     .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
-    .brand-word{
-      font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
-      -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
-    }
+    .brand-word{ font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:linear-gradient(180deg,#FFFFFF,#E6EEF7); -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap; }
     .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
     .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
   </style>
@@ -1121,7 +713,6 @@
   (function(){
     const brand = document.querySelector('.topbar .brand') || document.querySelector('.site-header .brand');
     if(!brand) return;
-
     const icon = `
 <svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -1156,63 +747,6 @@
     brand.setAttribute('aria-label','Galactly');
   })();
   </script>
-  
-  
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    // paste your real client ID here
-    const GOOGLE_CLIENT_ID = "PASTE_CLIENT_ID_HERE";
-  
-    // PERSONAL list must match the one already in your JS
-    const PERSONAL = new Set([
-      "gmail.com","googlemail.com","yahoo.com","ymail.com","outlook.com","hotmail.com","live.com","msn.com",
-      "icloud.com","me.com","mac.com","aol.com","proton.me","protonmail.com","pm.me","mail.com","yandex.com","yandex.ru",
-      "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"
-    ]);
-  
-    // Helper to extract domain from email
-    const emailDomain = (email) => (email.split("@")[1]||"").toLowerCase();
-  
-    // Start GIS when user clicks your chip
-    function handleGoogleClick(e){
-      e.preventDefault();
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: ({ credential }) => {
-          // Decode the JWT (no server required for this check)
-          const payload = JSON.parse(atob(credential.split(".")[1]));
-          const email = payload.email || "";
-          const domain = emailDomain(email);
-  
-          // Reject personal email domains
-          if (!email || PERSONAL.has(domain)) {
-            // show your existing pulse / error message
-            alert("Please use your work email.");
-            return;
-          }
-  
-          // Accept: you can now prefill the email field and jump to password stage
-          document.getElementById("email").value = email;
-          // call your existing function to advance:
-          document.getElementById("emailNext").click();
-        },
-        ux_mode: "popup",         // no redirects
-        auto_select: false,
-        // Optional hint: improves “work account” selection
-        // hd: "galactly.com"     // use only if you want to hint a specific domain
-      });
-  
-      // Show a standard Google popup selector
-      google.accounts.id.prompt(); // shows the account chooser / one-tap as popup
-    }
-  
-    // Attach to your custom chip
-    document.addEventListener("DOMContentLoaded", () => {
-      const chip = document.querySelector('#step2 .chip-row .chip');
-      if (chip) chip.addEventListener('click', handleGoogleClick);
-    });
-  </script>
-  
 
 </body>
 </html>
