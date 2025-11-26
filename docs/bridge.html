@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Galactly — Preparing your workspace</title>
+<meta name="color-scheme" content="dark light">
+
+<style>
+  /* ===== knobs ===== */
+  :root{
+    --bg: #0b0b0f;
+    --card: rgba(18,18,24,.86);
+    --card-border: rgba(255,255,255,.06);
+    --fg: #e9ecf3;
+    --muted: #9aa3b2;
+    --accent: #2fe077;
+    --accent-dim: rgba(47,224,119,.25);
+    --ring: rgba(255,255,255,.12);
+    --radius: 16px;
+    --step-h: 58px;
+    --stack-gap: 14px;
+    --anim-ms: 1500ms;     /* overall page intro */
+    --bar-ms: 1400ms;      /* progress pulse */
+  }
+
+  html,body{height:100%;margin:0}
+  body{
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color: var(--fg);
+    background:
+      radial-gradient(1100px 760px at 50% 28%, rgba(255,255,255,.04), transparent 60%),
+      radial-gradient(900px 680px at 25% 80%, rgba(82,152,255,.08), transparent 60%),
+      linear-gradient(180deg, #0e0f15, var(--bg));
+    -webkit-font-smoothing: antialiased;
+    overflow:hidden;
+  }
+
+  /* center stage */
+  .wrap{
+    min-height:100svh; display:grid; place-items:center;
+    padding: max(10vh, 56px) 16px;
+  }
+
+  .stack{
+    width:min(560px, 92vw);
+    display:grid; gap: var(--stack-gap);
+    filter: drop-shadow(0 12px 40px rgba(0,0,0,.55));
+  }
+
+  .step{
+    height:var(--step-h);
+    display:grid;
+    grid-template-columns: 40px 1fr;
+    align-items:center; gap:14px;
+    padding:12px 16px;
+    border-radius: calc(var(--radius) + 2px);
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+    border:1px solid var(--card-border);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.06),
+      0 10px 28px rgba(0,0,0,.35);
+    opacity:0; transform: translateY(18px) scale(.985);
+    animation: rise .9s cubic-bezier(.22,1,.36,1) both;
+  }
+  .step.dim { opacity:.45; }
+  .step:nth-child(1){ animation-delay: .00s; }
+  .step:nth-child(2){ animation-delay: .12s; }
+  .step:nth-child(3){ animation-delay: .24s; }
+  .step:nth-child(4){ animation-delay: .36s; }
+
+  @keyframes rise{
+    from{ opacity:0; transform: translateY(22px) scale(.985); filter: blur(2px); }
+    to  { opacity:1; transform: translateY(0)    scale(1);    filter: blur(0); }
+  }
+
+  .ic{
+    width:24px; height:24px; display:inline-grid; place-items:center;
+    color: #dfe7f5;
+    opacity:.9;
+  }
+
+  .title{ font-weight:700; font-size:14px; letter-spacing:.2px }
+  .meta{ color: var(--muted); font-size:12px; margin-top:2px }
+
+  .bar{
+    grid-column: 1 / -1;
+    height:8px; border-radius:999px; background: rgba(255,255,255,.06);
+    overflow:hidden; position:relative; margin-top:6px;
+  }
+  .bar .fill{
+    position:absolute; inset:0; width:22%; border-radius:inherit;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.0), rgba(255,255,255,.22), rgba(255,255,255,0)),
+      linear-gradient(90deg, var(--accent), var(--accent));
+    background-size: 120px 100%, 100% 100%;
+    filter: drop-shadow(0 0 10px var(--accent-dim));
+    animation: slide var(--bar-ms) linear infinite;
+  }
+  @keyframes slide{
+    from{ transform: translateX(-120%); }
+    to  { transform: translateX(220%); }
+  }
+
+  /* header chip */
+  .head{
+    width:min(560px, 92vw);
+    margin: 0 auto var(--stack-gap);
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    border:1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    opacity:0; transform: translateY(18px); animation: rise .9s .05s cubic-bezier(.22,1,.36,1) both;
+  }
+  .head .who{ font-size:13px; color:var(--muted) }
+  .head strong{ color:var(--fg); font-weight:700 }
+
+  .actions{
+    margin-top: var(--stack-gap);
+    display:flex; justify-content:center; gap:12px; opacity:.85;
+  }
+  .link{
+    appearance:none; background:transparent; color:var(--fg);
+    border:1px solid var(--card-border); border-radius:10px;
+    padding:10px 14px; cursor:pointer; font-weight:600; font-size:13px;
+  }
+  .link:hover{ border-color: rgba(255,255,255,.22); }
+
+  /* success badge */
+  .ok{
+    width:10px; height:10px; border-radius:999px; background: var(--accent);
+    box-shadow: 0 0 0 6px rgba(47,224,119,.12);
+  }
+
+  /* live ARIA updates for screen readers */
+  .sr{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:1ms !important; transition:none !important }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="head" id="head">
+    <div class="who">
+      Preparing workspace for <strong id="h-email">—</strong>
+      <span id="h-site" style="color:var(--muted)"></span>
+    </div>
+    <div class="ok" aria-hidden="true"></div>
+  </div>
+
+  <div class="stack" id="stack" role="status" aria-live="polite">
+    <!-- Steps are injected by JS for easy control -->
+  </div>
+
+  <div class="actions">
+    <button class="link" id="backBtn" type="button">Back to start</button>
+  </div>
+
+  <div class="sr" aria-live="polite" id="sr"></div>
+</div>
+
+<script>
+/* ========= config ========= */
+const STEP3_URL      = "INSERT_STEP3_URL_HERE"; // e.g. "step3.html"
+const STATUS_URL     = ""; // optional: "INSERT_BACKEND_STATUS_URL" (polling JSON)
+const POLL_MS        = 900;
+const MIN_SHOW_MS    = 4200; // don't flash—show at least this long
+const MAX_WAIT_MS    = 16000; // hard cap before we continue anyway
+
+/* ========= utilities ========= */
+const qs    = new URLSearchParams(location.search);
+const email = qs.get('email') || '';
+const role  = qs.get('role')  || '';
+const site  = (qs.get('site') || '').replace(/^www\./,'');
+const sr    = (t)=>document.getElementById('sr').textContent=t;
+
+/* header fill */
+document.getElementById('h-email').textContent = email || 'new user';
+document.getElementById('h-site').textContent = site ? `• ${site}` : '';
+
+/* build steps (you can tweak copy freely) */
+const steps = [
+  { id:'verify',  label:'Verifying details',      meta: email ? email : 'Signing in', bar:true },
+  { id:'scan',    label:'Scanning website',       meta: site ? site : 'Discovering business domain', bar:true },
+  { id:'enrich',  label:'Enriching company data', meta:'Signals & contacts', bar:true },
+  { id:'create',  label:'Creating your workspace',meta:'Roles, teams & defaults', bar:true },
+];
+
+const stack = document.getElementById('stack');
+for(const s of steps){
+  const card = document.createElement('div');
+  card.className = 'step dim';
+  card.id = `step-${s.id}`;
+  card.innerHTML = `
+    <div class="ic" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" opacity=".8"></circle>
+        <path d="M12 6v6l4 2" opacity=".9"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="title">${s.label}</div>
+      <div class="meta">${s.meta||''}</div>
+      ${s.bar ? `<div class="bar" aria-hidden="true"><div class="fill"></div></div>` : ``}
+    </div>
+  `;
+  stack.appendChild(card);
+}
+
+/* helpers to mark progress */
+const setActive = (id)=> {
+  for(const el of stack.querySelectorAll('.step')) el.classList.add('dim');
+  const el = document.getElementById(`step-${id}`);
+  if(el) el.classList.remove('dim');
+  sr(`${id}…`);
+};
+const setDone = (id)=> {
+  const el = document.getElementById(`step-${id}`);
+  if(!el) return;
+  el.querySelector('.bar')?.remove();
+  el.querySelector('.ic').innerHTML =
+    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M8 12l3 3 5-6"></path>
+    </svg>`;
+  el.classList.remove('dim');
+};
+
+/* ===== mode A: live polling (if STATUS_URL set) ===== */
+async function pollLoop(){
+  const start = Date.now();
+  let done=false, redirected=false;
+
+  while(!done){
+    try{
+      const res = await fetch(`${STATUS_URL}?${qs.toString()}`, {cache:'no-store'});
+      if(!res.ok) throw new Error('status not ok');
+      const j = await res.json(); // {stage:'verify|scan|enrich|create|done', percent:0..100, message?, redirectTo?}
+      if(j.stage) setActive(j.stage);
+      if(j.done || j.stage==='done'){
+        done = true;
+        for(const s of ['verify','scan','enrich','create']) setDone(s);
+      }else{
+        for(const s of ['verify','scan','enrich','create']){
+          if(['verify','scan','enrich','create'].indexOf(s) <= ['verify','scan','enrich','create'].indexOf(j.stage)) setDone(s);
+        }
+      }
+      if(j.redirectTo && !redirected){
+        redirected = true;
+        await nextPage(j.redirectTo);
+        return;
+      }
+    }catch(e){
+      // stay quiet—just keep the animation running
+    }
+    if(Date.now()-start > MAX_WAIT_MS) break;
+    await new Promise(r=>setTimeout(r,POLL_MS));
+  }
+  await nextPage(); // fallback after cap
+}
+
+/* ===== mode B: timed demo (if STATUS_URL empty) ===== */
+async function timedDemo(){
+  const seq = [
+    ['verify', 1100],
+    ['scan',   2200],
+    ['enrich', 1400],
+    ['create', 1200],
+  ];
+  const start = Date.now();
+  for(const [id,ms] of seq){
+    setActive(id);
+    await new Promise(r=>setTimeout(r,ms));
+    setDone(id);
+  }
+  const elapsed = Date.now()-start;
+  const pad = Math.max(0, MIN_SHOW_MS - elapsed);
+  await new Promise(r=>setTimeout(r,pad));
+  await nextPage();
+}
+
+/* handoff */
+async function nextPage(override){
+  const url = override || STEP3_URL || 'step3.html'; // sensible default
+  // brief micro-hold to let the final checkmark render
+  await new Promise(r=>setTimeout(r,420));
+  location.href = url + (url.includes('?') ? '&' : '?') + qs.toString();
+}
+
+/* buttons */
+document.getElementById('backBtn').addEventListener('click', ()=>{
+  history.length > 1 ? history.back() : location.href = 'start.html';
+});
+
+/* boot */
+(async ()=>{
+  // mark first as active instantly
+  setActive('verify');
+
+  if(STATUS_URL){
+    pollLoop();
+  }else{
+    timedDemo();
+  }
+})();
+</script>
+</body>
+</html>
