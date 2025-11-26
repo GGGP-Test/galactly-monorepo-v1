@@ -422,6 +422,27 @@
     @media (prefers-reduced-motion: reduce){
       *{ animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition: none !important; }
     }
+    
+    
+    /* ==== start.html: page-leave transition ==== */
+    :root{ --leave-ms: 1500ms; }
+    body.leaving .stage{
+      opacity: 0;
+      transform: translateY(12px) scale(.985);
+      filter: blur(2px);
+      transition: transform var(--leave-ms) cubic-bezier(.22,1,.36,1),
+                  opacity   var(--leave-ms) ease,
+                  filter    var(--leave-ms) ease;
+    }
+    body.leaving::after{
+      content:""; position:fixed; inset:0;
+      background: radial-gradient(1200px 800px at 50% 40%, rgba(0,0,0,.5), rgba(0,0,0,.86));
+      pointer-events:none; opacity:0; transition: opacity var(--leave-ms) ease;
+    }
+    body.leaving::after{ opacity:1; }
+    
+    
+    
 
     /* ===== Website badge (overlay) ===== */
     .site-badge{
@@ -744,6 +765,7 @@
       const r = el.getAttribute("data-role");
       const pick = () => {
         role = r;
+        window.role = role; // expose to goToBridge()
         qsa(".choice", step1).forEach(c => {
           c.classList.toggle("selected", c === el);
           c.setAttribute("aria-selected", c === el ? "true" : "false");
@@ -862,6 +884,13 @@
         e.preventDefault();
         pwdNext.click();
       }
+    });
+    
+    /* ---------- Password CTA click (finalize) ---------- */
+    pwdNext?.addEventListener('click', ()=>{
+      const pwd = pwdInput.value;
+      if (pwd.length < 6) return;
+      goToBridge('password');
     });
 
     /* ---------- Business email check ---------- */
@@ -1037,10 +1066,10 @@
             return;
           }
 
-          // Prefill & advance to password stage
+          // Prefill & hand off to the bridge screen
           emailInput.value = email;
           updateEmailCTA();
-          toPasswordStage();
+          goToBridge('google');
 
         }catch(err){
           showGoogleError("We couldn't complete Google sign-in. Check your connection and try again.");
@@ -1109,6 +1138,25 @@
     brand.setAttribute('aria-label','Galactly');
   })();
   </script>
+  
+  
+  
+<script>
+  // ==== start.html -> bridge.html handoff ====
+  function goToBridge(from){
+    // derive best-guess site host for the bridge screen
+    const email = (document.getElementById('email')?.value || '').trim();
+    const hostFromEmail = (email.match(/@([^@\s>]+)/)?.[1] || '').toLowerCase();
+    const urlParams = new URLSearchParams({
+      from: from || 'unknown',
+      role: (window.onboarding?.getRole?.() || window.role || '') || '',
+      email,
+      site: hostFromEmail || (localStorage.getItem('preWebsite') || sessionStorage.getItem('preWebsite') || '')
+    });
+    document.body.classList.add('leaving');
+    setTimeout(()=>{ location.href = `bridge.html?${urlParams}`; }, 1500); // matches --leave-ms
+  }
+</script>
 
 </body>
 </html>
