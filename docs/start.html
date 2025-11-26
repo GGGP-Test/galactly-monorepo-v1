@@ -1140,6 +1140,20 @@
   </script>
   
   
+<script>
+(function(){
+  const p = new URLSearchParams(location.search);
+  const err = p.get('err');
+  const msg = p.get('msg');
+  if(err || msg){
+    const el = document.getElementById('googleInlineError');
+    if(el){ el.textContent = msg || 'There was a problem. Please try again.'; el.hidden = false; }
+  }
+})();
+</script>
+
+  
+  
   
 <script>
   // ==== start.html -> bridge.html handoff ====
