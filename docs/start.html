@@ -1141,5 +1141,63 @@
     brand.setAttribute('aria-label','Galactly');
   })();
   </script>
+  
+  
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    // paste your real client ID here
+    const GOOGLE_CLIENT_ID = "PASTE_CLIENT_ID_HERE";
+  
+    // PERSONAL list must match the one already in your JS
+    const PERSONAL = new Set([
+      "gmail.com","googlemail.com","yahoo.com","ymail.com","outlook.com","hotmail.com","live.com","msn.com",
+      "icloud.com","me.com","mac.com","aol.com","proton.me","protonmail.com","pm.me","mail.com","yandex.com","yandex.ru",
+      "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"
+    ]);
+  
+    // Helper to extract domain from email
+    const emailDomain = (email) => (email.split("@")[1]||"").toLowerCase();
+  
+    // Start GIS when user clicks your chip
+    function handleGoogleClick(e){
+      e.preventDefault();
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: ({ credential }) => {
+          // Decode the JWT (no server required for this check)
+          const payload = JSON.parse(atob(credential.split(".")[1]));
+          const email = payload.email || "";
+          const domain = emailDomain(email);
+  
+          // Reject personal email domains
+          if (!email || PERSONAL.has(domain)) {
+            // show your existing pulse / error message
+            alert("Please use your work email.");
+            return;
+          }
+  
+          // Accept: you can now prefill the email field and jump to password stage
+          document.getElementById("email").value = email;
+          // call your existing function to advance:
+          document.getElementById("emailNext").click();
+        },
+        ux_mode: "popup",         // no redirects
+        auto_select: false,
+        // Optional hint: improves “work account” selection
+        // hd: "galactly.com"     // use only if you want to hint a specific domain
+      });
+  
+      // Show a standard Google popup selector
+      google.accounts.id.prompt(); // shows the account chooser / one-tap as popup
+    }
+  
+    // Attach to your custom chip
+    document.addEventListener("DOMContentLoaded", () => {
+      const chip = document.querySelector('#step2 .chip-row .chip');
+      if (chip) chip.addEventListener('click', handleGoogleClick);
+    });
+  </script>
+  
+
 </body>
 </html>
