@@ -277,15 +277,18 @@
     .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
     /* ===== Email/Password fields (pressed) ===== */
-    /* CHANGE 1: hard-center the field wrapper */
+    /* Set your lane width here */
+    :root{ --lane-w: 360px; } /* change this number to whatever you want */
+    
     .field-wrap{
-      width:100%;
-      max-width:360px;
+      /* a single, centered lane with a fixed cap */
+      display:block;
       margin:24px auto 0;
-      position:relative;
-      display:flex;
-      justify-content:center;
+      width: min(var(--lane-w), 90vw);
+      inline-size: min(var(--lane-w), 90vw);
+      position: relative;
     }
+    
     .pressed{
       position:relative;
       display:grid;
@@ -304,40 +307,41 @@
       -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
     
-      /* centering */
-      width:100%;
-      max-width:240px;
+      /* fill the lane exactly */
+      inline-size:100%;
+      max-width:none;
       margin-inline:auto;
     }
+    
     .pressed::before{ content:""; position:absolute; inset:0; border-radius:inherit; padding:0.1px;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor; mask-composite: exclude;
       background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.10));
       pointer-events:none;
     }
+    
     .pressed:has(input:focus){ border-color: rgba(255,255,255,.24); box-shadow:
       inset 0 1px 0 rgba(255,255,255,.25),
       inset 0 -2px 6px rgba(0,0,0,.6),
       inset 0 12px 26px rgba(0,0,0,.22),
       0 8px 22px rgba(0,0,0,.30); }
-
+    
     .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
-
+    
     input{
-      min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
+      min-width:0;
+      background:transparent; border:0; outline:0; color:var(--fg);
       font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
       padding-right: calc(var(--cta-d) + 14px);
     }
     input::placeholder{ color:rgba(233,236,243,.62); }
-
+    
     /* inside-field GLASS CTA */
-    /* CHANGE 2: remove horizontal translate and ensure clickability */
     .field-cta{
       position:absolute; right:6px; top:50%;
       width:var(--cta-d); height:var(--cta-d);
       transform: translateY(-50%);
-      opacity:0; pointer-events:none;
-      z-index:3;
+      opacity:0; pointer-events:none; z-index:3;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.16);
       background:
@@ -353,7 +357,6 @@
       color:var(--fg); display:grid; place-items:center; cursor:pointer;
     }
     .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translateY(-50%); }
-
     /* Back arrow row */
     .single-action{ display:grid; place-items:center; margin-top:14px; }
 
@@ -367,7 +370,11 @@
     #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) 0; }
     #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
 
-    #s2-bottom{ display:grid; justify-items:center; }
+    #s2-bottom{
+      display:flex;
+      flex-direction:column;
+      align-items:center;   /* centers all children horizontally */
+    }
 
     /* ===== Animations ===== */
     :root{
