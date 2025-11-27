@@ -866,11 +866,13 @@
       (window.__FIREBASE_CONFIG__ && typeof window.__FIREBASE_CONFIG__==='object' && window.__FIREBASE_CONFIG__) ||
       (typeof window.firebaseConfig!=='undefined' && window.firebaseConfig) ||
       META_CFG || {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        appId: "YOUR_APP_ID",
+        apiKey: "AIzaSyCBf7LHL4PfxD2rH7-HdYSE2dXIGfb3Vz4",
+        authDomain: "artemiss-42e40.firebaseapp.com",
+        projectId: "artemiss-42e40",
+        appId: "1:384891834378:web:53624662894e0650a74ff3",
       };
+      
+    const ACTION_SETTINGS = { url: location.origin + location.pathname };
 
     let auth=null;
 
@@ -971,13 +973,17 @@
       hideStatus();
       const email = emailInput.value.trim();
       if(!looksValidEmail(email) || !pwdWrap.hidden) return;
-
+    
       const business = isBusinessEmail(email);
       if(!business){
         pulseEmail();
         showStatus("Use a work email (not a personal domain) to continue.");
         return;
       }
+    
+      // Just move to the password stage. Do not send any email yet.
+      toPasswordStage();
+    });
 
       try{
         await sendVerifyLink(email);
@@ -1012,86 +1018,86 @@
       setTimeout(()=>{ emailBox.style.boxShadow = prev; }, 260);
     }
 
-    /* ---------- Password CTA click (finalize) ---------- */
-    pwdNext?.addEventListener('click', ()=>{
-      const pwd = pwdInput.value;
-      const verified = sessionStorage.getItem(VERIFIED_KEY) === '1';
-      if (!verified){ showStatus("Verify your email first (check your inbox for the link)."); return; }
-      if (pwd.length < 6) return;
-      goToBridge('password');
-    });
-
-    // keep s1-next disabled until role chosen
-    s1Next.disabled = true;
-
-    // If step2 is already visible (deep link)
-    if(step2.classList.contains('active')) syncSiteBadge(true);
-
-    /* ---------- GOOGLE SIGN-IN (unchanged for now) ---------- */
-    const GOOGLE_CLIENT_ID = "384891834378-4df25ijskgn206becb84o240td6d7eek.apps.googleusercontent.com";
-    let tokenClient = null;
-
-    function ensureTokenClient(){
-      if(tokenClient) return tokenClient;
-      if(!(window.google && google.accounts && google.accounts.oauth2)) return null;
-
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: 'openid email profile',
-        callback: (resp)=>{}
-      });
-      return tokenClient;
-    }
-
-    async function fetchUserInfo(accessToken){
-      const res = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      if(!res.ok) throw new Error('userinfo_failed');
-      return await res.json();
-    }
-
-    const googleBtn  = document.getElementById('googleBtn');
-    googleBtn?.addEventListener('click', (e) => {
+    /* ---------- GOOGLE SIGN-IN (Firebase popup, business-only) ---------- */
+    /* REQUIREMENTS:
+       1) In Firebase Console → Authentication → Sign-in method → enable "Google".
+       2) Authentication → Settings → Authorized domains: add your hosts (github.io, galactly.com, localhost, etc).
+    */
+    const googleBtn = document.getElementById('googleBtn');
+    
+    googleBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
       hideStatus();
-
-      const client = ensureTokenClient();
-      if(!client){
-        showStatus("Google Sign-In is loading. Try again in a second.");
-        return;
+    
+      if (!auth) { 
+        showStatus("Google sign-in isn’t configured. Add Firebase keys."); 
+        return; 
       }
-
-      client.callback = async (response) => {
-        try{
-          if(response.error){
-            if(response.error !== 'access_denied'){ showStatus("Sign-in was interrupted. Please try again."); }
-            return;
-          }
-          const info = await fetchUserInfo(response.access_token);
-          const email = info?.email || "";
-          const domain = (email.split("@")[1]||"").toLowerCase();
-
-          if(!email || PERSONAL.has(domain)){
-            showStatus("Please use a work email (Gmail/Outlook/Yahoo are not allowed).");
-            pulseEmail();
-            return;
-          }
-
-          emailInput.value = email;
-          updateEmailCTA();
-          goToBridge('google');
-
-        }catch(err){
-          showStatus("We couldn't complete Google sign-in. Check your connection and try again.");
+    
+      try {
+        // Use Firebase Auth's Google provider (no GIS token client needed)
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+    
+        const cred = await auth.signInWithPopup(provider);   // free on Spark
+        const user = cred.user;
+        const email = user?.email || "";
+        const domain = (email.split("@")[1] || "").toLowerCase();
+    
+        // Optional: read Workspace hosted domain claim (present for Google Workspace)
+        let hd = null;
+        try {
+          const idToken = await user.getIdToken();
+          const payload = JSON.parse(atob((idToken.split(".")[1] || "").replace(/-/g, '+').replace(/_/g, '/'))) || {};
+          hd = (payload.hd || "").toLowerCase() || null;
+        } catch {}
+    
+        // Block personal email domains. Your PERSONAL set already includes gmail/googlemail.
+        if (!email || PERSONAL.has(domain) || domain === 'gmail.com' || domain === 'googlemail.com') {
+          try { await auth.signOut(); } catch {}
+          showStatus("Please use a work Google account (no personal Gmail).");
+          pulseEmail();
+          return;
         }
-      };
-
-      client.requestAccessToken({ prompt: 'consent' });
+    
+        // Prefill and continue like your normal path
+        emailInput.value = email;
+        updateEmailCTA?.();
+        goToBridge('google');
+    
+      } catch (err) {
+        if (err?.code === 'auth/popup-closed-by-user') return;
+        if (err?.code === 'auth/account-exists-with-different-credential') {
+          showStatus("This email already exists with a different sign-in method. Use email + password.");
+          return;
+        }
+        showStatus("We couldn't complete Google sign-in. Check your connection and try again.");
+      }
     });
 
     /* ----- deep-link complete (email verification) ----- */
-    completeEmailLinkIfPresent();
+    async function handleVerifyOnLoad(){
+      if(!auth) return;
+      const p = new URLSearchParams(location.search);
+      const mode = p.get('mode');
+      const oob  = p.get('oobCode');
+    
+      // This covers the standard Firebase "verifyEmail" link
+      if(mode === 'verifyEmail' && oob){
+        try{
+          await auth.applyActionCode(oob);              // mark email as verified in Firebase
+          history.replaceState({}, "", location.pathname); // clean URL
+          sessionStorage.setItem(VERIFIED_KEY, '1');
+          // proceed exactly like your flow requires
+          goToBridge('email');
+        }catch(e){
+          showStatus("That verification link is invalid or expired. Resend and try again.");
+        }
+      }
+    }
+    
+    // ----- call it on load (replaces the old passwordless handler) -----
+    handleVerifyOnLoad();
   </script>
 
   <style>
