@@ -105,12 +105,14 @@
     body{
       color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
       background:
         radial-gradient(1200px 800px at 76% 26%, rgba(240,196,90,.28) 0%, transparent 58%),
         radial-gradient(1200px 800px at 24% 78%, rgba(64,186,255,.24) 0%, transparent 60%),
         radial-gradient(700px 500px at 50% -8%, rgba(255,255,255,.08) 0%, transparent 70%),
         linear-gradient(180deg, #171a17, #0f1210);
       background-blend-mode: screen, screen, normal, normal;
+
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overflow: hidden;
@@ -126,8 +128,6 @@
       width:var(--content-w);
       transform: translateY(var(--stage-lift-m));
       transition: transform .2s ease;
-      position: relative; /* ensure proper stacking */
-      z-index: 0;
     }
     @media (min-width:768px){
       .stage{ transform: translateY(var(--stage-lift-d)); }
@@ -157,24 +157,19 @@
     .step{ display:none; }
     .step.active{ display:block; }
 
-    .choices{ display:grid; grid-template-columns: 1fr; gap:16px; position: relative; z-index: 1; }
+    .choices{ display:grid; grid-template-columns: 1fr; gap:16px; }
     @media (min-width:720px){ .choices{ grid-template-columns: 1fr 1fr; } }
 
-    /* Make the card an actual button for reliable taps/clicks */
     .choice{
-      appearance:none; -webkit-appearance:none;
-      background: none; border:0; margin:0; text-align:left; padding:0;
-      position:relative; border-radius:16px; padding:18px 18px; cursor:pointer; user-select:none; z-index: 2;
-      display:flex; gap:14px; align-items:flex-start;
-
+      position:relative; border-radius:16px; padding:18px 18px;
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
       border:1px solid rgba(255,255,255,.15);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25);
-
+      cursor:pointer; user-select:none;
+      display:flex; gap:14px; align-items:flex-start;
       transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
-    .choice:hover,
-    .choice:focus{ transform:translateY(-2px); border-color:rgba(255,255,255,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 16px 42px rgba(0,0,0,.28); outline: none; }
+    .choice:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 16px 42px rgba(0,0,0,.28); }
     .choice.selected{ outline:2px solid #f4d06f; box-shadow: 0 0 0 6px rgba(244,208,111,.15), 0 14px 40px rgba(244,208,111,.18); }
     .choice h3{ margin:0 0 6px 0; font-size:18px; font-weight:700; letter-spacing:-0.01em; }
     .choice p{ margin:0; color:var(--muted); font-size:14px; line-height:1.35; }
@@ -306,7 +301,7 @@
     }
     .pressed:has(input:focus){ border-color: rgba(255,255,255,.24); box-shadow:
       inset 0 1px 0 rgba(255,255,255,.25),
-      inset 0 -3px 6px rgba(0,0,0,.6),
+      inset 0 -2px 6px rgba(0,0,0,.6),
       inset 0 12px 26px rgba(0,0,0,.22),
       0 8px 22px rgba(0,0,0,.30); }
 
@@ -416,7 +411,7 @@
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Email-link auth library (e.g., Firebase). Page will hide email flow if not configured. -->
+  <!-- Firebase (for email link verification) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
@@ -446,7 +441,7 @@
         <p class="subtitle">Pick one to tailor your setup.</p>
 
         <div class="choices" role="listbox" aria-label="Select your role">
-          <button class="choice" data-role="supplier" type="button" role="option" aria-selected="false">
+          <div class="choice" data-role="supplier" tabindex="0" role="option" aria-selected="false">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 7h18v10H3z"></path><path d="M16 7V3H8v4"></path>
@@ -456,9 +451,9 @@
               <h3>Supplier — I sell packaging</h3>
               <p>Capture buyers already signaling intent, prioritize by timing, and let smart outreach run on autopilot.</p>
             </div>
-          </button>
+          </div>
 
-          <button class="choice" data-role="buyer" type="button" role="option" aria-selected="false">
+          <div class="choice" data-role="buyer" tabindex="0" role="option" aria-selected="false">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.58L23 6H6"></path>
@@ -468,7 +463,7 @@
               <h3>Buyer — I buy packaging</h3>
               <p>Describe your need once—get matched to vetted suppliers fast, with clear timelines and quotes.</p>
             </div>
-          </button>
+          </div>
         </div>
 
         <div class="row-actions" style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px">
@@ -518,7 +513,7 @@
               </a>
             </div>
 
-            <!-- Neutral status area (not shown by default) -->
+            <!-- Inline rejection / status -->
             <div id="inlineStatus" class="inline-error" role="alert" hidden></div>
           </div>
         </div>
@@ -538,7 +533,7 @@
           <div id="s2-or" class="muted">OR</div>
 
           <!-- email field -->
-          <div class="field-wrap" id="emailWrap">
+          <div class="field-wrap">
             <div class="pressed" id="emailBox">
               <span class="left-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -639,7 +634,6 @@
     const s2TopPass  = byId("s2-top-pass");
     const s2Or       = byId("s2-or");
 
-    const emailWrap  = byId("emailWrap");
     const emailInput = byId("email");
     const emailBox   = byId("emailBox");
     const emailNext  = byId("emailNext");
@@ -660,8 +654,8 @@
     const siteInfo   = byId('siteInfo');
     const siteTip    = byId('siteTip');
 
-    /* shared status (kept hidden unless needed) */
-    const statusEl   = byId('inlineStatus');
+    /* Status/error area (shared) */
+    const statusEl  = byId('inlineStatus');
 
     let s2Stage = 'start'; // 'start' | 'password'
 
@@ -676,7 +670,7 @@
       if(!raw) return null;
       let s = String(raw).trim();
       s = s.replace(/^mailto:/i,'');
-      s = s.replace(/^(https?:)\/\//i,'');
+      s = s.replace(/^(https?:)?\/\//i,'');
       s = s.replace(/^www\./i,'');
       s = s.split(/[\/?#]/)[0];
       s = s.replace(/[^\w.-]/g,'');
@@ -707,7 +701,7 @@
         s1Next.disabled = false;
         if(window.onboarding?.setRole) window.onboarding.setRole(role);
       };
-      el.addEventListener("click", pick, {passive:true});
+      el.addEventListener("click", pick);
       el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
     });
 
@@ -858,39 +852,21 @@
     siteTip?.addEventListener('click', (e)=> e.stopPropagation());
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
-    /* ---------- Email-link auth (provider optional) ---------- */
+    /* ---------- Firebase (email-link verification) ---------- */
     const FIREBASE_CONFIG = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT.firebaseapp.com",
       projectId: "YOUR_PROJECT_ID",
       appId: "YOUR_APP_ID",
     };
-
-    let auth = null;
-    let EMAIL_PROVIDER_READY = false;
+    let auth=null;
     try{
       const looksReal = Object.values(FIREBASE_CONFIG).every(v => typeof v==='string' && v && !/^YOUR_/i.test(v));
       if(looksReal){
         firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
-        EMAIL_PROVIDER_READY = true;
       }
-    }catch(e){ auth = null; EMAIL_PROVIDER_READY = false; }
-
-    // Hide email flow entirely if provider isn't ready (no scary message for users)
-    function applyEmailAvailability(ready){
-      if(ready){ return; }
-      byId('s2-or').hidden = true;
-      byId('emailWrap').hidden = true;
-      byId('verifyPanel').hidden = true;
-      // Soft note (not red, not technical)
-      const note = document.createElement('div');
-      note.className = 'inline-note';
-      note.textContent = 'Work-email sign-up will be available soon. You can continue with Google for now.';
-      const topCenter = document.querySelector('#s2-top-start .center');
-      topCenter.appendChild(note);
-    }
-    applyEmailAvailability(EMAIL_PROVIDER_READY);
+    }catch(e){ auth = null; }
 
     const EMAIL_KEY = 'gg_pending_email';
     const VERIFIED_KEY = 'gg_email_verified';
@@ -902,8 +878,8 @@
     function hideStatus(){ statusEl.hidden = true; statusEl.textContent = ""; }
 
     async function sendVerifyLink(email){
-      if(!auth){ throw new Error('no_auth'); } // UI is already hidden when not ready
-      const url = location.origin + location.pathname + "?verify=1";
+      if(!auth){ showStatus("Email verification is not configured yet. Add Firebase keys."); throw new Error('no_auth'); }
+      const url = location.origin + location.pathname + "?verify=1"; // continue URL back to this page
       const settings = { url, handleCodeInApp: true };
       await auth.sendSignInLinkToEmail(email, settings);
       localStorage.setItem(EMAIL_KEY, email);
@@ -920,7 +896,10 @@
           localStorage.removeItem(EMAIL_KEY);
           sessionStorage.setItem(VERIFIED_KEY, '1');
           history.replaceState({}, "", location.pathname);
-          toPasswordStage();
+          // ensure input shows the verified email so it carries to bridge
+          if (emailInput) { emailInput.value = em; updateEmailCTA?.(); }
+          // NORMAL FLOW: verified -> straight to bridge
+          goToBridge('email');
         }catch(e){
           showStatus("That verification link is invalid or expired. Resend and try again.");
         }
@@ -971,8 +950,9 @@
         vEmail.textContent = email;
         localStorage.setItem(EMAIL_KEY, email);
       }catch(e){
-        // Provider missing is already hidden; any residual error gets a neutral message.
-        showStatus("We couldn’t send the verification email. Please try again later.");
+        if(e.message !== 'no_auth'){
+          showStatus("We couldn’t send the verification email. Check the address and try again.");
+        }
       }
     });
 
@@ -1012,7 +992,7 @@
     // If step2 is already visible (deep link)
     if(step2.classList.contains('active')) syncSiteBadge(true);
 
-    /* ---------- GOOGLE SIGN-IN (work emails only enforced later server-side) ---------- */
+    /* ---------- GOOGLE SIGN-IN (unchanged for now) ---------- */
     const GOOGLE_CLIENT_ID = "384891834378-4df25ijskgn206becb84o240td6d7eek.apps.googleusercontent.com";
     let tokenClient = null;
 
