@@ -277,26 +277,25 @@
     .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
     /* ===== Email/Password fields (pressed) ===== */
-    /* Set your lane width here */
-    :root{ --lane-w: 360px; } /* change this number to whatever you want */
+    :root{ --lane-w: 240px; } /* Do not raise above 240px */
     
     .field-wrap{
-      /* a single, centered lane with a fixed cap */
-      display:block;
-      margin:24px auto 0;
+      /* hard-centered lane with a hard cap */
       width: min(var(--lane-w), 90vw);
-      inline-size: min(var(--lane-w), 90vw);
+      margin: 24px auto 0;     /* centers on all screens */
       position: relative;
     }
     
     .pressed{
-      position:relative;
-      display:grid;
+      position: relative;
+      display: grid;
       grid-template-columns: 26px 1fr;
-      align-items:center;
-      height:var(--ctl-h);
-      border-radius:var(--ctl-r);
-      padding:0 14px;
+      align-items: center;
+      height: var(--ctl-h);
+      border-radius: var(--ctl-r);
+      padding: 0 14px;
+    
+      /* glass styles (unchanged) */
       background: transparent;
       border:1px solid rgba(255,255,255,.16);
       box-shadow:
@@ -307,31 +306,35 @@
       -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
     
-      /* fill the lane exactly */
-      inline-size:100%;
-      max-width:none;
-      margin-inline:auto;
+      /* critical: keep the whole pill ≤ 240px and centered */
+      box-sizing: border-box;  /* include padding + border in width */
+      width: 100%;
+      max-width: 100%;
+      margin-inline: auto;
     }
     
-    .pressed::before{ content:""; position:absolute; inset:0; border-radius:inherit; padding:0.1px;
+    .pressed::before{
+      content:""; position:absolute; inset:0; border-radius:inherit; padding:0.1px;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor; mask-composite: exclude;
       background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.10));
       pointer-events:none;
     }
+    .pressed:has(input:focus){
+      border-color: rgba(255,255,255,.24);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.25),
+        inset 0 -2px 6px rgba(0,0,0,.6),
+        inset 0 12px 26px rgba(0,0,0,.22),
+        0 8px 22px rgba(0,0,0,.30);
+    }
     
-    .pressed:has(input:focus){ border-color: rgba(255,255,255,.24); box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.25),
-      inset 0 -2px 6px rgba(0,0,0,.6),
-      inset 0 12px 26px rgba(0,0,0,.22),
-      0 8px 22px rgba(0,0,0,.30); }
-    
-    .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
+    .left-icon{ display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9 }
     
     input{
-      min-width:0;
-      background:transparent; border:0; outline:0; color:var(--fg);
-      font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
+      min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
+      font-size:14px; height:calc(var(--ctl-h) - 2px);
+      padding:0 8px;
       padding-right: calc(var(--cta-d) + 14px);
     }
     input::placeholder{ color:rgba(233,236,243,.62); }
@@ -356,7 +359,8 @@
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       color:var(--fg); display:grid; place-items:center; cursor:pointer;
     }
-    .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translateY(-50%); }
+    .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translateY(-50%); }    
+    
     /* Back arrow row */
     .single-action{ display:grid; place-items:center; margin-top:14px; }
 
@@ -791,6 +795,14 @@
       hideStatus();
     }
 
+    function showAccountExists(email){
+      const em = String(email||'').trim();
+      showStatusHTML(
+        `<strong>It looks like this account already exists.</strong> ` +
+        `<a href="login.html?email=${encodeURIComponent(em)}" id="errLoginLink">Log in instead</a>.`
+      );
+    }
+
     s2Back.addEventListener("click", ()=>{
       if(!step2.classList.contains('active')) return;
       if(s2Stage === 'password'){
@@ -984,19 +996,32 @@
       if(window.onboarding?.emailContinue){ window.onboarding.emailContinue(emailInput.value.trim()); }
     }
 
-    /* ---------- Email CTA click (show password, no email sent yet) ---------- */
+    /* ---------- Email CTA click (show password or show 'account exists') ---------- */
     emailNext.addEventListener('click', async ()=>{
       hideStatus();
       const email = emailInput.value.trim();
       if(!looksValidEmail(email) || !pwdWrap.hidden) return;
-
+    
       const business = isBusinessEmail(email);
       if(!business){
         pulseEmail();
         showStatus("Use a work email (not a personal domain) to continue.");
         return;
       }
-
+    
+      // If Firebase is available, check if the email already has any sign-in method.
+      try{
+        if (auth && typeof auth.fetchSignInMethodsForEmail === 'function'){
+          const methods = await auth.fetchSignInMethodsForEmail(email);
+          if (Array.isArray(methods) && methods.length > 0){
+            // Registered already → show red message with login link and stop.
+            showAccountExists(email);
+            return;
+          }
+        }
+      }catch(_){ /* ignore check errors and continue to password stage */ }
+    
+      // Not registered yet → proceed to password stage
       toPasswordStage();
     });
 
