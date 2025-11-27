@@ -126,6 +126,8 @@
       width:var(--content-w);
       transform: translateY(var(--stage-lift-m));
       transition: transform .2s ease;
+      position: relative; /* ensure proper stacking */
+      z-index: 0;
     }
     @media (min-width:768px){
       .stage{ transform: translateY(var(--stage-lift-d)); }
@@ -155,19 +157,24 @@
     .step{ display:none; }
     .step.active{ display:block; }
 
-    .choices{ display:grid; grid-template-columns: 1fr; gap:16px; }
+    .choices{ display:grid; grid-template-columns: 1fr; gap:16px; position: relative; z-index: 1; }
     @media (min-width:720px){ .choices{ grid-template-columns: 1fr 1fr; } }
 
+    /* Make the card an actual button for reliable taps/clicks */
     .choice{
-      position:relative; border-radius:16px; padding:18px 18px;
+      appearance:none; -webkit-appearance:none;
+      background: none; border:0; margin:0; text-align:left; padding:0;
+      position:relative; border-radius:16px; padding:18px 18px; cursor:pointer; user-select:none; z-index: 2;
+      display:flex; gap:14px; align-items:flex-start;
+
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
       border:1px solid rgba(255,255,255,.15);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.25);
-      cursor:pointer; user-select:none;
-      display:flex; gap:14px; align-items:flex-start;
+
       transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
-    .choice:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 16px 42px rgba(0,0,0,.28); }
+    .choice:hover,
+    .choice:focus{ transform:translateY(-2px); border-color:rgba(255,255,255,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 16px 42px rgba(0,0,0,.28); outline: none; }
     .choice.selected{ outline:2px solid #f4d06f; box-shadow: 0 0 0 6px rgba(244,208,111,.15), 0 14px 40px rgba(244,208,111,.18); }
     .choice h3{ margin:0 0 6px 0; font-size:18px; font-weight:700; letter-spacing:-0.01em; }
     .choice p{ margin:0; color:var(--muted); font-size:14px; line-height:1.35; }
@@ -439,7 +446,7 @@
         <p class="subtitle">Pick one to tailor your setup.</p>
 
         <div class="choices" role="listbox" aria-label="Select your role">
-          <div class="choice" data-role="supplier" tabindex="0" role="option" aria-selected="false">
+          <button class="choice" data-role="supplier" type="button" role="option" aria-selected="false">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 7h18v10H3z"></path><path d="M16 7V3H8v4"></path>
@@ -449,9 +456,9 @@
               <h3>Supplier — I sell packaging</h3>
               <p>Capture buyers already signaling intent, prioritize by timing, and let smart outreach run on autopilot.</p>
             </div>
-          </div>
+          </button>
 
-          <div class="choice" data-role="buyer" tabindex="0" role="option" aria-selected="false">
+          <button class="choice" data-role="buyer" type="button" role="option" aria-selected="false">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.58L23 6H6"></path>
@@ -461,7 +468,7 @@
               <h3>Buyer — I buy packaging</h3>
               <p>Describe your need once—get matched to vetted suppliers fast, with clear timelines and quotes.</p>
             </div>
-          </div>
+          </button>
         </div>
 
         <div class="row-actions" style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px">
@@ -669,14 +676,14 @@
       if(!raw) return null;
       let s = String(raw).trim();
       s = s.replace(/^mailto:/i,'');
-      s = s.replace(/^(https?:)?\\/\\//i,'');
-      s = s.replace(/^www\\./i,'');
-      s = s.split(/[\\/?#]/)[0];
-      s = s.replace(/[^\\w.-]/g,'');
+      s = s.replace(/^(https?:)\/\//i,'');
+      s = s.replace(/^www\./i,'');
+      s = s.split(/[\/?#]/)[0];
+      s = s.replace(/[^\w.-]/g,'');
       return s || null;
     }
     function extractHostFromEmail(val){
-      const m = String(val||'').trim().match(/@([^@\\s>]+)$/);
+      const m = String(val||'').trim().match(/@([^@\s>]+)$/);
       if(!m) return null;
       const host = cleanHost(m[1]);
       return host && host.includes('.') ? host.toLowerCase() : null;
@@ -700,7 +707,7 @@
         s1Next.disabled = false;
         if(window.onboarding?.setRole) window.onboarding.setRole(role);
       };
-      el.addEventListener("click", pick);
+      el.addEventListener("click", pick, {passive:true});
       el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); } });
     });
 
@@ -773,7 +780,7 @@
     });
 
     /* ---------- Email -> inside CTA visibility ---------- */
-    const looksValidEmail = (v)=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/i.test(v.trim());
+    const looksValidEmail = (v)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v.trim());
 
     function updateEmailCTA(){
       const v = emailInput.value;
@@ -876,7 +883,7 @@
       byId('s2-or').hidden = true;
       byId('emailWrap').hidden = true;
       byId('verifyPanel').hidden = true;
-      // Optional gentle note for UX (not red, not technical)
+      // Soft note (not red, not technical)
       const note = document.createElement('div');
       note.className = 'inline-note';
       note.textContent = 'Work-email sign-up will be available soon. You can continue with Google for now.';
@@ -905,7 +912,7 @@
 
     async function completeEmailLinkIfPresent(){
       if(!auth) return;
-      if(auth.isSignInWithEmailLink(location.href) || /[?&]verify=1\\b/.test(location.search)){
+      if(auth.isSignInWithEmailLink(location.href) || /[?&]verify=1\b/.test(location.search)){
         let em = localStorage.getItem(EMAIL_KEY) || prompt("Confirm your email to finish sign-in:");
         if(!em){ return; }
         try{
@@ -964,7 +971,7 @@
         vEmail.textContent = email;
         localStorage.setItem(EMAIL_KEY, email);
       }catch(e){
-        // If provider is missing we already hid the UI; any residual error gets a neutral message.
+        // Provider missing is already hidden; any residual error gets a neutral message.
         showStatus("We couldn’t send the verification email. Please try again later.");
       }
     });
@@ -1146,7 +1153,7 @@
   function goToBridge(from){
     // derive best-guess site host for the bridge screen
     const email = (document.getElementById('email')?.value || '').trim();
-    const hostFromEmail = (email.match(/@([^@\\s>]+)/)?.[1] || '').toLowerCase();
+    const hostFromEmail = (email.match(/@([^@\s>]+)/)?.[1] || '').toLowerCase();
     const urlParams = new URLSearchParams({
       from: from || 'unknown',
       role: (window.onboarding?.getRole?.() || window.role || '') || '',
