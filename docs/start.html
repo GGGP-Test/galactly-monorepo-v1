@@ -274,7 +274,15 @@
     .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
     /* ===== Email/Password fields (pressed) ===== */
-    .field-wrap{ width:min(280px, 86vw); margin: 24px auto 0 auto; position:relative; }
+    /* CHANGE 1: hard-center the field wrapper */
+    .field-wrap{
+      max-width:420px;
+      width:min(420px, 86vw);
+      margin: 24px auto 0 auto;
+      position:relative;
+      display:flex;
+      justify-content:center;
+    }
     .pressed{
       position:relative;
       display:grid;
@@ -315,11 +323,13 @@
     input::placeholder{ color:rgba(233,236,243,.62); }
 
     /* inside-field GLASS CTA */
+    /* CHANGE 2: remove horizontal translate and ensure clickability */
     .field-cta{
       position:absolute; right:6px; top:50%;
       width:var(--cta-d); height:var(--cta-d);
-      transform: translate(10px,-50%) scale(.9);
+      transform: translateY(-50%);
       opacity:0; pointer-events:none;
+      z-index:3;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.16);
       background:
@@ -333,9 +343,8 @@
         0 4px 14px rgba(0,0,0,.28);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       color:var(--fg); display:grid; place-items:center; cursor:pointer;
-      transition: transform var(--ring-speed) cubic-bezier(.25,1,.5,1), opacity calc(var(--ring-speed)*.7) ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
+    .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translateY(-50%); }
 
     /* Back arrow row */
     .single-action{ display:grid; place-items:center; margin-top:14px; }
