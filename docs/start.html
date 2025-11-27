@@ -408,10 +408,10 @@
     [hidden]{ display:none !important; }
   </style>
 
-  <!-- Google Identity Services -->
+  <!-- Google Identity Services (harmless even if unused directly) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Firebase (for email link verification) -->
+  <!-- Firebase (for auth) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
@@ -852,11 +852,8 @@
     siteTip?.addEventListener('click', (e)=> e.stopPropagation());
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
-    /* ---------- Firebase (email-link verification) ---------- */
-    // You can inject config in THREE ways without touching this file:
-    // 1) Define window.__FIREBASE_CONFIG__ before this script runs.
-    // 2) Add <meta name="firebase-config" content='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'>
-    // 3) Host on Firebase Hosting (auto-provisioned at /__/firebase/init.json).
+    /* ---------- Firebase (Email/Password + Verify) ---------- */
+    // Config sources: (window.__FIREBASE_CONFIG__), <meta name="firebase-config">, or explicit object below
     const META_CFG = (()=>{ try{
       const m=document.querySelector('meta[name="firebase-config"]');
       return m && m.content ? JSON.parse(m.content) : null;
@@ -871,8 +868,6 @@
         projectId: "artemiss-42e40",
         appId: "1:384891834378:web:53624662894e0650a74ff3",
       };
-      
-    const ACTION_SETTINGS = { url: location.origin + location.pathname };
 
     let auth=null;
 
@@ -912,38 +907,19 @@
     }
     function hideStatus(){ statusEl.hidden = true; statusEl.textContent = ""; }
 
-    async function sendVerifyLink(email){
-      if(!auth){ showStatus("Email verification is not configured yet. Add Firebase keys."); throw new Error('no_auth'); }
-      const url = new URL(location.href);
-      url.searchParams.set('verify','1');
-      url.hash = ''; // cleaner
-      const settings = { url: url.toString(), handleCodeInApp: true };
-      await auth.sendSignInLinkToEmail(email, settings);
-      localStorage.setItem(EMAIL_KEY, email);
+    // Send a standard verification email for the CURRENT user
+    async function sendVerifyLink(){
+      if(!auth || !auth.currentUser){
+        showStatus("Create your account first, then verify.");
+        throw new Error('no_auth');
+      }
+      const continueUrl = location.origin + location.pathname;
+      await auth.currentUser.sendEmailVerification({ url: continueUrl });
+      localStorage.setItem(EMAIL_KEY, auth.currentUser.email || '');
       return true;
     }
 
-    async function completeEmailLinkIfPresent(){
-      if(!auth) return;
-      if(auth.isSignInWithEmailLink(location.href) || /[?&]verify=1\b/.test(location.search)){
-        let em = localStorage.getItem(EMAIL_KEY) || prompt("Confirm your email to finish sign-in:");
-        if(!em){ return; }
-        try{
-          await auth.signInWithEmailLink(em, location.href);
-          localStorage.removeItem(EMAIL_KEY);
-          sessionStorage.setItem(VERIFIED_KEY, '1');
-          history.replaceState({}, "", location.pathname);
-          // ensure input shows the verified email so it carries to bridge
-          if (emailInput) { emailInput.value = em; updateEmailCTA?.(); }
-          // NORMAL FLOW: verified -> straight to bridge
-          goToBridge('email');
-        }catch(e){
-          showStatus("That verification link is invalid or expired. Resend and try again.");
-        }
-      }
-    }
-
-    /* ---------- Swap to Password stage (only after verified) ---------- */
+    /* ---------- Swap to Password stage (after business email) ---------- */
     function toPasswordStage(){
       s2Or.hidden = true;
       s2TopStart.hidden = true;
@@ -968,47 +944,20 @@
       if(window.onboarding?.emailContinue){ window.onboarding.emailContinue(emailInput.value.trim()); }
     }
 
-    /* ---------- Email CTA click ---------- */
+    /* ---------- Email CTA click (show password, no email sent yet) ---------- */
     emailNext.addEventListener('click', async ()=>{
       hideStatus();
       const email = emailInput.value.trim();
       if(!looksValidEmail(email) || !pwdWrap.hidden) return;
-    
+
       const business = isBusinessEmail(email);
       if(!business){
         pulseEmail();
         showStatus("Use a work email (not a personal domain) to continue.");
         return;
       }
-    
-      // Just move to the password stage. Do not send any email yet.
+
       toPasswordStage();
-    });
-
-      try{
-        await sendVerifyLink(email);
-        verifyPanel.hidden = false;
-        vEmail.textContent = email;
-        localStorage.setItem(EMAIL_KEY, email);
-      }catch(e){
-        if(e.message !== 'no_auth'){
-          showStatus("We couldn’t send the verification email. Check the address and try again.");
-        }
-      }
-    });
-
-    // resend / change
-    resendLink.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      hideStatus();
-      const email = localStorage.getItem(EMAIL_KEY) || emailInput.value.trim();
-      if(!email || !auth) return;
-      try{ await sendVerifyLink(email); }catch{}
-    });
-    changeEmail.addEventListener('click', (e)=>{
-      e.preventDefault();
-      verifyPanel.hidden = true;
-      emailInput.focus();
     });
 
     function pulseEmail(){
@@ -1018,53 +967,123 @@
       setTimeout(()=>{ emailBox.style.boxShadow = prev; }, 260);
     }
 
+    /* ---------- Password CTA click (create/login, then send verification) ---------- */
+    pwdNext?.addEventListener('click', async ()=>{
+      hideStatus();
+      const email = emailInput.value.trim();
+      const pwd = pwdInput.value;
+      if (!looksValidEmail(email)) { showStatus("Enter a valid work email first."); return; }
+      if (pwd.length < 6) return;
+      if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
+
+      if(!isBusinessEmail(email)){
+        pulseEmail();
+        showStatus("Use a work email (not a personal domain) to continue.");
+        return;
+      }
+
+      try{
+        let cred;
+        try{
+          // Try sign-up first
+          cred = await auth.createUserWithEmailAndPassword(email, pwd);
+        }catch(e){
+          // If the email exists, sign in with password instead
+          if(e?.code === 'auth/email-already-in-use'){
+            cred = await auth.signInWithEmailAndPassword(email, pwd);
+          }else{
+            throw e;
+          }
+        }
+
+        const user = cred.user;
+        // If already verified, go straight to bridge
+        await user.reload();
+        if(user.emailVerified){
+          sessionStorage.setItem(VERIFIED_KEY,'1');
+          goToBridge('password');
+          return;
+        }
+
+        // Not verified yet — send verification link and show panel
+        await sendVerifyLink();
+        verifyPanel.hidden = false;
+        vEmail.textContent = user.email || email;
+        localStorage.setItem(EMAIL_KEY, user.email || email);
+        showStatus("Check your inbox for the verification link to continue.");
+
+      }catch(err){
+        if(err?.code === 'auth/invalid-email'){ showStatus("That email looks invalid."); return; }
+        if(err?.code === 'auth/weak-password'){ showStatus("Password is too weak."); return; }
+        if(err?.code === 'auth/wrong-password'){ showStatus("Wrong password for this email."); return; }
+        if(err?.code === 'auth/too-many-requests'){ showStatus("Too many attempts. Try again later."); return; }
+        showStatus("We couldn’t continue. Please try again.");
+      }
+    });
+
+    // resend / change
+    resendLink.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      hideStatus();
+      try{
+        await sendVerifyLink();
+      }catch(_){}
+    });
+    changeEmail.addEventListener('click', (e)=>{
+      e.preventDefault();
+      verifyPanel.hidden = true;
+      emailInput.focus();
+    });
+
+    // keep s1-next disabled until role chosen
+    s1Next.disabled = true;
+
+    // If step2 is already visible (deep link)
+    if(step2.classList.contains('active')) syncSiteBadge(true);
+
     /* ---------- GOOGLE SIGN-IN (Firebase popup, business-only) ---------- */
     /* REQUIREMENTS:
        1) In Firebase Console → Authentication → Sign-in method → enable "Google".
-       2) Authentication → Settings → Authorized domains: add your hosts (github.io, galactly.com, localhost, etc).
+       2) Authentication → Settings → Authorized domains: add your hosts.
     */
-    const googleBtn = document.getElementById('googleBtn');
-    
+    const googleBtn  = document.getElementById('googleBtn');
     googleBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
       hideStatus();
-    
+
       if (!auth) { 
         showStatus("Google sign-in isn’t configured. Add Firebase keys."); 
         return; 
       }
-    
+
       try {
-        // Use Firebase Auth's Google provider (no GIS token client needed)
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
-    
-        const cred = await auth.signInWithPopup(provider);   // free on Spark
+
+        const cred = await auth.signInWithPopup(provider);
         const user = cred.user;
         const email = user?.email || "";
         const domain = (email.split("@")[1] || "").toLowerCase();
-    
-        // Optional: read Workspace hosted domain claim (present for Google Workspace)
+
+        // Decode hd claim when present (Google Workspace)
         let hd = null;
         try {
           const idToken = await user.getIdToken();
           const payload = JSON.parse(atob((idToken.split(".")[1] || "").replace(/-/g, '+').replace(/_/g, '/'))) || {};
           hd = (payload.hd || "").toLowerCase() || null;
         } catch {}
-    
-        // Block personal email domains. Your PERSONAL set already includes gmail/googlemail.
+
         if (!email || PERSONAL.has(domain) || domain === 'gmail.com' || domain === 'googlemail.com') {
           try { await auth.signOut(); } catch {}
           showStatus("Please use a work Google account (no personal Gmail).");
           pulseEmail();
           return;
         }
-    
-        // Prefill and continue like your normal path
+
         emailInput.value = email;
         updateEmailCTA?.();
         goToBridge('google');
-    
+
       } catch (err) {
         if (err?.code === 'auth/popup-closed-by-user') return;
         if (err?.code === 'auth/account-exists-with-different-credential') {
@@ -1075,28 +1094,31 @@
       }
     });
 
-    /* ----- deep-link complete (email verification) ----- */
+    /* ----- handle "verifyEmail" deep link from Firebase ----- */
     async function handleVerifyOnLoad(){
       if(!auth) return;
       const p = new URLSearchParams(location.search);
       const mode = p.get('mode');
       const oob  = p.get('oobCode');
-    
-      // This covers the standard Firebase "verifyEmail" link
+
       if(mode === 'verifyEmail' && oob){
         try{
-          await auth.applyActionCode(oob);              // mark email as verified in Firebase
-          history.replaceState({}, "", location.pathname); // clean URL
+          await auth.applyActionCode(oob);                  // mark email as verified
+          try{ await auth.currentUser?.reload(); }catch(_){}
+          history.replaceState({}, "", location.pathname);  // clean URL
           sessionStorage.setItem(VERIFIED_KEY, '1');
-          // proceed exactly like your flow requires
+
+          // If we still have the email, keep it in the field for bridge carry-over
+          const em = localStorage.getItem(EMAIL_KEY) || auth.currentUser?.email || "";
+          if (em && emailInput) { emailInput.value = em; updateEmailCTA?.(); }
+
+          // proceed to bridge
           goToBridge('email');
         }catch(e){
           showStatus("That verification link is invalid or expired. Resend and try again.");
         }
       }
     }
-    
-    // ----- call it on load (replaces the old passwordless handler) -----
     handleVerifyOnLoad();
   </script>
 
