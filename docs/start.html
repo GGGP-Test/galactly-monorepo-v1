@@ -853,20 +853,53 @@
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
     /* ---------- Firebase (email-link verification) ---------- */
-    const FIREBASE_CONFIG = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      appId: "YOUR_APP_ID",
-    };
+    // You can inject config in THREE ways without touching this file:
+    // 1) Define window.__FIREBASE_CONFIG__ before this script runs.
+    // 2) Add <meta name="firebase-config" content='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'>
+    // 3) Host on Firebase Hosting (auto-provisioned at /__/firebase/init.json).
+    const META_CFG = (()=>{ try{
+      const m=document.querySelector('meta[name="firebase-config"]');
+      return m && m.content ? JSON.parse(m.content) : null;
+    }catch(e){ return null; }})();
+
+    const FIREBASE_CONFIG =
+      (window.__FIREBASE_CONFIG__ && typeof window.__FIREBASE_CONFIG__==='object' && window.__FIREBASE_CONFIG__) ||
+      (typeof window.firebaseConfig!=='undefined' && window.firebaseConfig) ||
+      META_CFG || {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        appId: "YOUR_APP_ID",
+      };
+
     let auth=null;
-    try{
-      const looksReal = Object.values(FIREBASE_CONFIG).every(v => typeof v==='string' && v && !/^YOUR_/i.test(v));
-      if(looksReal){
-        firebase.initializeApp(FIREBASE_CONFIG);
-        auth = firebase.auth();
-      }
-    }catch(e){ auth = null; }
+
+    (async function initFirebase(){
+      try{
+        if(firebase?.apps?.length){ auth = firebase.auth(); return; }
+
+        const looksReal = FIREBASE_CONFIG && Object.values(FIREBASE_CONFIG).every(v => typeof v==='string' && v && !/^YOUR_/i.test(v));
+        if(looksReal){
+          firebase.initializeApp(FIREBASE_CONFIG);
+          auth = firebase.auth();
+          return;
+        }
+
+        // Try Firebase Hosting auto-injected config
+        try{
+          const res = await fetch('/__/firebase/init.json', { cache:'no-store' });
+          if(res.ok){
+            const cfg = await res.json();
+            if(cfg && cfg.projectId){
+              firebase.initializeApp(cfg);
+              auth = firebase.auth();
+              return;
+            }
+          }
+        }catch(_){}
+
+      }catch(e){ auth = null; }
+    })();
 
     const EMAIL_KEY = 'gg_pending_email';
     const VERIFIED_KEY = 'gg_email_verified';
@@ -879,8 +912,10 @@
 
     async function sendVerifyLink(email){
       if(!auth){ showStatus("Email verification is not configured yet. Add Firebase keys."); throw new Error('no_auth'); }
-      const url = location.origin + location.pathname + "?verify=1"; // continue URL back to this page
-      const settings = { url, handleCodeInApp: true };
+      const url = new URL(location.href);
+      url.searchParams.set('verify','1');
+      url.hash = ''; // cleaner
+      const settings = { url: url.toString(), handleCodeInApp: true };
       await auth.sendSignInLinkToEmail(email, settings);
       localStorage.setItem(EMAIL_KEY, email);
       return true;
