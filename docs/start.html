@@ -1152,6 +1152,21 @@
     }
     .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
     .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
+    
+    /* === CENTER PATCH === */
+#s2-bottom{ display:grid; justify-items:center; }       /* center children in the section */
+
+.field-wrap{
+  width:100%;
+  max-width:560px;          /* section lane */
+  margin:24px auto 0;       /* center the lane */
+}
+
+.pressed{
+  width:100%;
+  max-width:360px;          /* actual pill width */
+  margin-inline:auto;       /* center the pill itself */
+}
   </style>
 
   <script>
