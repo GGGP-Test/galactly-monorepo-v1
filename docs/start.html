@@ -105,14 +105,12 @@
     body{
       color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
       background:
         radial-gradient(1200px 800px at 76% 26%, rgba(240,196,90,.28) 0%, transparent 58%),
         radial-gradient(1200px 800px at 24% 78%, rgba(64,186,255,.24) 0%, transparent 60%),
         radial-gradient(700px 500px at 50% -8%, rgba(255,255,255,.08) 0%, transparent 70%),
         linear-gradient(180deg, #171a17, #0f1210);
       background-blend-mode: screen, screen, normal, normal;
-
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overflow: hidden;
@@ -301,7 +299,7 @@
     }
     .pressed:has(input:focus){ border-color: rgba(255,255,255,.24); box-shadow:
       inset 0 1px 0 rgba(255,255,255,.25),
-      inset 0 -2px 6px rgba(0,0,0,.6),
+      inset 0 -3px 6px rgba(0,0,0,.6),
       inset 0 12px 26px rgba(0,0,0,.22),
       0 8px 22px rgba(0,0,0,.30); }
 
@@ -411,7 +409,7 @@
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Firebase (for email link verification) -->
+  <!-- Email-link auth library (e.g., Firebase). Page will hide email flow if not configured. -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
@@ -513,7 +511,7 @@
               </a>
             </div>
 
-            <!-- Inline rejection / status -->
+            <!-- Neutral status area (not shown by default) -->
             <div id="inlineStatus" class="inline-error" role="alert" hidden></div>
           </div>
         </div>
@@ -533,7 +531,7 @@
           <div id="s2-or" class="muted">OR</div>
 
           <!-- email field -->
-          <div class="field-wrap">
+          <div class="field-wrap" id="emailWrap">
             <div class="pressed" id="emailBox">
               <span class="left-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -634,6 +632,7 @@
     const s2TopPass  = byId("s2-top-pass");
     const s2Or       = byId("s2-or");
 
+    const emailWrap  = byId("emailWrap");
     const emailInput = byId("email");
     const emailBox   = byId("emailBox");
     const emailNext  = byId("emailNext");
@@ -654,8 +653,8 @@
     const siteInfo   = byId('siteInfo');
     const siteTip    = byId('siteTip');
 
-    /* Status/error area (shared) */
-    const statusEl  = byId('inlineStatus');
+    /* shared status (kept hidden unless needed) */
+    const statusEl   = byId('inlineStatus');
 
     let s2Stage = 'start'; // 'start' | 'password'
 
@@ -670,14 +669,14 @@
       if(!raw) return null;
       let s = String(raw).trim();
       s = s.replace(/^mailto:/i,'');
-      s = s.replace(/^(https?:)?\/\//i,'');
-      s = s.replace(/^www\./i,'');
-      s = s.split(/[\/?#]/)[0];
-      s = s.replace(/[^\w.-]/g,'');
+      s = s.replace(/^(https?:)?\\/\\//i,'');
+      s = s.replace(/^www\\./i,'');
+      s = s.split(/[\\/?#]/)[0];
+      s = s.replace(/[^\\w.-]/g,'');
       return s || null;
     }
     function extractHostFromEmail(val){
-      const m = String(val||'').trim().match(/@([^@\s>]+)$/);
+      const m = String(val||'').trim().match(/@([^@\\s>]+)$/);
       if(!m) return null;
       const host = cleanHost(m[1]);
       return host && host.includes('.') ? host.toLowerCase() : null;
@@ -774,7 +773,7 @@
     });
 
     /* ---------- Email -> inside CTA visibility ---------- */
-    const looksValidEmail = (v)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v.trim());
+    const looksValidEmail = (v)=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/i.test(v.trim());
 
     function updateEmailCTA(){
       const v = emailInput.value;
@@ -852,21 +851,39 @@
     siteTip?.addEventListener('click', (e)=> e.stopPropagation());
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
-    /* ---------- Firebase (email-link verification) ---------- */
+    /* ---------- Email-link auth (provider optional) ---------- */
     const FIREBASE_CONFIG = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT.firebaseapp.com",
       projectId: "YOUR_PROJECT_ID",
       appId: "YOUR_APP_ID",
     };
-    let auth=null;
+
+    let auth = null;
+    let EMAIL_PROVIDER_READY = false;
     try{
       const looksReal = Object.values(FIREBASE_CONFIG).every(v => typeof v==='string' && v && !/^YOUR_/i.test(v));
       if(looksReal){
         firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
+        EMAIL_PROVIDER_READY = true;
       }
-    }catch(e){ auth = null; }
+    }catch(e){ auth = null; EMAIL_PROVIDER_READY = false; }
+
+    // Hide email flow entirely if provider isn't ready (no scary message for users)
+    function applyEmailAvailability(ready){
+      if(ready){ return; }
+      byId('s2-or').hidden = true;
+      byId('emailWrap').hidden = true;
+      byId('verifyPanel').hidden = true;
+      // Optional gentle note for UX (not red, not technical)
+      const note = document.createElement('div');
+      note.className = 'inline-note';
+      note.textContent = 'Work-email sign-up will be available soon. You can continue with Google for now.';
+      const topCenter = document.querySelector('#s2-top-start .center');
+      topCenter.appendChild(note);
+    }
+    applyEmailAvailability(EMAIL_PROVIDER_READY);
 
     const EMAIL_KEY = 'gg_pending_email';
     const VERIFIED_KEY = 'gg_email_verified';
@@ -878,8 +895,8 @@
     function hideStatus(){ statusEl.hidden = true; statusEl.textContent = ""; }
 
     async function sendVerifyLink(email){
-      if(!auth){ showStatus("Email verification is not configured yet. Add Firebase keys."); throw new Error('no_auth'); }
-      const url = location.origin + location.pathname + "?verify=1"; // continue URL back to this page
+      if(!auth){ throw new Error('no_auth'); } // UI is already hidden when not ready
+      const url = location.origin + location.pathname + "?verify=1";
       const settings = { url, handleCodeInApp: true };
       await auth.sendSignInLinkToEmail(email, settings);
       localStorage.setItem(EMAIL_KEY, email);
@@ -888,7 +905,7 @@
 
     async function completeEmailLinkIfPresent(){
       if(!auth) return;
-      if(auth.isSignInWithEmailLink(location.href) || /[?&]verify=1\b/.test(location.search)){
+      if(auth.isSignInWithEmailLink(location.href) || /[?&]verify=1\\b/.test(location.search)){
         let em = localStorage.getItem(EMAIL_KEY) || prompt("Confirm your email to finish sign-in:");
         if(!em){ return; }
         try{
@@ -947,9 +964,8 @@
         vEmail.textContent = email;
         localStorage.setItem(EMAIL_KEY, email);
       }catch(e){
-        if(e.message !== 'no_auth'){
-          showStatus("We couldn’t send the verification email. Check the address and try again.");
-        }
+        // If provider is missing we already hid the UI; any residual error gets a neutral message.
+        showStatus("We couldn’t send the verification email. Please try again later.");
       }
     });
 
@@ -989,7 +1005,7 @@
     // If step2 is already visible (deep link)
     if(step2.classList.contains('active')) syncSiteBadge(true);
 
-    /* ---------- GOOGLE SIGN-IN (unchanged for now) ---------- */
+    /* ---------- GOOGLE SIGN-IN (work emails only enforced later server-side) ---------- */
     const GOOGLE_CLIENT_ID = "384891834378-4df25ijskgn206becb84o240td6d7eek.apps.googleusercontent.com";
     let tokenClient = null;
 
@@ -1130,7 +1146,7 @@
   function goToBridge(from){
     // derive best-guess site host for the bridge screen
     const email = (document.getElementById('email')?.value || '').trim();
-    const hostFromEmail = (email.match(/@([^@\s>]+)/)?.[1] || '').toLowerCase();
+    const hostFromEmail = (email.match(/@([^@\\s>]+)/)?.[1] || '').toLowerCase();
     const urlParams = new URLSearchParams({
       from: from || 'unknown',
       role: (window.onboarding?.getRole?.() || window.role || '') || '',
