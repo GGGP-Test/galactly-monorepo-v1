@@ -414,6 +414,7 @@
   <!-- Firebase (for auth) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -904,10 +905,59 @@
       };
 
     let auth=null;
+    
+    <script>
+    // --- Firestore handle ---
+    let db = null;
+    
+    // Normalize domains and guard against odd inputs
+    function normalizeDomain(emailOrHost){
+      const raw = (emailOrHost || "").trim();
+      const host = raw.includes("@") ? (raw.split("@")[1] || "") : raw;
+      const clean = host.toLowerCase().replace(/^mailto:/,'').replace(/^(https?:)?\/\//,'').replace(/^www\./,'').split(/[\/?#]/)[0];
+      // very basic allowlist of chars: letters, digits, dash, dot
+      return clean.replace(/[^a-z0-9.-]/g,'');
+    }
+    
+    // A single doc per domain means "claimed by someone already"
+    function domainDocRef(domain){
+      return db.collection("domains").doc(domain); // e.g. domains/trigalactly.com
+    }
+    
+    // Check if domain is claimed (privacy-safe: no email/user disclosed)
+    async function isDomainTaken(domain){
+      if(!db) return false; // if Firestore not configured, don't block
+      const snap = await domainDocRef(domain).get();
+      return snap.exists;
+    }
+    
+    // Claim the domain atomically; if racing, this throws
+    async function claimDomainOrThrow(domain, ownerEmail){
+      return db.runTransaction(async (tx)=>{
+        const ref = domainDocRef(domain);
+        const snap = await tx.get(ref);
+        if(snap.exists){
+          throw new Error("domain-claimed");
+        }
+        tx.set(ref, {
+          ownerEmail: ownerEmail || null,   // optional breadcrumb
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+    }
+    
+    // If a brand-new signup sneaks past our pre-check and we lose the race,
+    // roll it back cleanly.
+    async function rollbackNewlyCreatedUser(err){
+      try { await firebase.auth().currentUser?.delete(); } catch {}
+      try { await firebase.auth().signOut(); } catch {}
+      throw err;
+    }
+    </script>
 
     (async function initFirebase(){
       try{
-        if(firebase?.apps?.length){ auth = firebase.auth(); return; }
+        if(firebase?.apps?.length){ auth = firebase.auth(); try { db = firebase.firestore(); } catch(_) { db = null; }; return; }
 
         const looksReal = FIREBASE_CONFIG && Object.values(FIREBASE_CONFIG).every(v => typeof v==='string' && v && !/^YOUR_/i.test(v));
         if(looksReal){
@@ -1000,16 +1050,25 @@
       const email = emailInput.value.trim();
       if(!looksValidEmail(email) || !isBusinessEmail(email)){ pulseEmail(); showStatus("Use a valid work email to continue."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
-
+    
+      const domain = normalizeDomain(email);
       try{
+        // 1) Domain-first policy
+        if(await isDomainTaken(domain)){
+          showStatusHTML(`<strong>This company domain is already registered.</strong> Log in to continue.`);
+          setTimeout(()=>goLogin(email), 450);
+          return;
+        }
+        // 2) Legacy per-email fallback (still blocks if the exact email exists)
         const exists = await emailExists(email);
         if(exists){
           showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
           setTimeout(()=>goLogin(email), 450);
           return;
         }
+        // 3) New domain → proceed to password
         toPasswordStage();
-      }catch(_){ /* emailExists already surfaced a message */ }
+      }catch(_){ /* status already shown if needed */ }
     });
 
     /* ---------- Password CTA: create ONLY if brand new ---------- */
@@ -1021,32 +1080,53 @@
       if (!isBusinessEmail(email)){ pulseEmail(); showStatus("Use a work email (not a personal domain)."); return; }
       if (pwd.length < 6) { showStatus("Password is too short."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
-
+    
+      const domain = normalizeDomain(email);
+    
       try{
-        const exists = await emailExists(email);
-        if(exists){
+        // Block if domain already claimed
+        if(await isDomainTaken(domain)){
+          showStatusHTML(`<strong>This company domain is already registered.</strong> Log in to continue.`);
+          setTimeout(()=>goLogin(email), 450);
+          return;
+        }
+        // Also block if exact email exists
+        if(await emailExists(email)){
           showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
           setTimeout(()=>goLogin(email), 450);
           return;
         }
-
-        // New account: create and send verification
+    
+        // Create the user first (auth required for Firestore write under common rules)
         const cred = await auth.createUserWithEmailAndPassword(email, pwd);
         const user = cred.user;
-
+    
+        // Atomically claim the domain; if race lost, roll back the newly created user
+        try{
+          await claimDomainOrThrow(domain, email);
+        }catch(e){
+          if(e && e.message === "domain-claimed"){
+            showStatusHTML(`<strong>This company domain is already registered.</strong> Log in to continue.`);
+          }else{
+            showStatus("We couldn't reserve your company domain. Please try again.");
+          }
+          await rollbackNewlyCreatedUser(e);
+          return;
+        }
+    
         await user.reload();
         if(user.emailVerified){
           sessionStorage.setItem(VERIFIED_KEY,'1');
           goToBridge('password');
           return;
         }
-
+    
         await sendVerifyLink();
         verifyPanel.hidden = false;
         vEmail.textContent = user.email || email;
         localStorage.setItem(EMAIL_KEY, user.email || email);
         showStatus("Check your inbox for the verification link to continue.");
-
+    
       }catch(err){
         if(err?.code === 'auth/invalid-email'){ showStatus("That email looks invalid."); return; }
         if(err?.code === 'auth/weak-password'){ showStatus("Password is too weak."); return; }
@@ -1078,19 +1158,19 @@
     googleBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
       hideStatus();
-
+    
       if (!auth) { showStatus("Google sign-in isn’t configured. Add Firebase keys."); return; }
-
+    
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
-
+    
         const cred = await auth.signInWithPopup(provider);
         const user = cred.user;
         const email = user?.email || "";
         const domain = (email.split("@")[1] || "").toLowerCase();
         const isNew = cred?.additionalUserInfo?.isNewUser === true;
-
+    
         // Enforce work domains
         if (!email || PERSONAL.has(domain)) {
           try { await auth.signOut(); } catch {}
@@ -1098,20 +1178,40 @@
           pulseEmail();
           return;
         }
-
-        if(!isNew){
-          // Existing account → send them to login
+    
+        const norm = normalizeDomain(domain);
+    
+        // If domain is already claimed → force login path, never create a new account
+        if(await isDomainTaken(norm)){
           try { await auth.signOut(); } catch {}
-          showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
+          showStatusHTML(`<strong>This company domain is already registered.</strong> Log in to continue.`);
           setTimeout(()=>goLogin(email), 450);
           return;
         }
-
-        // New Google account → proceed
-        emailInput.value = email;
-        updateEmailCTA?.();
-        goToBridge('google');
-
+    
+        // Brand-new Google user: attempt to claim the domain immediately
+        if(isNew){
+          try{
+            await claimDomainOrThrow(norm, email);
+          }catch(e){
+            // Lost race: back out and route to login
+            try { await firebase.auth().currentUser?.delete(); } catch {}
+            try { await firebase.auth().signOut(); } catch {}
+            showStatusHTML(`<strong>This company domain is already registered.</strong> Log in to continue.`);
+            setTimeout(()=>goLogin(email), 450);
+            return;
+          }
+          emailInput.value = email;
+          updateEmailCTA?.();
+          goToBridge('google');
+          return;
+        }
+    
+        // Existing Google user → login route
+        try { await auth.signOut(); } catch {}
+        showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
+        setTimeout(()=>goLogin(email), 450);
+    
       } catch (err) {
         if (err?.code === 'auth/popup-closed-by-user') return;
         if (err?.code === 'auth/account-exists-with-different-credential') {
