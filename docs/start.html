@@ -435,6 +435,30 @@
     /* hides */
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
+    
+    
+    /* ===== hard center + 240px cap (authoritative overrides) ===== */
+    #step2 #s2-bottom{
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:center !important;   /* center children horizontally */
+    }
+    
+    #step2 .field-wrap{
+      width:240px !important;
+      max-width:240px !important;
+      margin:24px auto 0 !important;   /* horizontal center */
+      display:block !important;
+      position:relative !important;
+    }
+    
+    #step2 .pressed{
+      box-sizing:border-box !important; /* include padding+border inside width */
+      width:100% !important;            /* fill the 240px lane */
+      max-width:100% !important;
+      margin-inline:auto !important;    /* belt & suspenders */
+    }
+
   </style>
 
   <!-- Google Identity Services (harmless even if unused directly) -->
