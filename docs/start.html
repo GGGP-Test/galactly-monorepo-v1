@@ -152,9 +152,6 @@
     .center { display:grid; gap:16px; place-items:center; }
     #step2 .center { gap: 0; }
 
-    .inline-error a{ color:#ffd7d7; text-decoration:underline; }
-    .inline-error strong{ color:#fff; font-weight:700; }
-
     /* ===================== STEP 1 ===================== */
     .cardless{ max-width:860px; margin-inline:auto; }
     .step{ display:none; }
@@ -277,25 +274,15 @@
     .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
     /* ===== Email/Password fields (pressed) ===== */
-    :root{ --lane-w: 240px; } /* Do not raise above 240px */
-    
-    .field-wrap{
-      /* hard-centered lane with a hard cap */
-      width: min(var(--lane-w), 90vw);
-      margin: 24px auto 0;     /* centers on all screens */
-      position: relative;
-    }
-    
+    .field-wrap{ width:min(280px, 86vw); margin: 24px auto 0 auto; position:relative; }
     .pressed{
-      position: relative;
-      display: grid;
+      position:relative;
+      display:grid;
       grid-template-columns: 26px 1fr;
-      align-items: center;
-      height: var(--ctl-h);
-      border-radius: var(--ctl-r);
-      padding: 0 14px;
-    
-      /* glass styles (unchanged) */
+      align-items:center;
+      height:var(--ctl-h);
+      border-radius:var(--ctl-r);
+      padding:0 14px;
       background: transparent;
       border:1px solid rgba(255,255,255,.16);
       box-shadow:
@@ -305,46 +292,34 @@
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
-    
-      /* critical: keep the whole pill ≤ 240px and centered */
-      box-sizing: border-box;  /* include padding + border in width */
-      width: 100%;
-      max-width: 100%;
-      margin-inline: auto;
     }
-    
-    .pressed::before{
-      content:""; position:absolute; inset:0; border-radius:inherit; padding:0.1px;
+    .pressed::before{ content:""; position:absolute; inset:0; border-radius:inherit; padding:0.1px;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor; mask-composite: exclude;
       background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.10));
       pointer-events:none;
     }
-    .pressed:has(input:focus){
-      border-color: rgba(255,255,255,.24);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.25),
-        inset 0 -2px 6px rgba(0,0,0,.6),
-        inset 0 12px 26px rgba(0,0,0,.22),
-        0 8px 22px rgba(0,0,0,.30);
-    }
-    
-    .left-icon{ display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9 }
-    
+    .pressed:has(input:focus){ border-color: rgba(255,255,255,.24); box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.25),
+      inset 0 -2px 6px rgba(0,0,0,.6),
+      inset 0 12px 26px rgba(0,0,0,.22),
+      0 8px 22px rgba(0,0,0,.30); }
+
+    .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
+
     input{
       min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
-      font-size:14px; height:calc(var(--ctl-h) - 2px);
-      padding:0 8px;
+      font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
       padding-right: calc(var(--cta-d) + 14px);
     }
     input::placeholder{ color:rgba(233,236,243,.62); }
-    
+
     /* inside-field GLASS CTA */
     .field-cta{
       position:absolute; right:6px; top:50%;
       width:var(--cta-d); height:var(--cta-d);
-      transform: translateY(-50%);
-      opacity:0; pointer-events:none; z-index:3;
+      transform: translate(10px,-50%) scale(.9);
+      opacity:0; pointer-events:none;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.16);
       background:
@@ -358,9 +333,10 @@
         0 4px 14px rgba(0,0,0,.28);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       color:var(--fg); display:grid; place-items:center; cursor:pointer;
+      transition: transform var(--ring-speed) cubic-bezier(.25,1,.5,1), opacity calc(var(--ring-speed)*.7) ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translateY(-50%); }    
-    
+    .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
+
     /* Back arrow row */
     .single-action{ display:grid; place-items:center; margin-top:14px; }
 
@@ -371,14 +347,8 @@
     #step2 .chip-row        { margin: 0 0 var(--s2-gap-chips-hr) 0; }
     #step2 .hr              { margin: 12px auto var(--s2-gap-hr-or) auto; }
     #step2 .muted           { margin: 0 0 var(--s2-gap-or-field) 0; }
-    #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) 0; }
+    #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
     #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
-
-    #s2-bottom{
-      display:flex;
-      flex-direction:column;
-      align-items:center;   /* centers all children horizontally */
-    }
 
     /* ===== Animations ===== */
     :root{
@@ -429,36 +399,13 @@
       border:1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
     .site-badge .host{ font-weight:800; letter-spacing:.2px; }
     .site-badge .info{ display:inline-grid; place-items:center; width:20px; height:20px; border-radius:999px; line-height:0; border:1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); color:var(--fg); cursor:pointer; }
+    /* Tooltip stays WHITE per your spec */
     .site-badge .tip{ position:absolute; top: calc(100% + 8px); left:50%; transform: translateX(-50%); z-index: 40; padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap; color:#0e1420; background: rgba(255,255,255,.95); border:1px solid rgba(0,0,0,.14); box-shadow: 0 6px 18px rgba(0,0,0,.28); opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease; }
     .site-badge:hover .tip, .site-badge:focus-within .tip, .site-badge.show-tip .tip{ opacity:1; transform: translate(-50%, -2px); pointer-events:auto; }
 
     /* hides */
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
-    
-    
-    /* ===== hard center + 240px cap (authoritative overrides) ===== */
-    #step2 #s2-bottom{
-      display:flex !important;
-      flex-direction:column !important;
-      align-items:center !important;   /* center children horizontally */
-    }
-    
-    #step2 .field-wrap{
-      width:240px !important;
-      max-width:240px !important;
-      margin:24px auto 0 !important;   /* horizontal center */
-      display:block !important;
-      position:relative !important;
-    }
-    
-    #step2 .pressed{
-      box-sizing:border-box !important; /* include padding+border inside width */
-      width:100% !important;            /* fill the 240px lane */
-      max-width:100% !important;
-      margin-inline:auto !important;    /* belt & suspenders */
-    }
-
   </style>
 
   <!-- Google Identity Services (harmless even if unused directly) -->
@@ -638,11 +585,7 @@
               </svg>
             </button>
           </div>
-          <div class="small-row">
-            <span>Already have an account?</span>
-            <a id="staticLoginLink" href="login.html">Log in</a>
-          </div>
-          </div> <!-- CLOSES #s2-bottom -->
+        </div>
       </section>
 
       <!-- Validation placeholders -->
@@ -819,14 +762,6 @@
       hideStatus();
     }
 
-    function showAccountExists(email){
-      const em = String(email||'').trim();
-      showStatusHTML(
-        `<strong>It looks like this account already exists.</strong> ` +
-        `<a href="login.html?email=${encodeURIComponent(em)}" id="errLoginLink">Log in instead</a>.`
-      );
-    }
-
     s2Back.addEventListener("click", ()=>{
       if(!step2.classList.contains('active')) return;
       if(s2Stage === 'password'){
@@ -970,57 +905,50 @@
       statusEl.textContent = msg || "We couldn't continue.";
       statusEl.hidden = false;
     }
-    function showStatusHTML(html){
-      statusEl.innerHTML = html;
-      statusEl.hidden = false;
-    }
-    
     function hideStatus(){ statusEl.hidden = true; statusEl.textContent = ""; }
 
-    // Send a verification email for the CURRENT user (in-app handling)
+    // Send a standard verification email for the CURRENT user
     async function sendVerifyLink(){
       if(!auth || !auth.currentUser){
         showStatus("Create your account first, then verify.");
         throw new Error('no_auth');
       }
-      // Use THIS page as the deep-link. Must be on an Authorized domain.
-      const startUrl = new URL(location.href);
-      startUrl.search = "";   // keep it clean
-      startUrl.hash = "";
+      // After Firebase marks the email verified, redirect to bridge.html
+      const continueUrl = new URL("bridge.html", location.origin).href;
       await auth.currentUser.sendEmailVerification({
-        url: startUrl.toString(),
-        handleCodeInApp: true
+        url: continueUrl,
+        handleCodeInApp: false // use Firebase’s hosted handler, then redirect
       });
       localStorage.setItem(EMAIL_KEY, auth.currentUser.email || '');
       return true;
     }
-
+    
     /* ---------- Swap to Password stage (after business email) ---------- */
     function toPasswordStage(){
       s2Or.hidden = true;
       s2TopStart.hidden = true;
       s2TopPass.hidden  = false;
-
+    
       verifyPanel.hidden = true;
-
+    
       emailBox.classList.remove('show-cta');
       emailNext.setAttribute('aria-hidden','true');
-
+    
       play(s2TopPass.querySelector('.title-row h1'),'anim-title');
       play(s2TopPass.querySelector('.title-row .subtitle'),'anim-sub');
-
+    
       pwdWrap.hidden = false;
       play(pwdWrap,'anim-pwd');
       updatePwdCTA();
       pwdInput.focus({ preventScroll:true });
-
+    
       syncSiteBadge(false);
-
+    
       s2Stage = 'password';
       if(window.onboarding?.emailContinue){ window.onboarding.emailContinue(emailInput.value.trim()); }
     }
-
-    /* ---------- Email CTA click (show password or show 'account exists') ---------- */
+    
+    /* ---------- Email CTA click (show password, no email sent yet) ---------- */
     emailNext.addEventListener('click', async ()=>{
       hideStatus();
       const email = emailInput.value.trim();
@@ -1033,29 +961,16 @@
         return;
       }
     
-      // If Firebase is available, check if the email already has any sign-in method.
-      try{
-        if (auth && typeof auth.fetchSignInMethodsForEmail === 'function'){
-          const methods = await auth.fetchSignInMethodsForEmail(email);
-          if (Array.isArray(methods) && methods.length > 0){
-            // Registered already → show red message with login link and stop.
-            showAccountExists(email);
-            return;
-          }
-        }
-      }catch(_){ /* ignore check errors and continue to password stage */ }
-    
-      // Not registered yet → proceed to password stage
       toPasswordStage();
     });
-
+    
     function pulseEmail(){
       emailBox.style.transition = 'box-shadow 180ms ease';
       const prev = emailBox.style.boxShadow;
       emailBox.style.boxShadow = '0 0 0 2px rgba(255,107,107,.45), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -3px 6px rgba(0,0,0,.6), inset 0 12px 26px rgba(0,0,0,.22)';
       setTimeout(()=>{ emailBox.style.boxShadow = prev; }, 260);
     }
-
+    
     /* ---------- Password CTA click (create/login, then send verification) ---------- */
     pwdNext?.addEventListener('click', async ()=>{
       hideStatus();
@@ -1064,13 +979,13 @@
       if (!looksValidEmail(email)) { showStatus("Enter a valid work email first."); return; }
       if (pwd.length < 6) return;
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
-
+    
       if(!isBusinessEmail(email)){
         pulseEmail();
         showStatus("Use a work email (not a personal domain) to continue.");
         return;
       }
-
+    
       try{
         let cred;
         try{
@@ -1084,9 +999,9 @@
             throw e;
           }
         }
-
+    
         const user = cred.user;
-
+    
         // If already verified, go straight to bridge
         await user.reload();
         if(user.emailVerified){
@@ -1094,33 +1009,23 @@
           goToBridge('password');
           return;
         }
-
+    
         // Not verified yet — send verification link and show panel
         await sendVerifyLink();
         verifyPanel.hidden = false;
         vEmail.textContent = user.email || email;
         localStorage.setItem(EMAIL_KEY, user.email || email);
         showStatus("Check your inbox for the verification link to continue.");
-
+    
       }catch(err){
-        // Map common 400-ish errors to friendly text
-        if(err?.code === 'auth/invalid-continue-uri'){ showStatus("Your site URL isn’t authorized in Firebase Auth → Settings → Authorized domains."); return; }
         if(err?.code === 'auth/invalid-email'){ showStatus("That email looks invalid."); return; }
         if(err?.code === 'auth/weak-password'){ showStatus("Password is too weak."); return; }
-        if (err?.code === 'auth/wrong-password') {
-          const em = emailInput.value.trim();
-          showStatusHTML(
-            `<strong>Account exists.</strong> Wrong password. ` +
-            `<a href="login.html?email=${encodeURIComponent(em)}" id="errLoginLink">Log in instead</a>.`
-          );
-          return;
-        }
+        if(err?.code === 'auth/wrong-password'){ showStatus("Wrong password for this email."); return; }
         if(err?.code === 'auth/too-many-requests'){ showStatus("Too many attempts. Try again later."); return; }
-        if(err?.code === 'auth/operation-not-allowed'){ showStatus("Email/Password provider is not enabled in Firebase."); return; }
         showStatus("We couldn’t continue. Please try again.");
       }
     });
-
+    
     // resend / change
     resendLink.addEventListener('click', async (e)=>{
       e.preventDefault();
@@ -1132,21 +1037,13 @@
       verifyPanel.hidden = true;
       emailInput.focus();
     });
-
-    byId('staticLoginLink')?.addEventListener('click', (e)=>{
-      const email = (document.getElementById('email')?.value || '').trim();
-      if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email)) {
-        e.preventDefault();
-        location.href = `login.html?email=${encodeURIComponent(email)}`;
-      }
-    });
-
+    
     // keep s1-next disabled until role chosen
     s1Next.disabled = true;
-
+    
     // If step2 is already visible (deep link)
     if(step2.classList.contains('active')) syncSiteBadge(true);
-
+    
     /* ---------- GOOGLE SIGN-IN (Firebase popup, business-only) ---------- */
     /* REQUIREMENTS:
        1) In Firebase Console → Authentication → Sign-in method → enable "Google".
@@ -1156,21 +1053,21 @@
     googleBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
       hideStatus();
-
+    
       if (!auth) { 
         showStatus("Google sign-in isn’t configured. Add Firebase keys."); 
         return; 
       }
-
+    
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
-
+    
         const cred = await auth.signInWithPopup(provider);
         const user = cred.user;
         const email = user?.email || "";
         const domain = (email.split("@")[1] || "").toLowerCase();
-
+    
         // Decode hd claim when present (Google Workspace)
         let hd = null;
         try {
@@ -1178,18 +1075,18 @@
           const payload = JSON.parse(atob((idToken.split(".")[1] || "").replace(/-/g, '+').replace(/_/g, '/'))) || {};
           hd = (payload.hd || "").toLowerCase() || null;
         } catch {}
-
+    
         if (!email || PERSONAL.has(domain) || domain === 'gmail.com' || domain === 'googlemail.com') {
           try { await auth.signOut(); } catch {}
           showStatus("Please use a work Google account (no personal Gmail).");
           pulseEmail();
           return;
         }
-
+    
         emailInput.value = email;
         updateEmailCTA?.();
         goToBridge('google');
-
+    
       } catch (err) {
         if (err?.code === 'auth/popup-closed-by-user') return;
         if (err?.code === 'auth/account-exists-with-different-credential') {
@@ -1199,34 +1096,49 @@
         showStatus("We couldn't complete Google sign-in. Check your connection and try again.");
       }
     });
-
-    /* ----- handle "verifyEmail" deep link from Firebase (in-app) ----- */
+    
+    /* ----- handle "verifyEmail" deep link from Firebase (only used if you switch handleCodeInApp:true) ----- */
     async function handleVerifyOnLoad(){
       if(!auth) return;
       const p = new URLSearchParams(location.search);
       const mode = p.get('mode');
       const oob  = p.get('oobCode');
-
+    
       if(mode === 'verifyEmail' && oob){
         try{
           await auth.applyActionCode(oob);                  // mark email as verified
           try{ await auth.currentUser?.reload(); }catch(_){}
           history.replaceState({}, "", location.pathname);  // clean URL
           sessionStorage.setItem(VERIFIED_KEY, '1');
-
+    
           const em = localStorage.getItem(EMAIL_KEY) || auth.currentUser?.email || "";
           if (em && emailInput) { emailInput.value = em; updateEmailCTA?.(); }
-
+    
           goToBridge('email');
         }catch(e){
           showStatus("That verification link is invalid or expired. Resend and try again.");
-          // stay on this page; user can resend
         }
       }
     }
     handleVerifyOnLoad();
   </script>
 
+  <style>
+    .site-header .brand,
+    .topbar .brand{
+      display:flex; align-items:center;
+      --icon-w: 36px; --brand-gap: 4px; gap: var(--brand-gap);
+    }
+    .brand-icon{ --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0; }
+    .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
+    .brand-word{
+      font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
+      -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
+    }
+    .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+    .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
+  </style>
 
   <script>
   (function(){
@@ -1293,9 +1205,7 @@
       site: hostFromEmail || (localStorage.getItem('preWebsite') || sessionStorage.getItem('preWebsite') || '')
     });
     document.body.classList.add('leaving');
-    // Use current location as base (works on GitHub Pages subpaths)
-    const bridge = new URL('bridge.html', location.href).toString();
-    setTimeout(()=>{ location.href = `${bridge}?${urlParams}`; }, 1500); // matches --leave-ms
+    setTimeout(()=>{ location.href = `bridge.html?${urlParams}`; }, 1500); // matches --leave-ms
   }
 </script>
 </body>
