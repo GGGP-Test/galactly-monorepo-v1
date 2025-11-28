@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Galactly — Login</title>
+
+  <!-- Jakarta for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
+
+  <!-- Primary: SVG favicon -->
+  <link rel="icon" type="image/svg+xml" sizes="any"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-24 -24 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='-24' x2='0' y2='24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23E6EEF7'/%3E%3Cstop offset='1' stop-color='%23F2DCA0'/%3E%3C/linearGradient%3E%3ClinearGradient id='dim' x1='24' y1='24' x2='-24' y2='-24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%230e1420' stop-opacity='.48'/%3E%3Cstop offset='.6' stop-color='%230e1420' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='0' cy='0' r='22' fill='%230e1420'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 -12 A12 12 0 1 0 5 12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M2 0 H12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M5 12 A12 12 0 0 1 8 10' stroke='url(%23dim)' stroke-width='6.6'/%3E%3C/g%3E%3C/svg%3E" />
+  <!-- PNG fallbacks -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=3">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=3">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
+  <link rel="manifest" href="site.webmanifest?v=3">
+  <link rel="shortcut icon" href="favicon.ico?v=3">
+
+  <style>
+    /* ========================== KNOBS ========================== */
+    :root{
+      --content-w: min(960px, 92vw);
+      --title-fs: clamp(28px, 5.6vw, 58px);
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+
+      /* pressed glass controls */
+      --ctl-h: 46px;
+      --ctl-r: 16px;
+      --rim-w: 1.5px;
+      --bevel-light: rgba(255,255,255,.35);
+      --bevel-dark: rgba(0,0,0,.55);
+      --pane-bg-2: rgba(0,0,0,.16);
+      --outer-shadow: 0 4px 14px rgba(0,0,0,.22);
+
+      /* ring animation */
+      --ring-alpha: .34;
+      --ring-speed: 900ms;
+      --ring-size: 110%;
+
+      /* colors */
+      --fg: #e9ecf3;
+      --muted: #a9b2c2;
+      --error: #ff6b6b;
+
+      /* background */
+      --bg-1: #0c1020;
+      --bg-2: #0c1326;
+
+      /* spacing */
+      --s2-gap-edge-title: 56px;
+      --s2-gap-title-subtitle: 10px;
+      --s2-gap-subtitle-chips: 14px;
+      --s2-gap-chips-hr: 18px;
+      --s2-gap-hr-or: 10px;
+      --s2-gap-or-field: 18px;
+      --s2-gap-field-arrow: 12px;
+      --s2-gap-bottom-edge: 56px;
+
+      /* topbar */
+      --topbar-pad-x: 20px;
+      --topbar-pad-y: 10px;
+
+      /* CTA size */
+      --cta-d: 36px;
+
+      /* vertical lift — set to 0 to center */
+      --stage-lift-m: 0px;
+      --stage-lift-d: 0px;
+
+      /* glare controls */
+      --chip-sheen-ang: -70deg;
+      --chip-sheen-ang-hover: -110deg;
+      --chip-glare-alpha: .22;
+      --chip-glare-soften: .7px;
+
+      /* field rim/shadow */
+      --field-rim-w: 0.1px;
+      --field-rim-top: rgba(255,255,255,.02);
+      --field-rim-bottom: rgba(255,255,255,.10);
+      --field-inset-top: rgba(255,255,255,.02);
+      --field-inset-bottom: rgba(0,0,0,.58);
+      --field-inset-ambient: rgba(0,0,0,.22);
+    }
+    @property --chip-sheen-ang { syntax: "<angle>"; inherits: true; initial-value: -70deg; }
+
+    @media (min-width:768px){ :root{ --cta-d: 40px; } }
+    @media (min-width: 768px){
+      :root{
+        --s2-gap-edge-title: 80px;
+        --s2-gap-title-subtitle: 12px;
+        --s2-gap-subtitle-chips: 16px;
+        --s2-gap-chips-hr: 22px;
+        --s2-gap-hr-or: 12px;
+        --s2-gap-or-field: 22px;
+        --s2-gap-field-arrow: 16px;
+        --s2-gap-bottom-edge: 80px;
+      }
+    }
+
+    /* ====================== BASE / BACKDROP ===================== */
+    html,body{height:100%;margin:0; background-color:#0c1020;}
+    body{
+      color:var(--fg);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+      background:
+        radial-gradient(1200px 800px at 76% 26%, rgba(240,196,90,.28) 0%, transparent 58%),
+        radial-gradient(1200px 800px at 24% 78%, rgba(64,186,255,.24) 0%, transparent 60%),
+        radial-gradient(700px 500px at 50% -8%, rgba(255,255,255,.08) 0%, transparent 70%),
+        linear-gradient(180deg, #171a17, #0f1210);
+      background-blend-mode: screen, screen, normal, normal;
+
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    .wrap{
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      padding: calc(0px + var(--safe-top)) 16px calc(0px + var(--safe-bottom));
+    }
+    .stage{
+      width:var(--content-w);
+      transform: translateY(var(--stage-lift-m));
+      transition: transform .2s ease;
+    }
+    @media (min-width:768px){
+      .stage{ transform: translateY(var(--stage-lift-d)); }
+    }
+
+    /* top chrome (KEEP) */
+    .topbar{
+      position:fixed; top: calc(var(--safe-top) + var(--topbar-pad-y)); left:0; right:0; z-index:10;
+      display:flex; align-items:center; justify-content:space-between; padding:0 var(--topbar-pad-x);
+    }
+    .brand{ display:flex; align-items:center; gap:10px; color:var(--fg); text-decoration:none; padding:6px 8px; border-radius:12px; }
+    .brand img{height:22px; width:auto}
+    .brand span{ font:800 14px/1 "Plus Jakarta Sans", Inter, system-ui; letter-spacing:.2px; }
+
+    .home-link{ display:inline-flex; align-items:center; justify-content:center; padding:6px 8px; background:none; border:0; line-height:0; color: var(--fg); }
+    .home-link svg{ width:22px; height:22px; display:block; }
+    @media (min-width:1024px){ .home-link svg{ width:28px; height:28px; } }
+    .home-link:hover{ opacity:.85; transform:none; }
+
+    h1{ font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui; margin:0 0 18px 0; text-shadow:0 1px 0 rgba(0,0,0,.35); text-align:center; }
+    .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
+    .center { display:grid; gap:16px; place-items:center; }
+
+    .cardless{ max-width:860px; margin-inline:auto; }
+
+    /* ===================== LOGIN (single step) ===================== */
+    .title-row{ text-align:center; margin-bottom:8px }
+    .title-row h1{ font-family:"Plus Jakarta Sans", Inter, system-ui }
+
+    .hr{ width:min(560px, 86vw); height:1px; margin:14px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
+    .muted{ color:var(--muted); font-size:14px; text-align:center }
+
+    /* --------- GLASS BUTTON (Google) ---------- */
+    .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
+    .chip{
+      --local-h: var(--ctl-h);
+      position:relative;
+      display:inline-grid;
+      grid-auto-flow:column;
+      align-items:center;
+      gap:10px;
+      height:var(--local-h);
+      padding:0 18px;
+      border-radius:calc(var(--ctl-r) + 4px);
+      color:var(--fg);
+      text-decoration:none;
+      font-weight:600;
+
+      background:
+        linear-gradient(var(--chip-sheen-ang), transparent 44%, rgba(255,255,255,var(--chip-glare-alpha)) 51%, transparent 58%),
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
+        radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
+      background-clip: padding-box;
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 5px var(--bevel-dark),
+        inset 0 10px 22px var(--pane-bg-2),
+        0 2px 8px rgba(0,0,0,.25);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, --chip-sheen-ang .45s ease;
+    }
+    .chip:hover{
+      --chip-sheen-ang: var(--chip-sheen-ang-hover);
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,.22);
+      box-shadow:
+        inset 0 1px 0 var(--bevel-light),
+        inset 0 -2px 5px var(--bevel-dark),
+        inset 0 12px 24px var(--pane-bg-2),
+        0 6px 18px rgba(0,0,0,.32);
+    }
+
+    /* Inline error/info */
+    .inline-error{
+      width:min(560px, 86vw);
+      margin: 8px auto 0;
+      font-size: 13px;
+      line-height: 1.35;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border:1px solid rgba(255,107,107,.35);
+      background: rgba(255,107,107,.12);
+      color: #ffd7d7;
+    }
+    .inline-error a,
+    .inline-error a:visited {
+      color: currentColor;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 600;
+    }
+    .inline-error a:hover,
+    .inline-error a:focus-visible {
+      text-decoration-thickness: 2px;
+      outline: none;
+    }
+    .inline-note{
+      width:min(560px, 86vw);
+      margin: 8px auto 0;
+      font-size: 13px;
+      line-height: 1.35;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color: var(--fg);
+    }
+    .small-row{ display:flex; gap:10px; justify-content:center; margin-top:8px; font-size:12px; color:var(--muted); }
+    .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
+
+    /* ===== Email/Password fields (pressed) ===== */
+    .field-wrap{ width:min(280px, 86vw); margin: 24px auto 0 auto; position:relative; }
+    .pressed{
+      position:relative;
+      display:grid;
+      grid-template-columns: 26px 1fr;
+      align-items:center;
+      height:var(--ctl-h);
+      border-radius:var(--ctl-r);
+      padding:0 14px;
+      background: transparent;
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:
+        inset 0 1px 0 var(--field-inset-top),
+        inset 0 -3px 6px var(--field-inset-bottom),
+        inset 0 12px 26px var(--field-inset-ambient);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+    .pressed::before{ content:""; position:absolute; inset:0; border-radius:inherit; padding:0.1px;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.10));
+      pointer-events:none;
+    }
+    .pressed:has(input:focus){ border-color: rgba(255,255,255,.24); box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.25),
+      inset 0 -3px 6px rgba(0,0,0,.6),
+      inset 0 12px 26px rgba(0,0,0,.22),
+      0 8px 22px rgba(0,0,0,.30); }
+
+    .left-icon{display:inline-grid; place-items:center; width:24px; color:#e7e7e7; opacity:.9}
+
+    input{
+      min-width:0; background:transparent; border:0; outline:0; color:var(--fg);
+      font-size:14px; padding:0 8px; height:calc(var(--ctl-h) - 2px);
+      padding-right: calc(var(--cta-d) + 14px);
+    }
+    input::placeholder{ color:rgba(233,236,243,.62); }
+
+    /* inside-field GLASS CTA */
+    .field-cta{
+      position:absolute; right:6px; top:50%;
+      width:var(--cta-d); height:var(--cta-d);
+      transform: translate(10px,-50%) scale(.9);
+      opacity:0; pointer-events:none;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background:
+        radial-gradient(140% 90% at 50% -20%, rgba(255,255,255,.22) 0%, rgba(255,255,255,.06) 28%, rgba(255,255,255,0) 60%),
+        radial-gradient(120% 120% at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.45));
+      background-blend-mode: screen, normal;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.25),
+        inset 0 -3px 6px rgba(0,0,0,.6),
+        inset 0 14px 28px rgba(0,0,0,.28),
+        0 4px 14px rgba(0,0,0,.28);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      color:var(--fg); display:grid; place-items:center; cursor:pointer;
+      transition: transform var(--ring-speed) cubic-bezier(.25,1,.5,1), opacity calc(var(--ring-speed)*.7) ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
+
+    /* Back arrow row */
+    .single-action{ display:grid; place-items:center; margin-top:14px; }
+
+    /* Spacing */
+    .title-row       { margin-top: var(--s2-gap-edge-title); margin-bottom: 0; }
+    .title-row h1    { margin: 0 0 var(--s2-gap-title-subtitle) 0; }
+    .subtitle        { margin: 0 0 var(--s2-gap-subtitle-chips) 0; text-align: center; }
+    .chip-row        { margin: 0 0 var(--s2-gap-chips-hr) 0; }
+    .hr              { margin: 12px auto var(--s2-gap-hr-or) auto; }
+    .muted           { margin: 0 0 var(--s2-gap-or-field) 0; }
+    .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
+    .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
+
+    /* ===== Animations ===== */
+    :root{
+      --ease-hero: cubic-bezier(.22,1,.36,1);
+      --ease-soft: cubic-bezier(.25,.95,.35,1);
+      --ease-snap: cubic-bezier(.16,.84,.44,1);
+      --anim-title-d: 1.25s;
+      --anim-sub-d:   1.40s;
+      --anim-chip-d:  1.10s;
+      --anim-div-d:   1.00s;
+      --anim-below-d: 1.25s;
+      --anim-pwd-d:   1.30s;
+    }
+    @keyframes titleRise { 0%{ opacity:0; transform: translateY(24px) scale(.985); filter: blur(3px); } 60%{ filter: blur(0); } 100%{ opacity:1; transform: translateY(0) scale(1); } }
+    .anim-title{ animation: titleRise var(--anim-title-d) var(--ease-hero) both; }
+    @keyframes subDrift { 0%{ opacity:0; transform: translateY(30px); } 100%{ opacity:1; transform: translateY(0); } }
+    .anim-sub{ animation: subDrift var(--anim-sub-d) var(--ease-soft) both; animation-delay: .12s; }
+    @keyframes dividerGrow { 0%{ opacity:0; transform: scaleX(.6); } 100%{ opacity:1; transform: scaleX(1); } }
+    .anim-divider{ transform-origin: 50% 50%; animation: dividerGrow var(--anim-div-d) cubic-bezier(.2,.8,.2,1) both; animation-delay: .10s; }
+    @keyframes fieldDrop { 0%{ opacity:0; transform: translateY(-24px); } 100%{ opacity:1; transform: translateY(0); } }
+    .anim-or   { animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .18s; }
+    .anim-field{ animation: fieldDrop var(--anim-below-d) var(--ease-hero) both; animation-delay: .26s; }
+    .anim-back { animation: fieldDrop var(--anim-below-d) var(--ease-soft) both; animation-delay: .36s; }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+    }
+
+    /* ==== page-leave ==== */
+    :root{ --leave-ms: 1500ms; }
+    body.leaving .stage{
+      opacity: 0; transform: translateY(12px) scale(.985); filter: blur(2px);
+      transition: transform var(--leave-ms) cubic-bezier(.22,1,.36,1),
+                  opacity   var(--leave-ms) ease,
+                  filter    var(--leave-ms) ease;
+    }
+    body.leaving::after{
+      content:""; position:fixed; inset:0;
+      background: radial-gradient(1200px 800px at 50% 40%, rgba(0,0,0,.5), rgba(0,0,0,.86));
+      pointer-events:none; opacity:0; transition: opacity var(--leave-ms) ease;
+    }
+    body.leaving::after{ opacity:1; }
+
+    /* ===== Website badge (overlay) ===== */
+    .site-badge{ position: relative; display: inline-grid; grid-auto-flow: column; align-items: center; gap:10px; margin: 8px auto 6px; padding: 8px 12px; border-radius: 14px; color: var(--fg); font-weight:600; font-size:13px; background:
+      linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
+      radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
+      border:1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    .site-badge .host{ font-weight:800; letter-spacing:.2px; }
+    .site-badge .info{ display:inline-grid; place-items:center; width:24px; height:24px; border-radius:999px; line-height:0; border:1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); color:var(--fg); cursor:pointer; }
+    .site-badge .info svg,
+    .site-badge .info img{ width:16px; height:16px; display:block; }
+    .site-badge .tip{ position:absolute; top: calc(100% + 8px); left:50%; transform: translateX(-50%); z-index: 40; padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap; color:#0e1420; background: rgba(255,255,255,.95); border:1px solid rgba(0,0,0,.14); box-shadow: 0 6px 18px rgba(0,0,0,.28); opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease; }
+    .site-badge:hover .tip, .site-badge:focus-within .tip{ opacity:1; transform: translate(-50%, -2px); pointer-events:auto; }
+
+    /* hides */
+    .error{ display:none !important; }
+    [hidden]{ display:none !important; }
+  </style>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Firebase (for auth) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+  <!-- top chrome (KEEP) -->
+  <div class="topbar">
+    <a class="brand" href="#" aria-label="Galactly">
+      <img alt="Galactly" src="" id="brandLogo"/>
+      <span>MyWebApp</span>
+    </a>
+    <a class="home-link" href="index.html" aria-label="Home">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 11l9-8 9 8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 10v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 22V13h6v9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+
+  <main class="wrap">
+    <div class="stage cardless">
+
+      <!-- Website overlay badge -->
+      <div id="siteBadge" class="site-badge" hidden>
+        <span>We’ll use&nbsp;<span class="host" id="siteHost">—</span></span>
+        <button class="info" id="siteInfo" type="button" aria-label="Why this site?">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 7v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="17" r="1.5" fill="currentColor"/>
+          </svg>
+        </button>
+        <span class="tip" id="siteTip" role="tooltip">
+          Privacy: <a id="siteTipLink" class="tip-link" href="/privacy#domain-match" target="_blank" rel="noopener">domain match</a>
+        </span>
+      </div>
+
+      <!-- LOGIN -->
+      <section id="login" aria-labelledby="login-title">
+        <div class="title-row">
+          <h1 id="login-title" class="title anim-title">Log in</h1>
+          <p class="subtitle anim-sub">Welcome back — continue with</p>
+        </div>
+
+        <div class="center">
+          <div class="chip-row">
+            <a class="chip" id="googleBtn" href="#" aria-label="Continue with Google">
+              <span class="glare" aria-hidden="true"></span>
+              <!-- Official Google "G" inline SVG -->
+              <svg width="20" height="20" viewBox="0 0 533.5 544.3" role="img" aria-hidden="true" focusable="false">
+                <path fill="#4285F4" d="M533.5 278.4c0-18.4-1.7-36-4.9-53.1H272v100.5h146.9c-6.3 34-25 62.8-53.1 82v68h85.7c50.1-46.2 81.9-114.1 81.9-197.4z"/>
+                <path fill="#34A853" d="M272 544.3c72.2 0 132.8-23.9 177.1-64.9l-85.7-68c-23.8 16-54.2 25.5-91.4 25.5-70 0-129.4-47.2-150.6-110.8H33.1v69.6c44.2 87.8 135.2 148.6 238.9 148.6z"/>
+                <path fill="#FBBC04" d="M121.4 326.1c-11.2-33.5-11.2-69.6 0-103.1V153.4H33.1c-40.1 79.9-40.1 175.2 0 255.1l88.3-69.6z"/>
+                <path fill="#EA4335" d="M272 107.7c39.2-.6 76.7 14 104.8 41.2l78.3-78.3C411.7 18.1 344.2-5.3 272 0 168.3 0 77.3 60.8 33.1 148.6l88.3 69.6C142.7 154.6 202 107.7 272 107.7z"/>
+              </svg>
+              <span>Google</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="hr anim-divider" aria-hidden="true"></div>
+        <div id="inlineStatus" class="inline-error" role="alert" aria-live="polite" hidden></div>
+
+        <div id="login-bottom">
+          <div id="or" class="muted anim-or">OR</div>
+
+          <!-- email field -->
+          <div class="field-wrap anim-field">
+            <div class="pressed" id="emailBox">
+              <span class="left-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/>
+                </svg>
+              </span>
+              <input id="email" type="email" inputmode="email" autocomplete="username" placeholder="Work email"/>
+              <button id="emailNext" class="field-cta" type="button" aria-label="Next">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- password field (revealed when email uses password sign-in) -->
+          <div class="field-wrap" id="pwdWrap" hidden>
+            <div class="pressed" id="pwdBox">
+              <span class="left-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="10" rx="3"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/>
+                </svg>
+              </span>
+              <input id="password" type="password" autocomplete="current-password" placeholder="Password"/>
+              <button id="pwdNext" class="field-cta" type="button" aria-label="Log in">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="small-row">
+              <a id="forgotLink">Forgot password?</a>
+            </div>
+          </div>
+
+          <!-- back to email stage -->
+          <div class="single-action anim-back">
+            <button type="button" id="backBtn" class="btn-icon" aria-label="Back to email" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="small-row" id="signupRow">
+            <span>Don’t have an account?</span>
+            <a id="staticSignupLink" href="start.html">Sign up</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Validation placeholders (hookable if you ever need) -->
+      <div id="emailError" class="error hide"></div>
+      <div id="siteUnreachable" class="error hide"></div>
+
+    </div>
+  </main>
+
+  <script>
+    /* ---------- logo loader (KEEP) ---------- */
+    (function tryLogo(){
+      const candidates = [
+        "/assets/logo/galactly-logo.svg",
+        "/assets/logo/logo.svg",
+        "/assets/brand/galactly-logo.svg",
+        "/assets/branding/galactly-logo.svg",
+        "/img/galactly-logo.svg",
+        "/images/logo.svg",
+        "/logo.svg",
+        "/assets/logo.png",
+        "/images/logo.png"
+      ];
+      const el = document.getElementById("brandLogo");
+      let i = 0;
+      (function next(){
+        if(i>=candidates.length){ try{ el.remove(); }catch{} return; }
+        const src = candidates[i++], img = new Image();
+        img.onload = () => el.src = src;
+        img.onerror = next;
+        img.src = src;
+      })();
+    })();
+
+    /* ---------- helpers ---------- */
+    const byId = (id)=>document.getElementById(id);
+
+    const emailInput = byId("email");
+    const emailBox   = byId("emailBox");
+    const emailNext  = byId("emailNext");
+
+    const pwdWrap    = byId("pwdWrap");
+    const pwdBox     = byId("pwdBox");
+    const pwdInput   = byId("password");
+    const pwdNext    = byId("pwdNext");
+
+    const backBtn    = byId("backBtn");
+
+    const siteBadge  = byId('siteBadge');
+    const siteHostEl = byId('siteHost');
+    const siteInfo   = byId('siteInfo');
+    const siteTip    = byId('siteTip');
+
+    const statusEl   = byId('inlineStatus');
+
+    const staticSignupLink = byId('staticSignupLink');
+    const forgotLink = byId('forgotLink');
+
+    function showStatus(msg){
+      statusEl.textContent = msg || "We couldn't continue.";
+      statusEl.hidden = false;
+    }
+    function showStatusHTML(html){
+      statusEl.innerHTML = html || "We couldn't continue.";
+      statusEl.hidden = false;
+    }
+    function hideStatus(){ statusEl.hidden = true; statusEl.textContent = ""; }
+
+    function looksValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(v||'').trim()); }
+    function cleanHost(raw){
+      if(!raw) return null;
+      let s = String(raw).trim();
+      s = s.replace(/^mailto:/i,'');
+      s = s.replace(/^(https?:)?\/\//i,'');
+      s = s.replace(/^www\./i,'');
+      s = s.split(/[\/?#]/)[0];
+      s = s.replace(/[^\w.-]/g,'');
+      return s || null;
+    }
+    function extractHostFromEmail(val){
+      const m = String(val||'').trim().match(/@([^@\s>]+)$/);
+      if(!m) return null;
+      const host = cleanHost(m[1]);
+      return host && host.includes('.') ? host.toLowerCase() : null;
+    }
+    function getQueryParam(name){
+      const p = new URLSearchParams(location.search);
+      return p.get(name);
+    }
+
+    function pulse(el){
+      if(!el) return;
+      el.style.transition = 'box-shadow 180ms ease';
+      const prev = el.style.boxShadow;
+      el.style.boxShadow = '0 0 0 2px rgba(255,107,107,.45), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -3px 6px rgba(0,0,0,.6), inset 0 12px 26px rgba(0,0,0,.22)';
+      setTimeout(()=>{ el.style.boxShadow = prev; }, 260);
+    }
+
+    function updateSignupLink(){
+      const em = (emailInput?.value || '').trim();
+      const href = looksValidEmail(em) ? `start.html?email=${encodeURIComponent(em)}` : `start.html`;
+      staticSignupLink.href = href;
+    }
+    emailInput?.addEventListener('input', updateSignupLink);
+    emailInput?.addEventListener('blur', updateSignupLink);
+
+    /* ---------- inside-field CTA visibility ---------- */
+    function updateEmailCTA(){
+      const v = emailInput.value;
+      const valid = looksValidEmail(v);
+      const lock = !pwdWrap.hidden; // when password stage visible, keep email CTA hidden
+      const show = valid && !lock;
+      emailBox.classList.toggle('show-cta', show);
+      emailNext.toggleAttribute('disabled', !show);
+      emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+    function updatePwdCTA(){
+      const show = (pwdInput.value.length >= 1);
+      pwdBox.classList.toggle('show-cta', show);
+      pwdNext.toggleAttribute('disabled', !show);
+      pwdNext.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+    emailInput.addEventListener('input', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
+    emailInput.addEventListener('blur', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
+    emailInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && looksValidEmail(emailInput.value)){
+        e.preventDefault();
+        if(pwdWrap.hidden) emailNext.click();
+      }
+    });
+    pwdInput?.addEventListener('input', updatePwdCTA);
+    pwdInput?.addEventListener('blur', updatePwdCTA);
+    pwdInput?.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && pwdInput.value.length >= 1){
+        e.preventDefault();
+        pwdNext.click();
+      }
+    });
+
+    /* ---------- Website badge ---------- */
+    function getPrefilledSite(){
+      const cands = [ getQueryParam('site'), getQueryParam('website'), getQueryParam('domain'),
+        sessionStorage.getItem('preWebsite'), localStorage.getItem('preWebsite') ];
+      for(const c of cands){ const h = cleanHost(c); if(h) return h.toLowerCase(); }
+      return null;
+    }
+    let preSiteHost = getPrefilledSite();
+
+    function showSiteBadge(host, animate=false){
+      if(!host) return hideSiteBadge();
+      siteHostEl.textContent = host;
+      const wasHidden = siteBadge.hasAttribute('hidden');
+      siteBadge.removeAttribute('hidden');
+      if(animate || wasHidden){ siteBadge.classList.remove('anim-badge'); void siteBadge.offsetWidth; siteBadge.classList.add('anim-badge'); }
+    }
+    function hideSiteBadge(){
+      siteBadge.setAttribute('hidden','');
+      siteBadge.classList.remove('show-tip');
+    }
+    function syncSiteBadge(animate=false){
+      const emailHost = extractHostFromEmail(emailInput.value);
+      if(emailHost){ showSiteBadge(emailHost, animate); return; }
+      if(preSiteHost){ showSiteBadge(preSiteHost, animate); return; }
+      hideSiteBadge();
+    }
+    siteInfo.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
+    siteInfo.addEventListener('click', (e)=>{ e.stopPropagation(); siteBadge.classList.toggle('show-tip'); });
+    siteTip?.addEventListener('mouseenter', ()=> siteBadge.classList.add('show-tip'));
+    siteTip?.addEventListener('click', (e)=> e.stopPropagation());
+    document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
+
+    /* ---------- Firebase ---------- */
+    const META_CFG = (()=>{ try{
+      const m=document.querySelector('meta[name="firebase-config"]');
+      return m && m.content ? JSON.parse(m.content) : null;
+    }catch(e){ return null; }})();
+
+    const FIREBASE_CONFIG =
+      (window.__FIREBASE_CONFIG__ && typeof window.__FIREBASE_CONFIG__==='object' && window.__FIREBASE_CONFIG__) ||
+      (typeof window.firebaseConfig!=='undefined' && window.firebaseConfig) ||
+      META_CFG || {
+        apiKey: "AIzaSyCBf7LHL4PfxD2rH7-HdYSE2dXIGfb3Vz4",
+        authDomain: "artemiss-42e40.firebaseapp.com",
+        projectId: "artemiss-42e40",
+        appId: "1:384891834378:web:53624662894e0650a74ff3",
+      };
+
+    let auth=null;
+
+    (async function initFirebase(){
+      try{
+        if(firebase?.apps?.length){
+          auth = firebase.auth();
+          return;
+        }
+
+        const looksReal = FIREBASE_CONFIG && Object.values(FIREBASE_CONFIG).every(v => typeof v==='string' && v && !/^YOUR_/i.test(v));
+        if(looksReal){
+          firebase.initializeApp(FIREBASE_CONFIG);
+          auth = firebase.auth();
+          return;
+        }
+
+        try{
+          const res = await fetch('/__/firebase/init.json', { cache:'no-store' });
+          if(res.ok){
+            const cfg = await res.json();
+            if(cfg && cfg.projectId){
+              firebase.initializeApp(cfg);
+              auth = firebase.auth();
+              return;
+            }
+          }
+        }catch(_){}
+
+      }catch(e){ auth = null; }
+    })();
+
+    // --- helpers to avoid long hangs ---
+    const TIMEOUTS = {
+      emailMethods: 3500,
+      signIn: 12000,
+      resetEmail: 7000
+    };
+
+    function withTimeout(promise, ms, label){
+      let t;
+      const timer = new Promise((_,rej)=>{ t=setTimeout(()=>rej(new Error('timeout:'+label)), ms); });
+      return Promise.race([promise, timer]).finally(()=>clearTimeout(t));
+    }
+
+    let globalBusy = false;
+    function setBusy(flag){
+      globalBusy = !!flag;
+      try{
+        const btns = [emailNext, pwdNext, backBtn, document.getElementById('googleBtn')];
+        btns.forEach(b=> b?.toggleAttribute('disabled', globalBusy));
+        const roots = [emailBox, pwdBox];
+        roots.forEach(r=> r && r.setAttribute('aria-busy', globalBusy ? 'true' : 'false'));
+      }catch(_){}
+    }
+
+    /* ---------- Staging between email and password ---------- */
+    let stage = 'email'; // 'email' | 'password'
+    function toPasswordStage(){
+      // change header
+      const titleRow = document.querySelector('.title-row');
+      const title = titleRow?.querySelector('h1');
+      const sub   = titleRow?.querySelector('.subtitle');
+      if(title) title.textContent = 'Enter your password';
+      if(sub) { sub.textContent = 'Use your password to continue'; sub.classList.add('anim-sub'); }
+
+      // show pwd field
+      pwdWrap.hidden = false;
+      backBtn.hidden = false;
+      document.getElementById('or').hidden = true;
+      emailBox.classList.remove('show-cta');
+      emailNext.setAttribute('aria-hidden','true');
+      updatePwdCTA();
+      pwdInput.focus({ preventScroll:true });
+      stage = 'password';
+    }
+    function toEmailStage(){
+      const titleRow = document.querySelector('.title-row');
+      const title = titleRow?.querySelector('h1');
+      const sub   = titleRow?.querySelector('.subtitle');
+      if(title) title.textContent = 'Log in';
+      if(sub) { sub.textContent = 'Welcome back — continue with'; }
+      pwdWrap.hidden = true;
+      backBtn.hidden = true;
+      document.getElementById('or').hidden = false;
+      pwdInput.value = '';
+      pwdBox.classList.remove('show-cta');
+      updateEmailCTA();
+      stage = 'email';
+      hideStatus();
+      syncSiteBadge(false);
+    }
+    backBtn.addEventListener('click', ()=>{
+      if(stage === 'password') toEmailStage();
+    });
+
+    /* ---------- Email -> Check Sign-in Methods ---------- */
+    async function fetchMethods(email){
+      try{
+        const methods = await withTimeout(auth.fetchSignInMethodsForEmail(email), TIMEOUTS.emailMethods, 'emailMethods');
+        return Array.isArray(methods) ? methods : [];
+      }catch(e){
+        if(String(e?.message||'').startsWith('timeout')){ showStatus("Still checking… your connection is slow."); return 'timeout'; }
+        if(e?.code === 'auth/invalid-email'){ showStatus("That email looks invalid."); }
+        else if(e?.code === 'auth/network-request-failed'){ showStatus("Network problem. Check your connection and try again."); }
+        else { showStatus("We couldn’t check that email right now. Try again in a moment."); }
+        throw e;
+      }
+    }
+
+    emailNext.addEventListener('click', async ()=>{
+      if(globalBusy) return;
+      hideStatus();
+      const email = emailInput.value.trim();
+      if(!looksValidEmail(email)){ pulse(emailBox); showStatus("Enter a valid email to continue."); return; }
+      if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
+
+      setBusy(true);
+      showStatus("Checking your account…");
+      try{
+        const methods = await fetchMethods(email);
+        if(methods === 'timeout'){ setBusy(false); return; }
+        if(methods.length === 0){
+          showStatusHTML(
+            `No account found for <strong>${email.replace(/</g,'&lt;')}</strong>. ` +
+            `<a href="start.html?email=${encodeURIComponent(email)}">Create an account?</a>`
+          );
+          setBusy(false);
+          return;
+        }
+        if(methods.includes('password')){
+          hideStatus();
+          setBusy(false);
+          toPasswordStage();
+          return;
+        }
+        if(methods.includes('google.com') && !methods.includes('password')){
+          setBusy(false);
+          showStatus("This email uses Google sign-in. Use the Google button above.");
+          return;
+        }
+        // Fallback: if some other method exists, nudge to Google
+        setBusy(false);
+        showStatus("Use the available sign-in method for this account.");
+      }catch(_){
+        setBusy(false);
+      }
+    });
+
+    /* ---------- Password -> Sign In ---------- */
+    function goToDashboard(){
+      document.body.classList.add('leaving');
+      setTimeout(()=>{ location.href = 'free-panel.html'; }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--leave-ms')) || 1500);
+    }
+
+    pwdNext.addEventListener('click', async ()=>{
+      if(globalBusy) return;
+      hideStatus();
+
+      const email = emailInput.value.trim();
+      const pwd = pwdInput.value;
+      if(!looksValidEmail(email)){ pulse(emailBox); showStatus("Enter your email first."); return; }
+      if(!pwd){ pulse(pwdBox); showStatus("Enter your password."); return; }
+      if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
+
+      setBusy(true);
+      showStatus("Signing you in…");
+
+      try{
+        await withTimeout(auth.signInWithEmailAndPassword(email, pwd), TIMEOUTS.signIn, 'signIn');
+        hideStatus();
+        setBusy(false);
+        goToDashboard();
+      }catch(e){
+        setBusy(false);
+        if(String(e?.message||'').startsWith('timeout')){ showStatus("Taking longer than usual… check your connection and try again."); return; }
+        switch(e?.code){
+          case 'auth/wrong-password':
+            showStatusHTML(`Incorrect password. <a id="inlineReset" href="#">Reset it?</a>`);
+            document.getElementById('inlineReset')?.addEventListener('click', (ev)=>{ ev.preventDefault(); sendReset(email); });
+            pulse(pwdBox);
+            break;
+          case 'auth/user-not-found':
+            showStatusHTML(
+              `We couldn’t find an account for <strong>${email.replace(/</g,'&lt;')}</strong>. ` +
+              `<a href="start.html?email=${encodeURIComponent(email)}">Sign up?</a>`
+            );
+            break;
+          case 'auth/user-disabled':
+            showStatus("This account has been disabled. Contact support.");
+            break;
+          case 'auth/too-many-requests':
+            showStatus("Too many attempts. Wait a bit and try again.");
+            break;
+          case 'auth/network-request-failed':
+            showStatus("Network problem. Check your connection and try again.");
+            break;
+          case 'auth/operation-not-allowed':
+            showStatus("Email/password sign-in is disabled for this project.");
+            break;
+          default:
+            showStatus("We couldn’t sign you in. Please try again.");
+        }
+      }
+    });
+
+    /* ---------- Forgot password ---------- */
+    async function sendReset(email){
+      if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
+      if(!looksValidEmail(email)){ pulse(emailBox); showStatus("Enter a valid email above, then choose reset."); return; }
+      try{
+        setBusy(true);
+        await withTimeout(auth.sendPasswordResetEmail(email), TIMEOUTS.resetEmail, 'resetEmail');
+        showStatus(`Password reset email sent to ${email}. Check your inbox.`);
+      }catch(e){
+        if(String(e?.message||'').startsWith('timeout')){ showStatus("We couldn’t send the reset email yet. Try again shortly."); }
+        else if(e?.code === 'auth/user-not-found'){
+          showStatusHTML(`No account found for <strong>${email.replace(/</g,'&lt;')}</strong>. <a href="start.html?email=${encodeURIComponent(email)}">Sign up?</a>`);
+        }else if(e?.code === 'auth/network-request-failed'){
+          showStatus("Network problem. Try again.");
+        }else{
+          showStatus("We couldn’t send the reset email. Please try again.");
+        }
+      }finally{
+        setBusy(false);
+      }
+    }
+    forgotLink?.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      sendReset(email);
+    });
+
+    /* ---------- Google Sign-in ---------- */
+    const googleBtn  = document.getElementById('googleBtn');
+    googleBtn?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if(globalBusy) return;
+      hideStatus();
+
+      if (!auth) { showStatus("Google sign-in isn’t configured. Add Firebase keys."); return; }
+
+      setBusy(true);
+      showStatus("Opening Google…");
+
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        const cred = await auth.signInWithPopup(provider);
+        const user = cred.user;
+        const email = user?.email || "";
+
+        // Success → dashboard
+        setBusy(false);
+        goToDashboard();
+
+      } catch (err) {
+        setBusy(false);
+        if (err?.code === 'auth/popup-closed-by-user') return;
+        if (err?.code === 'auth/account-exists-with-different-credential') {
+          showStatus("This email exists with a different sign-in method. Use that method to log in.");
+          return;
+        }
+        if (err?.code === 'auth/network-request-failed'){ showStatus("Network problem. Try again."); return; }
+        if (err?.code === 'auth/operation-not-allowed'){ showStatus("Google sign-in is disabled for this project."); return; }
+        showStatus("We couldn't complete Google sign-in. Try again.");
+      }
+    });
+
+    /* ---------- Prefills & query-based inline message ---------- */
+    (function initPrefill(){
+      const em = getQueryParam('email') || getQueryParam('e');
+      if(em){ emailInput.value = em; updateEmailCTA(); updateSignupLink(); syncSiteBadge(true); }
+      else { updateEmailCTA(); updateSignupLink(); syncSiteBadge(true); }
+
+      const err = getQueryParam('err');
+      const msg = getQueryParam('msg');
+      if(err || msg){
+        const el = document.getElementById('inlineStatus');
+        if(el){ el.textContent = msg || 'There was a problem. Please try again.'; el.hidden = false; }
+      }
+    })();
+  </script>
+
+  <!-- Brand icon injection (KEEP) -->
+  <style>
+    .site-header .brand,
+    .topbar .brand{
+      display:flex; align-items:center;
+      --icon-w: 36px; --brand-gap: 4px; gap: var(--brand-gap);
+    }
+    .brand-icon{ --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0; }
+    .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
+    .brand-word{
+      font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
+      -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
+    }
+    .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+    .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
+  </style>
+
+  <script>
+  (function(){
+    const brand = document.querySelector('.topbar .brand') || document.querySelector('.site-header .brand');
+    if(!brand) return;
+
+    const icon = `
+<svg viewBox="0 0 64 64" aria-label="Galactly double G" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol id="gSym" viewBox="0 0 320 860" overflow="visible">
+      <path id="gPath" d="M 209.5 474.25 H 261.5 C 261.667 524.583 262 630.45 262 651.25 C 262 677.25 242.5 718.75 235.5 730.25 C 228.5 741.75 208.5 760.25 193 770.25 C 177.5 780.25 161 786.25 149.5 786.25 C 140.3 786.25 131.667 779.916 128.5 776.75 C 122.5 771.916 105.6 755.85 86.0003 730.25 C 66.4003 704.65 60.5003 662.583 60.0003 644.75 V 221.25 C 59.667 209.583 61.7003 177.25 72.5003 141.25 C 81.5253 111.166 104.214 87.8332 119.5 75.9188 C 131.5 65.7496 150.57 68.3373 156.5 69.2496 C 163 70.2496 173.834 73.2496 178 74.7496 C 184.834 77.083 195.3 82.5496 206.5 91.7496 C 220.5 103.25 227 113.75 230 119.75 C 236 124.15 248.5 161.25 254 179.25 L 264 247.25 L 269.5 259.25 C 273.834 263.75 285 272.45 295 271.25 C 307.5 269.75 310.5 258.25 314 251.25 C 312 159.25 295 102.75 253.5 51.2496 C 220.3 10.0496 176.667 2.08297 159 3.24964 C 143.5 1.4163 101.8 8.84964 59.0003 53.2496 C 16.2003 97.6496 3.83366 179.416 3.00033 214.75 L 7.00033 649.75 C 7.33366 667.75 12.9003 713.55 32.5003 752.75 C 57.0003 801.75 108.5 847.25 166 847.25 C 211.6 846.45 254.334 803.25 270 781.75 C 292.8 752.55 313.392 681.75 313.5 642.25 C 313.667 581.583 313.9 456.65 313.5 442.25 C 313.1 427.85 304.667 416.916 300.5 413.25 H 204.5 C 198 416.083 185 426.35 185 444.75 C 185 463.15 201.334 472.083 209.5 474.25 Z"/>
+    </symbol>
+    <linearGradient id="ggFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ECF4FF"/><stop offset="0.55" stop-color="#CFE0F3"/><stop offset="1" stop-color="#AEBED2"/></linearGradient>
+    <linearGradient id="ggShimmer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9F0F8"/></linearGradient>
+    <radialGradient id="ggHalo" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#B6E6FF" stop-opacity="0.35"/><stop offset="1" stop-color="#B6E6FF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="ggSheen" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.46" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.54" stop-color="#FFFFFF" stop-opacity="0.35"/><stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="ggSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#000" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#9ED8FF" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <g pointer-events="none"><circle cx="32" cy="33" r="21" fill="url(#ggHalo)"/></g>
+  <g class="piece" style="transform: translateX(calc(var(--gg-gap-x)/2)); filter:url(#ggSoftGlow);">
+    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
+    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
+  </g>
+  <g class="piece" style="transform: translateX(calc(-1 * var(--gg-gap-x)/2)) scaleX(-1); filter:url(#ggSoftGlow); opacity: var(--left-dim);">
+    <use href="#gSym" width="64" height="64" fill="url(#ggFill)"/>
+    <use href="#gSym" width="64" height="64" class="stroke" stroke="url(#ggShimmer)" stroke-width="var(--stroke-w)" fill="none"/>
+    <use href="#gSym" width="64" height="64" fill="url(#ggSheen)"/>
+  </g>
+</svg>`;
+    const word = brand.querySelector('.brand-word')?.outerHTML || '<span class="brand-word">Galactly</span>';
+    brand.innerHTML = `<span class="brand-icon" aria-hidden="true">${icon}</span>${word}`;
+    brand.setAttribute('aria-label','Galactly');
+  })();
+  </script>
+</body>
+</html>
