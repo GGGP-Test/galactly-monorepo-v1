@@ -36,6 +36,7 @@ jobs:
           # Core public pages
           cp -v "$PUBLIC_SRC/index.html"      "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/start.html"      "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/login.html"      "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/bridge.html"     "$PUBLIC_OUT/" || true   # <- NEW
           cp -v "$PUBLIC_SRC/step3.html"      "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/pricing.html"    "$PUBLIC_OUT/" || true
