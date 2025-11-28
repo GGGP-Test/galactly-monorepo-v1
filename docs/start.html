@@ -692,7 +692,7 @@
       const isCompany = raw.includes('company') || raw.includes('website');
       const header = isCompany ? 'Company already registered.' : 'Account exists.';
       const body   = isCompany ? 'That website is already linked to an account.' : 'This email is already in use.';
-    
+
       showStatusHTML(
         `<strong>${header}</strong> ${body} ` +
         `<a href="login.html?email=${encodeURIComponent(em)}">Log in?</a>`
@@ -830,6 +830,7 @@
       const lockEmailCTA = !pwdWrap.hidden; // once password stage is visible, keep email CTA hidden
       const show = valid && !lockEmailCTA;
       emailBox.classList.toggle('show-cta', show);
+      emailNext.toggleAttribute('disabled', !show);
       emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
     emailInput.addEventListener('input', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
@@ -845,6 +846,7 @@
     function updatePwdCTA(){
       const show = (pwdInput.value.length >= 6);
       pwdBox.classList.toggle('show-cta', show);
+      pwdNext.toggleAttribute('disabled', !show);
       pwdNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
     pwdInput?.addEventListener('input', updatePwdCTA);
@@ -954,6 +956,32 @@
     const EMAIL_KEY = 'gg_pending_email';
     const VERIFIED_KEY = 'gg_email_verified';
 
+    // --- helpers to avoid long hangs ---
+    const TIMEOUTS = {
+      emailExists: 3500,
+      domainCheck: 2500,
+      createUser: 10000,
+      sendVerify: 7000,
+      claimAfter: 5000
+    };
+
+    function withTimeout(promise, ms, label){
+      let t;
+      const timer = new Promise((_,rej)=>{ t=setTimeout(()=>rej(new Error('timeout:'+label)), ms); });
+      return Promise.race([promise, timer]).finally(()=>clearTimeout(t));
+    }
+
+    let globalBusy = false;
+    function setBusy(flag, scope){
+      globalBusy = !!flag;
+      try{
+        const btns = [emailNext, pwdNext, s2Back];
+        btns.forEach(b=> b?.toggleAttribute('disabled', globalBusy));
+        const roots = [emailBox, pwdBox];
+        roots.forEach(r=> r && r.setAttribute('aria-busy', globalBusy ? 'true' : 'false'));
+      }catch(_){}
+    }
+
     // Send a standard verification email for the CURRENT user
     async function sendVerifyLink(){
       if(!auth || !auth.currentUser){
@@ -961,19 +989,20 @@
         throw new Error('no_auth');
       }
       const continueUrl = new URL("bridge.html", location.origin).href;
-      await auth.currentUser.sendEmailVerification({
+      await withTimeout(auth.currentUser.sendEmailVerification({
         url: continueUrl,
         handleCodeInApp: false
-      });
+      }), TIMEOUTS.sendVerify, 'sendVerify');
       localStorage.setItem(EMAIL_KEY, auth.currentUser.email || '');
       return true;
     }
 
     async function emailExists(email){
       try{
-        const methods = await auth.fetchSignInMethodsForEmail(email);
+        const methods = await withTimeout(auth.fetchSignInMethodsForEmail(email), TIMEOUTS.emailExists, 'emailExists');
         return Array.isArray(methods) && methods.length > 0;
       }catch(e){
+        if(String(e?.message||'').startsWith('timeout')){ showStatus("Still checking… connection is slow."); return 'timeout'; }
         if(e?.code === 'auth/invalid-email'){ showStatus("That email looks invalid."); }
         else if(e?.code === 'auth/network-request-failed'){ showStatus("Network problem. Check your connection and try again."); }
         else { showStatus("We couldn’t check that email right now. Try again in a moment."); }
@@ -992,17 +1021,16 @@
     function domainFromEmail(email){ return extractHostFromEmail(email) || ''; }
 
     async function checkDomainBeforeSignup(domain, email){
-      // If Firestore is unavailable, allow flow to continue and enforce after signup
       if(!db || !domain) return {state:'unknown'};
       try{
-        const ref = db.collection('domainClaims').doc(domain);
-        const snap = await ref.get();
+        const snap = await withTimeout(db.collection('domainClaims').doc(domain).get(), TIMEOUTS.domainCheck, 'domainCheck');
         if(!snap.exists) return {state:'free'};
         const data = snap.data() || {};
         const owner = (data.owner || data.claimedBy || '').toLowerCase();
         if(owner && owner === (email||'').toLowerCase()){ return {state:'claimed-self'}; }
         return {state:'claimed-other'};
       }catch(e){
+        if(String(e?.message||'').startsWith('timeout')) return {state:'unavailable'};
         return {state:'unavailable'};
       }
     }
@@ -1010,26 +1038,31 @@
     async function claimDomainAfterSignup(domain, email, uid){
       if(!db || !domain) return {ok:true, skip:true};
       try{
-        const res = await db.runTransaction(async (tx)=>{
-          const ref = db.collection('domainClaims').doc(domain);
-          const snap = await tx.get(ref);
-          if(snap.exists){
-            const data = snap.data() || {};
-            const owner = (data.owner || data.claimedBy || '').toLowerCase();
-            if(owner && owner === (email||'').toLowerCase()){
-              return {ok:true, already:true};
+        const res = await withTimeout(
+          db.runTransaction(async (tx)=>{
+            const ref = db.collection('domainClaims').doc(domain);
+            const snap = await tx.get(ref);
+            if(snap.exists){
+              const data = snap.data() || {};
+              const owner = (data.owner || data.claimedBy || '').toLowerCase();
+              if(owner && owner === (email||'').toLowerCase()){
+                return {ok:true, already:true};
+              }
+              return {ok:false, reason:'claimed-other'};
             }
-            return {ok:false, reason:'claimed-other'};
-          }
-          tx.set(ref, {
-            owner: email,
-            uid: uid || null,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-          return {ok:true, claimed:true};
-        });
+            tx.set(ref, {
+              owner: email,
+              uid: uid || null,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return {ok:true, claimed:true};
+          }),
+          TIMEOUTS.claimAfter,
+          'claimAfter'
+        );
         return res;
       }catch(e){
+        if(String(e?.message||'').startsWith('timeout')) return {ok:false, reason:'registry-timeout'};
         return {ok:false, reason:'registry-unavailable'};
       }
     }
@@ -1066,66 +1099,89 @@
 
     /* ---------- Email CTA: decide route BEFORE password ---------- */
     emailNext.addEventListener('click', async ()=>{
+      if(globalBusy) return;
       hideStatus();
       const email = emailInput.value.trim();
       if(!looksValidEmail(email) || !isBusinessEmail(email)){ pulseEmail(); showStatus("Use a valid work email to continue."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
 
+      setBusy(true);
+      showStatus("Checking your email…");
+
       const domain = domainFromEmail(email);
 
       try{
-        // Hard-stop if the email already exists
         const exists = await emailExists(email);
-        if(exists){
-          showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
-          setTimeout(()=>goLogin(email), 450);
+        if(exists === true){
+          showStatusHTML(`<strong>Account exists.</strong> `);
+          goLogin(email); // immediate inline prompt, no redirect
+          setBusy(false);
+          return;
+        }
+        if(exists === 'timeout'){
+          // Don’t proceed blindly; invite login
+          goLogin(email);
+          setBusy(false);
           return;
         }
 
-        // Domain pre-check (privacy-safe: no owner details surfaced)
         const d = await checkDomainBeforeSignup(domain, email);
         if(d.state === 'claimed-other' || d.state === 'claimed-self'){
-          showStatusHTML(`<strong>Company already registered.</strong> Log in to continue.`);
-          setTimeout(()=>goLogin(email), 500);
+          showStatusHTML(`<strong>Company already registered.</strong> `);
+          goLogin(email);
+          setBusy(false);
           return;
         }
-        // free / unavailable / unknown → allow password stage (we enforce again after signup)
+
+        hideStatus();
+        setBusy(false);
         toPasswordStage();
 
-      }catch(_){ /* emailExists already surfaced a message if it failed */ }
+      }catch(_){
+        setBusy(false);
+        // emailExists already surfaced a message
+      }
     });
 
     /* ---------- Password CTA: create ONLY if brand new and domain free ---------- */
     pwdNext?.addEventListener('click', async ()=>{
+      if(globalBusy) return;
       hideStatus();
       const email = emailInput.value.trim();
       const pwd = pwdInput.value;
-      if (!looksValidEmail(email)) { showStatus("Enter a valid work email first."); return; }
+      if (!looksValidEmail(email)) { showStatus("Enter a valid work email first."); pulseEmail(); return; }
       if (!isBusinessEmail(email)){ pulseEmail(); showStatus("Use a work email (not a personal domain)."); return; }
       if (pwd.length < 6) { showStatus("Password is too short."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
 
       const domain = domainFromEmail(email);
 
+      setBusy(true);
+      showStatus("Creating your account…");
+
       try{
-        // Block if email already exists (normal or race)
+        // Re-check email to avoid race
         const exists = await emailExists(email);
-        if(exists){
-          showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
-          setTimeout(()=>goLogin(email), 450);
+        if(exists === true){
+          showStatusHTML(`<strong>Account exists.</strong> `);
+          goLogin(email);
+          setBusy(false);
+          return;
+        }
+        if(exists === 'timeout'){
+          goLogin(email);
+          setBusy(false);
           return;
         }
 
-        // Create the user
+        // Create the user (guard with timeout)
         let cred;
         try{
-          cred = await auth.createUserWithEmailAndPassword(email, pwd);
+          cred = await withTimeout(auth.createUserWithEmailAndPassword(email, pwd), TIMEOUTS.createUser, 'createUser');
         }catch(e){
-          if(e?.code === 'auth/email-already-in-use'){
-            showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
-            setTimeout(()=>goLogin(email), 500);
-            return;
-          }
+          setBusy(false);
+          if(String(e?.message||'').startsWith('timeout')){ showStatus("It’s taking too long to create the account. Check your connection and try again."); return; }
+          if(e?.code === 'auth/email-already-in-use'){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); return; }
           if(e?.code === 'auth/operation-not-allowed'){ showStatus("Password sign-up is disabled for this project."); return; }
           if(e?.code === 'auth/weak-password'){ showStatus("Password is too weak."); return; }
           if(e?.code === 'auth/network-request-failed'){ showStatus("Network problem. Try again."); return; }
@@ -1136,28 +1192,33 @@
 
         const user = cred.user;
 
-        // Enforce domain claim atomically (and rollback if conflict)
+        // Enforce domain claim (quick guard; do not hang UI)
+        showStatus("Verifying your company…");
         const claim = await claimDomainAfterSignup(domain, email, user?.uid);
         if(!claim.ok){
-          await rollbackNewlyCreatedUser();
+          // Keep the newly created user but be explicit
           if(claim.reason === 'claimed-other'){
-            showStatusHTML(`<strong>Company already registered.</strong> Log in with your company account.`);
-            setTimeout(()=>goLogin(email), 700);
+            await rollbackNewlyCreatedUser();
+            showStatusHTML(`<strong>Company already registered.</strong> `);
+            goLogin(email);
+            setBusy(false);
             return;
           }
-          showStatus("We couldn’t verify your company right now. Try again later or log in if you already have an account.");
-          return;
+          // registry-timeout / unavailable → proceed with verify but tell them
+          showStatus("Company registry is unavailable right now. You can continue once email is verified.");
         }
 
         // If already verified (rare), go straight to bridge
         try{ await user.reload(); }catch(_){}
         if(user.emailVerified){
           sessionStorage.setItem(VERIFIED_KEY,'1');
+          setBusy(false);
           goToBridge('password');
           return;
         }
 
         // Send verification link and show panel
+        showStatus("Sending verification link…");
         try{
           await sendVerifyLink();
           verifyPanel.hidden = false;
@@ -1166,9 +1227,12 @@
           showStatus("Check your inbox for the verification link to continue.");
         }catch(_){
           showStatus("We couldn’t send the verification email. Try resending.");
+        }finally{
+          setBusy(false);
         }
 
-      }catch(err){
+      }catch(_){
+        setBusy(false);
         showStatus("We couldn’t continue. Please try again.");
       }
     });
@@ -1176,8 +1240,11 @@
     // resend / change
     resendLink.addEventListener('click', async (e)=>{
       e.preventDefault();
+      if(globalBusy) return;
       hideStatus();
+      setBusy(true);
       try{ await sendVerifyLink(); showStatus("Verification email resent."); }catch(_){ showStatus("We couldn’t resend right now. Try again later."); }
+      setBusy(false);
     });
     changeEmail.addEventListener('click', (e)=>{
       e.preventDefault();
@@ -1195,9 +1262,13 @@
     const googleBtn  = document.getElementById('googleBtn');
     googleBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
+      if(globalBusy) return;
       hideStatus();
 
       if (!auth) { showStatus("Google sign-in isn’t configured. Add Firebase keys."); return; }
+
+      setBusy(true);
+      showStatus("Opening Google…");
 
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -1212,40 +1283,43 @@
         // Enforce work domains
         if (!email || PERSONAL.has(domain)) {
           try { await auth.signOut(); } catch {}
+          setBusy(false);
           showStatus("Please use a work Google account (no personal Gmail).");
           pulseEmail();
           return;
         }
 
-        // If not new, send to login (existing account)
         if(!isNew){
           try { await auth.signOut(); } catch {}
-          showStatusHTML(`<strong>Account exists.</strong> Log in to continue.`);
-          setTimeout(()=>goLogin(email), 450);
+          setBusy(false);
+          showStatusHTML(`<strong>Account exists.</strong> `);
+          goLogin(email);
           return;
         }
 
-        // For brand-new Google accounts, claim domain
+        showStatus("Verifying your company…");
         const claim = await claimDomainAfterSignup(domain, email, user?.uid);
         if(!claim.ok){
-          // Roll back the just-created Google auth user to keep one-per-domain
           try{ await auth.currentUser?.delete(); }catch(_){}
           try{ await auth.signOut(); }catch(_){}
           if(claim.reason === 'claimed-other'){
-            showStatusHTML(`<strong>Company already registered.</strong> Log in with your company account.`);
-            setTimeout(()=>goLogin(email), 700);
+            setBusy(false);
+            showStatusHTML(`<strong>Company already registered.</strong> `);
+            goLogin(email);
             return;
           }
+          setBusy(false);
           showStatus("We couldn’t verify your company right now. Try again later.");
           return;
         }
 
-        // Domain claimed: continue
         emailInput.value = email;
         updateEmailCTA?.();
+        setBusy(false);
         goToBridge('google');
 
       } catch (err) {
+        setBusy(false);
         if (err?.code === 'auth/popup-closed-by-user') return;
         if (err?.code === 'auth/account-exists-with-different-credential') {
           showStatus("This email already exists with a different sign-in method. Use email + password to log in.");
