@@ -686,8 +686,19 @@
     }
 
     function goLogin(email){
-      const url = `login.html?email=${encodeURIComponent(email)}`;
-      location.href = url;
+      // No auto-redirect — show an inline prompt with a clickable Login link.
+      const em = (email || emailInput?.value || '').trim();
+      const raw = (statusEl?.textContent || '').toLowerCase();
+      const isCompany = raw.includes('company') || raw.includes('website');
+      const header = isCompany ? 'Company already registered.' : 'Account exists.';
+      const body   = isCompany ? 'That website is already linked to an account.' : 'This email is already in use.';
+    
+      showStatusHTML(
+        `<strong>${header}</strong> ${body} ` +
+        `<a href="login.html?email=${encodeURIComponent(em)}">Log in?</a>`
+      );
+      try { statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+      // Intentionally NOT redirecting.
     }
 
     emailInput?.addEventListener('input', updateLoginLink);
