@@ -259,6 +259,19 @@
       background: rgba(255,107,107,.12);
       color: #ffd7d7;
     }
+    /* Make links inside the red banner match the banner text */
+    .inline-error a,
+    .inline-error a:visited {
+      color: currentColor;          /* inherits #ffd7d7 from the banner */
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 600;
+    }
+    .inline-error a:hover,
+    .inline-error a:focus-visible {
+      text-decoration-thickness: 2px;
+      outline: none;
+    }
     .inline-note{
       width:min(560px, 86vw);
       margin: 8px auto 0;
