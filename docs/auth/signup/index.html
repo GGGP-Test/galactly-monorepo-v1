@@ -646,7 +646,7 @@
           </div>
           <div class="small-row" id="loginRow">
             <span>Already have an account?</span>
-            <a id="staticLoginLink" href="login.html">Log in</a>
+            <a id="staticLoginLink" href="/auth/login/">Log in</a>
           </div>
         </div>
       </section>
@@ -988,7 +988,7 @@
 
     (async function initFirebase(){
       try{
-        if(firebase?.apps?.length){
+        if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
           auth = firebase.auth();
           try{ db = firebase.firestore(); }catch(_){}
           return;
@@ -1664,5 +1664,106 @@
     setTimeout(()=>{ location.href = `/auth/bridge/?${urlParams}`; }, 1500); // matches --leave-ms
   }
 </script>
+
+
+
+<script>
+/* --- signup receiver glue (CTA intents, canonical links, safe handoffs) --- */
+(function(){
+  // 1) Capture & sanitize inbound intent ( ?next=... ) and remember it
+  function captureNext(){
+    const p = new URLSearchParams(location.search);
+    let next = p.get('next') || sessionStorage.getItem('gg_next') || '';
+    if (!next) return '';
+    try { next = decodeURIComponent(next); } catch(_){}
+
+    // Keep only same-origin paths to avoid open redirects
+    if (/^https?:/i.test(next)) {
+      try {
+        const u = new URL(next, location.origin);
+        next = (u.origin === location.origin) ? (u.pathname + u.search + u.hash) : '';
+      } catch(_) { next = ''; }
+    }
+    if (next && !next.startsWith('/')) next = '';
+    if (next) sessionStorage.setItem('gg_next', next);
+    return next;
+  }
+  const nextPath = captureNext();
+
+  // 2) Accept prefilled email (from links) and update the login link right away
+  (function prefillEmail(){
+    const p = new URLSearchParams(location.search);
+    const em = (p.get('email') || localStorage.getItem('gg_pending_email') || '').trim();
+    if (!em) return;
+    const inp = document.getElementById('email');
+    if (inp) {
+      inp.value = em;
+      try { inp.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){}
+    }
+  })();
+
+  // 3) Canonicalize any legacy anchors/forms on this page
+  (function canonicalize(){
+    const map = new Map([
+      ['login.html','/auth/login/'],
+      ['/login','/auth/login/'],
+      ['index.html','/auth/signup/'],
+      ['/auth/signup','/auth/signup/']
+    ]);
+    const norm = v => (v||'').replace(/^https?:\/\/[^/]+/i,'').replace(/^\.\//,'');
+    const split = v => { const m=String(v||'').match(/^([^?#]*)(.*)$/); return [m?m[1]:'',m?m[2]:'']; };
+
+    document.querySelectorAll('a[href], form[action]').forEach(el=>{
+      const attr = el.tagName==='FORM' ? 'action' : 'href';
+      const raw  = el.getAttribute(attr); if(!raw) return;
+      if (attr==='href' && /^#/.test(raw)) return; // in-page anchors
+      const [path, rest] = split(norm(raw));
+      if (map.has(path)) el.setAttribute(attr, map.get(path) + rest);
+    });
+  })();
+
+  // 4) Make every handoff to Bridge carry ?next=… as well
+  const origGoToBridge = window.goToBridge;
+  window.goToBridge = function(from){
+    const email = (document.getElementById('email')?.value || '').trim();
+    const hostFromEmail = (email.match(/@([^@\s>]+)/)?.[1] || '').toLowerCase();
+
+    const params = new URLSearchParams({
+      from: from || 'unknown',
+      role: (window.onboarding?.getRole?.() || window.role || '') || '',
+      email,
+      site: hostFromEmail || (localStorage.getItem('preWebsite') || sessionStorage.getItem('preWebsite') || '')
+    });
+    const nx = sessionStorage.getItem('gg_next') || '';
+    if (nx) params.set('next', nx);
+
+    document.body.classList.add('leaving');
+    setTimeout(()=>{ location.href = `/auth/bridge/?${params}`; }, 1500);
+  };
+
+  // 5) Make verification email’s continue URL also preserve ?next=…
+  if (typeof window.sendVerifyLink === 'function') {
+    const wrapSendVerify = async function(){
+      try{
+        if (!auth || !auth.currentUser) throw new Error('no_auth');
+        const nx = sessionStorage.getItem('gg_next') || '';
+        const url = new URL('/auth/bridge/', location.origin);
+        if (nx) url.searchParams.set('next', nx);
+        await auth.currentUser.sendEmailVerification({ url: url.href, handleCodeInApp: false });
+        try { localStorage.setItem('gg_pending_email', auth.currentUser.email || ''); } catch(_){}
+        return true;
+      }catch(_){
+        // Fall back to original if anything odd happens
+        return window.sendVerifyLink();
+      }
+    };
+    window.sendVerifyLink = wrapSendVerify;
+  }
+
+  // 6) Defensive: avoid ReferenceError if firebase isn’t on the page yet
+  try { if (typeof firebase === 'undefined') window.firebase = undefined; } catch(_){}
+})();
+</script>
+
 </body>
 </html>
