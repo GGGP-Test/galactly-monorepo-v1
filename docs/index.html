@@ -4993,6 +4993,55 @@ window.SCOREBOARD_KNOBS = {
 </script>
 
 
+<script>
+(function(){
+  // Map old paths → canonical folder URLs
+  const map = new Map([
+    ['start.html','/auth/signup/'],['signup.html','/auth/signup/'],['/start','/auth/signup/'],['/signup','/auth/signup/'],
+    ['login.html','/auth/login/'],['/login','/auth/login/'],
+    ['pricing.html','/pricing/'],['/pricing','/pricing/'],
+    ['sectors.html','/sectors/'],['/sectors','/sectors/']
+  ]);
+  const norm=v=>(v||'').replace(/^https?:\/\/[^/]+/i,'').replace(/^\.\//,'');
+  const split=v=>{const m=String(v||'').match(/^([^?#]*)(.*)$/);return [m?m[1]:'',m?m[2]:''];};
+
+  // Canonicalize anchors/forms
+  document.querySelectorAll('a[href], form[action]').forEach(el=>{
+    const attr = el.tagName==='FORM' ? 'action' : 'href';
+    const raw = el.getAttribute(attr); if(!raw) return;
+    const [path, rest] = split(norm(raw));
+    if(map.has(path)) el.setAttribute(attr, map.get(path) + rest);
+  });
+
+  // Tiny analytics bridge
+  function track(id, props){
+    try{
+      if(window.plausible) window.plausible('nav_click',{props:{id,...props}});
+      if(window.gtag)      window.gtag('event','nav_click',{event_category:'navigation',event_label:id,...props});
+      if(window.dataLayer) window.dataLayer.push({event:'nav_click',id,...props});
+    }catch(_){}
+  }
+
+  // Hero CTAs → /auth/signup/?site=...
+  function cleanHost(raw){
+    if(!raw) return '';
+    let s=String(raw).trim().replace(/^https?:\/\//i,'').replace(/^www\./i,''); s=s.split(/[\/?#]/)[0];
+    return s.replace(/[^\w.-]/g,'');
+  }
+  function goSignup(site){
+    const host = cleanHost(site);
+    if(host){ try{ sessionStorage.setItem('preWebsite',host); localStorage.setItem('preWebsite',host);}catch(_){ } }
+    const q = host ? `?site=${encodeURIComponent(host)}` : '';
+    location.href = `/auth/signup/${q}`;
+  }
+  const btnD=document.getElementById('cta-desktop'), inpD=document.getElementById('hostHeroDesktop');
+  const btnM=document.getElementById('cta'),         inpM=document.getElementById('hostHeroMobile');
+  btnD?.addEventListener('click',()=>{ track('cta-desktop',{dest:'/auth/signup/'}); goSignup(inpD?.value); });
+  btnM?.addEventListener('click',()=>{ track('cta-mobile', {dest:'/auth/signup/'}); goSignup(inpM?.value); });
+  [inpD,inpM].forEach((i,b)=>i?.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); (b===0?btnD:btnM).click(); }}));
+})();
+</script>
+
 
 
 </body>
