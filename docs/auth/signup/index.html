@@ -1707,8 +1707,8 @@
     const map = new Map([
       ['login.html','/auth/login/'],
       ['/login','/auth/login/'],
-      ['index.html','/auth/signup/'],
-      ['/auth/signup','/auth/signup/']
+      ['index.html','/auth/signup'],
+      ['/auth/signup','/auth/signup']
     ]);
     const norm = v => (v||'').replace(/^https?:\/\/[^/]+/i,'').replace(/^\.\//,'');
     const split = v => { const m=String(v||'').match(/^([^?#]*)(.*)$/); return [m?m[1]:'',m?m[2]:'']; };
