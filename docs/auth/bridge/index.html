@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Galactly — Setting things up…</title>
+<meta name="color-scheme" content="dark light"/>
+
+<style>
+  :root{
+    --bg: #0b0f14;
+    --halo1: rgba(246,205,98,.18);
+    --halo2: rgba(88,175,255,.18);
+    --fg: #e9ecf3;
+    --muted: #9aa3b2;
+    --accent: #2fe077;
+    --accent-shadow: rgba(47,224,119,.25);
+    --card: rgba(15,16,22,.86);
+    --card-border: rgba(255,255,255,.08);
+    --radius: 16px;
+
+    --main-h: 86px;      /* center card height */
+    --side-h: 64px;      /* top/bottom card height */
+    --gap: 16px;
+
+    --rot-ms: 2200ms;    /* per step dwell */
+    --total-min: 10000;  /* 10s min */
+    --total-max: 15000;  /* 15s max */
+
+    --bar-ms: 1400ms;    /* progress shimmer */
+  }
+
+  html,body{height:100%;margin:0}
+  body{
+    color:var(--fg);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1200px 800px at 72% 24%, var(--halo1), transparent 60%),
+      radial-gradient(1100px 760px at 28% 76%, var(--halo2), transparent 62%),
+      linear-gradient(180deg, #0f1218, var(--bg));
+    -webkit-font-smoothing: antialiased;
+    overflow:hidden;
+  }
+
+  .wrap{
+    min-height:100svh;
+    display:grid;
+    place-items:center;
+    padding: 12svh 16px 10svh;
+  }
+
+  /* header chip */
+  .head{
+    width:min(560px, 92vw);
+    margin: 0 auto 18px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    border:1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .head .who{ font-size:13px; color:var(--muted) }
+  .head strong{ color:var(--fg); font-weight:700 }
+  .ok{ width:10px; height:10px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 6px var(--accent-shadow) }
+
+  /* stack */
+  .stack{
+    width:min(560px, 92vw);
+    display:grid; gap: var(--gap);
+    filter: drop-shadow(0 16px 44px rgba(0,0,0,.55));
+  }
+
+  .card{
+    position:relative;
+    display:grid;
+    grid-template-columns: 38px 1fr;
+    align-items:center; gap:12px;
+    padding: 12px 14px;
+    border-radius: calc(var(--radius) + 2px);
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--card-border);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.06),
+      0 12px 30px rgba(0,0,0,.35);
+    transition: transform .6s cubic-bezier(.22,1,.36,1), opacity .6s ease, height .6s ease, filter .6s ease;
+    overflow:hidden;
+  }
+  .card .title{ font-weight:700; font-size:14px; letter-spacing:.2px }
+  .card .meta{ color:var(--muted); font-size:12px; margin-top:3px }
+
+  .ic{ width:24px; height:24px; display:grid; place-items:center; color:#dfe7f5; opacity:.95 }
+  .ic svg{ width:20px; height:20px; display:block }
+
+  /* progress bar (only visible on active) */
+  .bar{ height:8px; border-radius:999px; background: rgba(255,255,255,.06); overflow:hidden; margin-top:8px }
+  .fill{
+    width:22%; height:100%;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.22), rgba(255,255,255,0)),
+      linear-gradient(90deg, var(--accent), var(--accent));
+    filter: drop-shadow(0 0 10px var(--accent-shadow));
+    animation: slide var(--bar-ms) linear infinite;
+  }
+  @keyframes slide{ from{transform:translateX(-120%)} to{transform:translateX(220%)} }
+
+  /* slots */
+  .slot-top    { height: var(--side-h);   opacity:.55; transform: scale(.94); filter: blur(.2px) }
+  .slot-main   { height: var(--main-h);   opacity:1;    transform: scale(1);   filter: blur(0) }
+  .slot-bottom { height: var(--side-h);   opacity:.55; transform: scale(.94); filter: blur(.2px) }
+
+  /* state helpers */
+  .is-pending .bar{ display:none }
+  .is-done    .bar{ display:none }
+  .is-done .ic svg{ stroke: currentColor }
+  .is-done .ic svg .ok{ display:block }
+
+  .actions{
+    margin-top: 18px;
+    display:flex; justify-content:center; gap:12px; opacity:.85;
+  }
+  .link{
+    appearance:none; background:transparent; color:var(--fg);
+    border:1px solid var(--card-border); border-radius:10px;
+    padding:10px 14px; cursor:pointer; font-weight:600; font-size:13px;
+  }
+  .link:hover{ border-color: rgba(255,255,255,.22); }
+
+  .sr{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:1ms !important; transition:none !important }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head" id="head">
+    <div class="who">
+      Preparing workspace for <strong id="h-email">—</strong>
+      <span id="h-site" style="color:var(--muted)"></span>
+    </div>
+    <div class="ok" aria-hidden="true"></div>
+  </div>
+
+  <div class="stack" id="stack" role="status" aria-live="polite">
+    <div class="card slot-top   is-done"    id="card-top"></div>
+    <div class="card slot-main  is-active"  id="card-main"></div>
+    <div class="card slot-bottom is-pending" id="card-bottom"></div>
+  </div>
+
+  <div class="actions">
+    <button class="link" id="backBtn" type="button">Back</button>
+  </div>
+
+  <div class="sr" id="sr" aria-live="polite"></div>
+</div>
+
+<script>
+/* ===================== INPUTS ===================== */
+const qs     = new URLSearchParams(location.search);
+const email  = (qs.get('email') || '').trim();
+const role   = (qs.get('role') || '').trim();       // 'supplier' | 'buyer' | ''
+const site   = (qs.get('site') || '').replace(/^https?:\/\//,'').replace(/^www\./,'').trim();
+const from   = (qs.get('from') || '').trim();       // 'google' | 'password' | 'unknown'
+
+document.getElementById('h-email').textContent = email || 'new user';
+document.getElementById('h-site').textContent  = site ? `• ${site}` : '';
+
+/* Where to go after success */
+const STEP3_URL  = 'step3.html';       // can be absolute if you prefer
+const STATUS_URL = '';                 // optional: e.g. '/api/onboarding/status'
+
+/* ===================== COPY ===================== */
+const forSupplier = [
+  ['Verifying details',      email || 'Signing in'],
+  ['Matching your domain',   site || 'Detecting business website'],
+  ['Scanning website',       'Public pages & metadata'],
+  ['Finding buyers with intent', 'Recent signals'],
+  ['Training outreach agent','Tone & guardrails'],
+  ['Creating your workspace','Teams, roles & defaults'],
+];
+
+const forBuyer = [
+  ['Verifying details',        email || 'Signing in'],
+  ['Matching your domain',     site || 'Detecting business website'],
+  ['Scanning website',         'Public pages & metadata'],
+  ['Finding vetted suppliers', 'Category & region'],
+  ['Collecting timelines',     'MOQ, lead times, MOQs'],
+  ['Creating your workspace',  'Projects & defaults'],
+];
+
+const defaultSteps = [
+  ['Verifying details',      email || 'Signing in'],
+  ['Matching your domain',   site || 'Detecting business website'],
+  ['Scanning website',       'Public pages & metadata'],
+  ['Enriching company data', 'Signals & contacts'],
+  ['Configuring defaults',   'Preferences & roles'],
+  ['Creating your workspace','Final touches'],
+];
+
+const stepsSource = role === 'supplier' ? forSupplier : role === 'buyer' ? forBuyer : defaultSteps;
+
+/* ===================== VALIDATIONS ===================== */
+/* Client-only heuristics. Backend should still verify authoritatively. */
+const PERSONAL = new Set([
+  "gmail.com","googlemail.com","yahoo.com","ymail.com","outlook.com","hotmail.com","live.com","msn.com",
+  "icloud.com","me.com","mac.com","aol.com","proton.me","protonmail.com","pm.me","mail.com","yandex.com","yandex.ru",
+  "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"
+]);
+
+const emailHost = (()=>{ const m = email.match(/@([^@\s>]+)$/); return m ? m[1].toLowerCase() : ''; })();
+
+/* baseDomain("foo.bar.example.com") -> "example.com" (simple heuristic) */
+function baseDomain(h){
+  if(!h) return '';
+  const parts = h.toLowerCase().split('.').filter(Boolean);
+  if(parts.length <= 2) return parts.join('.');
+  // naive ccTLD handling for common 2-level TLDs
+  const tlds2 = new Set(['co.uk','com.au','com.br','co.jp','co.in','com.mx','com.tr','com.cn','co.za','com.sg']);
+  const last2 = parts.slice(-2).join('.');
+  const last3 = parts.slice(-3).join('.');
+  return tlds2.has(last2) ? last3 : last2;
+}
+function looksBusinessEmail(){ return !!emailHost && !PERSONAL.has(emailHost); }
+
+/* try to see if host is reachable by loading its favicon as an image (CORS-safe) */
+function imgReachable(host, timeoutMs=3500){
+  return new Promise((resolve)=>{
+    if(!host) return resolve(false);
+    const img = new Image();
+    let done = false;
+    const url = 'https://' + host + '/favicon.ico?__ping=' + Date.now();
+    const timer = setTimeout(()=>{ if(!done){ done=true; resolve(false); } }, timeoutMs);
+    img.onload = ()=>{ if(!done){ done=true; clearTimeout(timer); resolve(true); } };
+    img.onerror= ()=>{ if(!done){ done=true; clearTimeout(timer); resolve(true); } }; // error still means host responded
+    img.referrerPolicy = 'no-referrer';
+    img.src = url;
+  });
+}
+
+/* bounce back to start with an inline error message token */
+function bounceToStart(code, msg){
+  const back = 'start.html?err=' + encodeURIComponent(code) + (msg ? '&msg=' + encodeURIComponent(msg) : '') +
+               (email ? '&email=' + encodeURIComponent(email) : '') + (site ? '&site=' + encodeURIComponent(site) : '') +
+               (role ? '&role=' + encodeURIComponent(role) : '') + (from ? '&from=' + encodeURIComponent(from) : '');
+  location.replace(back);
+}
+
+/* run validations early. Return true to proceed, false to bounce. */
+async function runValidations(){
+  // 1) require a site hint (we use email host if site query is empty)
+  const hostFromSite  = (site || '').toLowerCase();
+  const hostFromEmail = emailHost;
+  const guessSite = hostFromSite || hostFromEmail;
+
+  if(!guessSite){
+    bounceToStart('no_site', 'Add your company website (work email or site).');
+    return false;
+  }
+
+  // 2) business email check (only if we have an email)
+  if(email && !looksBusinessEmail()){
+    bounceToStart('personal_email', 'Use a work email (Gmail/Outlook/Yahoo are not allowed).');
+    return false;
+  }
+
+  // 3) mismatch: base domains differ (example: email @rtfgb.com but site is brand.io)
+  if(hostFromSite && hostFromEmail && baseDomain(hostFromSite) !== baseDomain(hostFromEmail)){
+    bounceToStart('domain_mismatch', `Your email domain (${baseDomain(hostFromEmail)}) doesn’t match the website (${baseDomain(hostFromSite)}).`);
+    return false;
+  }
+
+  // 4) quick reachability probe (best effort; still heuristic)
+  const reachable = await imgReachable(guessSite);
+  if(!reachable){
+    bounceToStart('site_unreachable', 'We couldn’t reach that site. Check that it’s public and spelled correctly.');
+    return false;
+  }
+
+  // Passed client-side checks
+  return true;
+}
+
+/* ===================== ROTOR UI ===================== */
+const sr = (t)=>{ const el=document.getElementById('sr'); if(el) el.textContent=t; };
+
+function renderCard(el, title, meta, state){
+  el.className = el.className.replace(/\bis-(active|pending|done)\b/g,'').trim();
+  el.classList.add('card');
+  if(el.id === 'card-top')    el.classList.add('slot-top');
+  if(el.id === 'card-main')   el.classList.add('slot-main');
+  if(el.id === 'card-bottom') el.classList.add('slot-bottom');
+  el.classList.add('is-' + state);
+
+  el.innerHTML = `
+    <div class="ic" aria-hidden="true">
+      ${state === 'done'
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <circle cx="12" cy="12" r="10"></circle><path d="M8 12l3 3 5-6"></path>
+           </svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <circle cx="12" cy="12" r="10" opacity=".9"></circle><path d="M12 6v6l4 2" opacity=".9"></path>
+           </svg>`
+      }
+    </div>
+    <div>
+      <div class="title">${title}</div>
+      <div class="meta">${meta || ''}</div>
+      ${state === 'active' ? `<div class="bar"><div class="fill"></div></div>` : ``}
+    </div>
+  `;
+}
+
+/* initialize three slots */
+const topEl    = document.getElementById('card-top');
+const mainEl   = document.getElementById('card-main');
+const bottomEl = document.getElementById('card-bottom');
+
+let queue = stepsSource.map(([t,m]) => ({title:t, meta:m}));
+let idxMain = 1;                                // main shows queue[1] at boot
+if(queue.length < 3){ queue = queue.concat(queue).slice(0,3); }
+
+renderCard(topEl,    queue[0].title, queue[0].meta, 'done');
+renderCard(mainEl,   queue[1].title, queue[1].meta, 'active');
+renderCard(bottomEl, queue[2].title, queue[2].meta, 'pending');
+
+function rotateOnce(nextTask){
+  // main -> top (now done)
+  renderCard(topEl, mainEl.querySelector('.title').textContent, mainEl.querySelector('.meta').textContent, 'done');
+  // bottom -> main (now active)
+  renderCard(mainEl, bottomEl.querySelector('.title').textContent, bottomEl.querySelector('.meta').textContent, 'active');
+  // new task -> bottom (pending)
+  renderCard(bottomEl, nextTask.title, nextTask.meta, 'pending');
+  sr(mainEl.querySelector('.title').textContent + '…');
+}
+
+/* ===================== FLOW ===================== */
+async function startFlow(){
+  // Early guard/validation — keeps animation smooth but exits fast on failure.
+  const ok = await runValidations();
+  if(!ok) return;
+
+  // Optional backend status mode
+  if(STATUS_URL){
+    try{
+      await pollBackend();
+      return;
+    }catch{ /* fall through to demo rotor */ }
+  }
+
+  // Timed rotor (10–15s)
+  const totalMs = Math.floor(Math.random()*(Number(getComputedStyle(document.documentElement).getPropertyValue('--total-max')) - Number(getComputedStyle(document.documentElement).getPropertyValue('--total-min'))) + Number(getComputedStyle(document.documentElement).getPropertyValue('--total-min')));
+
+  let spent = 0;
+  let p = 2; // next item index in queue
+  while(spent < totalMs - 600){                      // leave a small cushion for the final settle
+    const dwell = Math.floor(1800 + Math.random()*1200); // 1.8–3.0s per card
+    p = (p + 1) % queue.length;
+    const nextTask = queue[p];
+    rotateOnce(nextTask);
+    await new Promise(r=>setTimeout(r, dwell));
+    spent += dwell;
+  }
+
+  // Final “Creating your workspace” center focus before leaving
+  const final = {title:'Creating your workspace', meta:'Final checks'};
+  rotateOnce(final);
+  await new Promise(r=>setTimeout(r, 620));
+
+  // hand-off to step3
+  goNext();
+}
+
+/* Backend polling (optional) */
+async function pollBackend(){
+  const start = Date.now();
+  let done = false;
+  while(!done && Date.now()-start < 15000){
+    const res = await fetch(STATUS_URL + '?' + qs.toString(), {cache:'no-store'});
+    if(!res.ok) throw new Error('bad status');
+    const j = await res.json(); // {stage:'verify|scan|create|...', done:boolean, redirectTo?}
+    const next = {title: j.label || j.stage || 'Working', meta: j.meta || ''};
+    rotateOnce(next);
+    if(j.done){ done=true; if(j.redirectTo){ location.href = j.redirectTo; return; } }
+    await new Promise(r=>setTimeout(r, j.nextInMs || 1200));
+  }
+  goNext();
+}
+
+/* Go to step3 with all params preserved */
+function goNext(){
+  const url = STEP3_URL + (STEP3_URL.includes('?') ? '&' : '?') + qs.toString();
+  location.href = url;
+}
+
+/* Back button */
+document.getElementById('backBtn').addEventListener('click', ()=>{
+  history.length > 1 ? history.back() : location.href = 'start.html';
+});
+
+/* Boot */
+startFlow();
+</script>
+</body>
+</html>
