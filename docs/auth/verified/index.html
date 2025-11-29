@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Step 3: Tune your buyers</title>
+<meta name="api-base" content="">
+<link id="favIcon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23121822'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='34' fill='%236de1ff' font-family='Arial,Helvetica,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121822; --panel2:#0e141c; --card:#0f1724;
+    --text:#e9f1f7; --muted:#8aa0b2; --muted2:#a9bfd1; --divider:#1b2531;
+    --accent:#6de1ff; --accentText:#082433; --ring:#2a4e6d;
+    --good:#38e08f; --warn:#ffd166; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  a{color:inherit}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+
+  .topbar{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--divider);
+    border-radius:14px;background:linear-gradient(180deg,#0f1622,#0e1520)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
+  .dot.on{background:#5bd0ff}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-flex;gap:6px;align-items:center}
+  .sep{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);
+    background:#152333;color:#cfe0ee;cursor:pointer}
+  .btn.primary{background:var(--accent);border:none;color:var(--accentText);font-weight:800}
+  .btn:active{transform:translateY(1px)}
+  .gear{background:transparent;border:none;color:#9bb2c6;cursor:pointer}
+
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:16px;margin-top:16px}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px}
+  .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:4px 0 8px}
+
+  /* One-liner */
+  .one{background:#0e1622;border:1px solid var(--divider);border-radius:12px;padding:12px}
+  .one .edit{font-size:12px;color:#9bb2c8;cursor:pointer;margin-top:6px}
+
+  /* Rotor pane */
+  .rotorWrap{position:relative;height:420px;overflow:hidden;border-radius:12px;background:var(--panel2);
+    border:1px solid var(--divider);padding:6px}
+  .rotorList{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:18px;will-change:transform}
+  .rotItem{user-select:none;cursor:pointer;transition:transform .12s ease, opacity .12s ease; will-change:transform,opacity}
+  .rotItem .label{padding:6px 10px;border-radius:10px;border:1px solid transparent}
+  .rotItem.active .label{font-weight:800;border-color:#234158;background:#112032}
+  .rotorCtrls{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .mutedLine{font-size:12px;color:var(--muted)}
+
+  /* Metrics pane */
+  .sectHead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .sectHead .title{font-weight:800}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#1a2433;
+    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip.on{background:#103247;color:#eaf7ff;border-color:#1b4862}
+  .field{margin:10px 0}
+  label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
+  input[type=text]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text]:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+
+  /* Sliders */
+  .sliderRow{margin:12px 0;display:grid;grid-template-columns:1fr 280px;align-items:center;gap:12px}
+  .sliderRow input[type=range]{width:100%}
+  .slim{display:flex;align-items:center;gap:8px}
+  .val{font-variant-numeric:tabular-nums;color:#cfe0ee}
+  .hint{font-size:12px;color:#9bb2c8}
+
+  /* Dual range */
+  .dual{position:relative;height:36px}
+  .dual input[type=range]{position:absolute;inset:0;pointer-events:none;background:transparent}
+  .dual input[type=range]::-webkit-slider-thumb{pointer-events:auto}
+  .dual input[type=range]::-moz-range-thumb{pointer-events:auto}
+  .track{position:absolute;left:0;right:0;top:16px;height:4px;background:#162433;border-radius:999px}
+  .fill{position:absolute;top:16px;height:4px;background:#2f6f8f;border-radius:999px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:680px){ .sliderRow{grid-template-columns:1fr} .grid2{grid-template-columns:1fr} }
+
+  /* footer */
+  .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+  .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span class="dot on"></span><span class="dot on"></span><span class="dot on"></span>
+    <span class="pill">Step 3 of 3 — Tune & apply</span>
+    <span id="apiBadge" class="pill">API: unknown</span>
+    <span class="sep"></span>
+    <button id="setApi" class="gear" title="Set API base">⚙️ API</button>
+    <button id="finish" class="btn primary">Finish & Go to panel</button>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="one">
+      <div id="oneLine">Loading your site summary…</div>
+      <div class="edit" id="editOne">click to toggle edit • <a href="#" id="refreshLink">refresh from website</a></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: industry rotor -->
+    <aside class="card">
+      <div class="h">Industries</div>
+      <div id="rotor" class="rotorWrap" aria-label="Industry selector">
+        <div id="rotorList" class="rotorList"></div>
+      </div>
+      <div class="rotorCtrls">
+        <div class="mutedLine"><span id="mutedCount">0</span> muted • <a href="#" id="toggleMuted">show</a></div>
+        <div style="display:flex;gap:6px">
+          <button id="upBtn" class="btn" title="Previous">▲</button>
+          <button id="downBtn" class="btn" title="Next">▼</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: metrics -->
+    <main class="card">
+      <div class="sectHead">
+        <div class="title" id="sectTitle">Industry</div>
+        <span class="pill" id="sectHint">hot metrics pre-filled</span>
+        <span class="sep"></span>
+        <button id="muteBtn" class="btn">Mute “<span id="muteName">—</span>”</button>
+      </div>
+
+      <div class="h">Hot buyer persona</div>
+      <div id="titlesBox" class="field"></div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>Target company size — <b>Revenue</b> (range)</label>
+          <div class="dual" id="revDual">
+            <div class="track"></div><div class="fill" id="revFill"></div>
+            <input id="revMin" type="range" min="0" max="200" step="1" value="0" />
+            <input id="revMax" type="range" min="0" max="200" step="1" value="60" />
+          </div>
+          <div class="slim"><span class="val" id="revMinVal">$0M</span> — <span class="val" id="revMaxVal">$60M</span></div>
+          <div class="hint">Drag both handles. Scale: $0–$200M.</div>
+        </div>
+        <div class="field">
+          <label>Target company size — <b>Employees</b></label>
+          <input id="emp" type="range" min="1" max="5000" step="1" value="120"/>
+          <div class="slim"><span class="val" id="empVal">120</span> employees • <span class="hint" id="empHint">small</span></div>
+        </div>
+      </div>
+
+      <div class="h" style="margin-top:6px">Top priorities (pre-filled for this industry)</div>
+      <div id="metricBox"></div>
+
+      <div class="h" style="margin-top:10px">Targeting</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Priority cities</label>
+          <input id="cityInput" type="text" placeholder="add city and press Enter">
+          <div id="cityChips"></div>
+        </div>
+        <div class="field">
+          <label>Product focus from your site</label>
+          <input id="tagInput" type="text" placeholder="add tag and press Enter">
+          <div id="tagChips"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label><input id="letAi" type="checkbox" checked> Let AI finalize conflicts (recommended)</label>
+      </div>
+
+      <div class="ft">
+        <button id="apply" class="btn">Apply to API</button>
+        <button id="saveLocal" class="btn">Save locally</button>
+      </div>
+      <div class="hint" id="statusLine" style="margin-top:8px"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ---------- tiny helpers ---------- */
+  const $ = (q,r=document)=>r.querySelector(q);
+  const $$ = (q,r=document)=>Array.from(r.querySelectorAll(q));
+  const normHost = s => (s||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+  const fmtM = v => "$" + v.toString() + "M";
+  const LS = { seed:"onb.seed", apiBase:"apiBase", persona:"fp.persona", muted:"fp.muted.industries" };
+
+  /* ---------- favicon helpers ---------- */
+  function svgFav(letter){
+    const l = encodeURIComponent(String(letter||"G").toUpperCase()[0]);
+    return "data:image/svg+xml,"+
+      `%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E`+
+      `%3Crect width='64' height='64' rx='12' fill='%23121822'/%3E`+
+      `%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='40' fill='%236de1ff' font-family='Arial,Helvetica,sans-serif'%3E${l}%3C/text%3E`+
+      `%3C/svg%3E`;
+  }
+  function setFavicon(url, host){
+    const link = document.getElementById("favIcon");
+    if (!url) { link.href = svgFav(host?.[0]); return; }
+    const img = new Image();
+    img.onload = ()=>{ link.href = url; };
+    img.onerror = ()=>{ link.href = svgFav(host?.[0]); };
+    img.src = url;
+  }
+
+  /* ---------- city sanitization ---------- */
+  const BAD_TOKENS = /\b(rd|road|st|street|ave|avenue|blvd|boulevard|dr|drive|ln|lane|hwy|highway|pkwy|parkway|ct|court|ctr|center|mall|plaza|trl|trail|county|state|airport|campus|university|college|park|winery|vineyard|blvd)\b/i;
+  function titleCase(s){ return String(s).toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()); }
+  function isLikelyCity(s){
+    if (!s) return false;
+    const t = String(s).trim();
+    if (!t || /\d/.test(t)) return false;
+    if (/,/.test(t)) return false; // skip "City, ST"
+    if (BAD_TOKENS.test(t)) return false;
+    if (t.length < 2 || t.length > 32) return false;
+    return /^[A-Za-z .'-]+$/.test(t);
+  }
+  function sanitizeCities(list){
+    const out = []; const seen = new Set();
+    for (const raw of (list||[])){
+      const c = titleCase(String(raw||"").trim());
+      if (!isLikelyCity(c)) continue;
+      if (seen.has(c)) continue;
+      seen.add(c);
+      out.push(c);
+      if (out.length >= 8) break;
+    }
+    return out;
+  }
+
+  const displaySector = s => {
+    const k = String(s||"").toLowerCase();
+    if (k === "home") return "Home Care";
+    if (k === "industrial") return "Industrial";
+    return String(s||"").replace(/\b\w/g,m=>m.toUpperCase());
+  };
+
+  const getSeed = ()=>{ try{ return JSON.parse(localStorage.getItem(LS.seed)||"{}"); }catch{ return {}; } };
+  const getApiBase = ()=>{
+    const meta = document.querySelector('meta[name="api-base"]')?.content || "";
+    const v = localStorage.getItem(LS.apiBase) || meta || "";
+    return (v||"").trim().replace(/\/+$/,"");
+  };
+  const setApiBase = (raw)=>{
+    const v = (raw||"").trim().replace(/\/+$/,"");
+    if (v) localStorage.setItem(LS.apiBase, v);
+  };
+  const ensureApi = ()=>{
+    let base = getApiBase();
+    if (!base) {
+      const v = prompt("API base (with or without /api). Example:\nhttps://YOUR-SUBDOMAIN.code.run/api","")||"";
+      if (v) { setApiBase(v); base = getApiBase(); }
+    }
+    return base;
+  };
+  const join=(b,t)=>`${b.replace(/\/+$/,"")}/${String(t).replace(/^\/+/,"")}`;
+
+  const apiBadge=$("#apiBadge");
+  const updApiBadge=()=>{
+    const b=getApiBase(); apiBadge.textContent = b? ("API: " + b.replace(/https?:\/\//,"")) : "API: not set";
+  };
+
+  /* ---------- state ---------- */
+  const seed = getSeed();
+  const hostSeed = normHost(seed.host || seed?.contact?.email?.split("@")[1] || localStorage.getItem("fp.supplier.host") || "");
+  const state = {
+    host: hostSeed,
+    classify:null,
+    industries:[],
+    muted:new Set(),
+    showMuted:false,
+    sel:0,
+    titlesDefault:["Operations","Procurement","COO","Logistics","Supply Chain"],
+    titlesBySector:{
+      beverage:["Operations","Plant Manager","Packaging Engineer","Procurement"],
+      food:["Quality","Operations","Procurement","Packaging Engineer"],
+      cosmetics:["Brand Ops","QA/Regulatory","Procurement"],
+      electronics:["Operations","Packaging Engineer","Procurement"],
+      pharma:["QA/Regulatory","Operations","Packaging","Procurement"],
+      apparel:["Operations","Fulfillment","Procurement"],
+      cannabis:["Compliance","Operations","Procurement"]
+    },
+    products:[],
+    metricsBySector:{},
+    geo:{citiesTop:[],statesTop:[]}
+  };
+
+  /* ---------- default priorities (fallbacks) ---------- */
+  const DEFAULT_METRICS = {
+    general:["Fast turnaround","Lowest unit cost","Line automation / fulfillment"],
+    food:["Quality & compliance","Fast turnaround","Shelf-ready packaging"],
+    cosmetics:["Brand consistency","Regulatory labeling","Short runs / sampling"],
+    cannabis:["Compliance","Child-resistant closures","Local suppliers"],
+    pharma:["QA / Regulatory","Sterile handling","Serialization / traceability"],
+    beverage:["Breakage control","Line speed / automation","Cold-chain readiness"],
+    electronics:["ESD-safe packaging","Kitting accuracy","Return logistics"],
+    apparel:["Fulfillment speed","Eco materials","SKU variety"],
+    industrial:["Damage reduction","Cube efficiency","Barcode readiness"],
+    home:["Eco materials","Brand consistency","Shelf impact"]
+  };
+
+  /* ---------- one-liner helpers ---------- */
+  function joinForLine(list){
+    if (!list || !list.length) return "";
+    if (list.length === 1) return list[0];
+    if (list.length === 2) return list[0] + " & " + list[1];
+    if (list.length === 3) return list[0] + ", " + list[1] + " & " + list[2];
+    return list[0] + ", " + list[1] + ", " + list[2] + ", etc.";
+  }
+  function composeOneLiner(data){
+    const short = (data.host||state.host||"yourcompany.com").replace(/^www\./,"");
+    const verb = data.role==="packaging_buyer" ? "buys packaging" :
+                 data.role==="packaging_supplier" ? "supplies packaging" : "does business";
+    const prods = (data.productTags||[]).map(String);
+    const sectors = (data.sectorHints||[]).map(displaySector);
+    const prodBits = joinForLine(prods.slice(0, Math.min(3, prods.length)));
+    const sectBits = joinForLine(sectors.slice(0, Math.min(3, sectors.length)));
+    let line = `${short} ${verb}`;
+    if (prodBits) line += ` — ${prodBits}`;
+    if (sectBits) line += ` for ${sectBits} brands`;
+    line += ".";
+    return line;
+  }
+
+  /* ---------- classify fetch ---------- */
+  async function fetchClassify(h){
+    const base = ensureApi(); if (!base) return null;
+    const u1 = new URL(join(base,"/classify")); u1.searchParams.set("host", h); u1.searchParams.set("maxPages","16");
+    const u2 = new URL(join(base.replace(/\/api\/?$/i,""),"/api/classify")); u2.searchParams.set("host", h); u2.searchParams.set("maxPages","16");
+    const tryFetch = async (url)=>{
+      const r = await fetch(url, {credentials:"omit"});
+      const t = await r.text();
+      try{ return JSON.parse(t); }catch{ return {ok:false, error:"bad_json", raw:t}; }
+    };
+    let d = await tryFetch(u1.toString());
+    if (!d?.ok) d = await tryFetch(u2.toString());
+    return d;
+  }
+
+  /* ---------- chips ---------- */
+  function chip(label, box, on=true){
+    const s=document.createElement("span"); s.className="chip"+(on?" on":""); s.textContent=label;
+    s.addEventListener("click",()=> s.classList.toggle("on"));
+    box.appendChild(s); return s;
+  }
+  function getOnChips(box){ return Array.from(box.querySelectorAll(".chip.on")).map(x=>x.textContent.trim()); }
+  function addOnEnter(input, box){
+    input.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); const v=input.value.trim(); if(!v) return; chip(v, box, true); input.value=""; }
+    });
+  }
+
+  /* ---------- rotor ---------- */
+  const rotor=$("#rotor"), rotorList=$("#rotorList");
+  const mutedKey = LS.muted + ":" + (state.host||"");
+  try{ const arr = JSON.parse(localStorage.getItem(mutedKey)||"[]"); if (Array.isArray(arr)) arr.forEach(x=>state.muted.add(String(x))); }catch{}
+
+  function setMutedPersist(){
+    try{ localStorage.setItem(mutedKey, JSON.stringify(Array.from(state.muted))); }catch{}
+    $("#mutedCount").textContent = String(state.muted.size);
+  }
+
+  function buildIndustries(d){
+    const s = Array.isArray(d?.sectorHints) ? d.sectorHints.filter(Boolean) : [];
+    const uniq = []; const seen = new Set(); const source = s.length ? s : ["general"];
+    for (const x of source){
+      const k = String(x||"").toLowerCase().trim();
+      if (!k || seen.has(k)) continue;
+      seen.add(k); uniq.push(k);
+      if (uniq.length>=14) break;
+    }
+    state.industries = uniq;
+    let idx = uniq.findIndex(x => !state.muted.has(x));
+    if (idx<0) idx = 0;
+    state.sel = idx;
+    renderRotor(true);
+  }
+
+  function renderRotor(center=false){
+    rotorList.innerHTML="";
+    const visible = state.industries.filter(i => state.showMuted || !state.muted.has(i));
+    let selName = state.industries[state.sel] || visible[0] || "general";
+    if (!state.showMuted && state.muted.has(selName)){
+      const cand = visible[0]; if (cand){ selName = cand; state.sel = state.industries.indexOf(cand); }
+    }
+    const selVisibleIndex = Math.max(0, visible.indexOf(selName));
+
+    visible.forEach((name, i)=>{
+      const dist = Math.abs(i - selVisibleIndex);
+      const scale = dist===0? 1.15 : Math.max(0.82, 1 - dist*0.06);
+      const opacity = dist===0? 1 : Math.max(0.25, 1 - dist*0.18);
+
+      const item = document.createElement("div");
+      item.className = "rotItem"+(name===selName?" active":"");
+      item.style.transform = `scale(${scale})`;
+      item.style.opacity = String(opacity);
+      item.setAttribute("role","button");
+      item.setAttribute("aria-label", name);
+      item.innerHTML = `<div class="label">${displaySector(name)}</div>`;
+      item.addEventListener("click", ()=> selectIndustryByName(name));
+      rotorList.appendChild(item);
+    });
+
+    const boxH = rotor.clientHeight;
+    const itemH = 36;
+    const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
+    rotorList.style.transition = center ? "" : "transform .12s ease";
+    rotorList.style.transform = `translateY(${Math.round(top)}px)`;
+    if (!center) setTimeout(()=> rotorList.style.transition = "", 150);
+
+    $("#toggleMuted").textContent = state.showMuted? "hide" : "show";
+    $("#mutedCount").textContent = String(state.muted.size);
+    $("#sectTitle").textContent = displaySector(selName);
+    $("#muteName").textContent = displaySector(selName);
+    renderMetricsFor(selName);
+  }
+
+  function selectIndustryByName(name){
+    const idx = state.industries.indexOf(name);
+    if (idx>=0){ state.sel = idx; renderRotor(false); }
+  }
+  function stepSelection(delta){
+    const visible = state.industries.filter(i => state.showMuted || !state.muted.has(i));
+    const curName = state.industries[state.sel];
+    let i = visible.indexOf(curName);
+    if (i<0) i=0;
+    i = (i + delta + visible.length) % visible.length;
+    const target = visible[i];
+    selectIndustryByName(target);
+  }
+
+  let touchY=0;
+  rotor.addEventListener("wheel",(e)=>{ e.preventDefault(); stepSelection(e.deltaY>0? +1 : -1); }, {passive:false});
+  rotor.addEventListener("pointerdown",(e)=>{ touchY=e.clientY; rotor.setPointerCapture(e.pointerId); });
+  rotor.addEventListener("pointermove",(e)=>{ if (!touchY) return; const dy=e.clientY-touchY; if (Math.abs(dy)>18){ stepSelection(dy>0? +1 : -1); touchY=e.clientY; } });
+  rotor.addEventListener("pointerup",()=>{ touchY=0; });
+
+  $("#upBtn").addEventListener("click",()=> stepSelection(-1));
+  $("#downBtn").addEventListener("click",()=> stepSelection(+1));
+
+  $("#toggleMuted").addEventListener("click",(e)=>{ e.preventDefault(); state.showMuted=!state.showMuted; renderRotor(true); });
+  $("#muteBtn").addEventListener("click",()=>{
+    const name = state.industries[state.sel]; if (!name) return;
+    if (state.muted.has(name)) state.muted.delete(name); else state.muted.add(name);
+    try{ localStorage.setItem(mutedKey, JSON.stringify(Array.from(state.muted))); }catch{}
+    $("#mutedCount").textContent = String(state.muted.size);
+    renderRotor(true);
+  });
+
+  /* ---------- metrics render ---------- */
+  const metricBox=$("#metricBox"), titlesBox=$("#titlesBox");
+  const cityChips=document.createElement("div"); cityChips.id="cityChipsInner"; $("#cityChips").appendChild(cityChips);
+  const tagChips=document.createElement("div"); tagChips.id="tagChipsInner"; $("#tagChips").appendChild(tagChips);
+
+  function renderTitlesFor(sector){
+    titlesBox.innerHTML="";
+    const list = state.titlesBySector[sector] || state.titlesDefault;
+    titlesBox.append(...list.map(title=>{
+      const el = document.createElement("span"); el.className="chip on"; el.textContent=title; el.addEventListener("click",()=> el.classList.toggle("on"));
+      return el;
+    }));
+  }
+
+  function metricsFor(sector){
+    const m = (state.metricsBySector[sector] || state.metricsBySector.general || []);
+    if (m && m.length) return m.slice(0,3);
+    const k = (sector||"general").toLowerCase();
+    return (DEFAULT_METRICS[k] || DEFAULT_METRICS.general).slice(0,3);
+  }
+
+  function renderMetricsFor(sector){
+    renderTitlesFor(sector);
+    const metrics = metricsFor(sector);
+    metricBox.innerHTML="";
+    for (const m of metrics){
+      const row=document.createElement("div"); row.className="sliderRow";
+      const lab=document.createElement("div"); lab.textContent=m;
+      const ctl=document.createElement("div");
+      ctl.innerHTML = `<input type="range" min="0" max="10" step="1" value="8">`;
+      row.appendChild(lab); row.appendChild(ctl);
+      metricBox.appendChild(row);
+    }
+  }
+
+  /* ---------- revenue dual range ---------- */
+  const revMin=$("#revMin"), revMax=$("#revMax"), revFill=$("#revFill"), revMinVal=$("#revMinVal"), revMaxVal=$("#revMaxVal");
+  function syncDual(){
+    let a = parseInt(revMin.value,10), b = parseInt(revMax.value,10);
+    if (a>b){ const t=a; a=b; b=t; revMin.value=a; revMax.value=b; }
+    const lo = a/200, hi=b/200;
+    revFill.style.left = (lo*100)+"%";
+    revFill.style.right = ((1-hi)*100)+"%";
+    revMinVal.textContent = fmtM(a);
+    revMaxVal.textContent = fmtM(b);
+  }
+  revMin.addEventListener("input", syncDual);
+  revMax.addEventListener("input", syncDual);
+  window.addEventListener("resize", syncDual);
+
+  /* ---------- employees ---------- */
+  const emp=$("#emp"), empVal=$("#empVal"), empHint=$("#empHint");
+  function syncEmp(){
+    const n = parseInt(emp.value,10);
+    empVal.textContent = String(n);
+    empHint.textContent = n<20 ? "micro" : n<200 ? "small" : n<1000 ? "mid" : "large";
+  }
+  emp.addEventListener("input", syncEmp);
+
+  /* ---------- one-liner edit/refresh ---------- */
+  const oneLine=$("#oneLine");
+  $("#editOne").addEventListener("click", (e)=>{
+    if ((e.target||{}).id==="refreshLink") return;
+    const ed = oneLine.isContentEditable;
+    oneLine.contentEditable = !ed;
+    oneLine.style.outline = ed? "none" : "2px solid var(--ring)";
+  });
+  $("#refreshLink").addEventListener("click", async (e)=>{
+    e.preventDefault(); await loadFromSite(state.host,true);
+  });
+
+  /* ---------- apply/save ---------- */
+  function collectPersona(){
+    const sector = state.industries[state.sel] || "general";
+    const titles = Array.from(titlesBox.querySelectorAll(".chip.on")).map(x=>x.textContent.trim());
+    const cities = sanitizeCities(Array.from(document.querySelectorAll("#cityChipsInner .chip.on")).map(x=>x.textContent.trim()));
+    const tags = Array.from(document.querySelectorAll("#tagChipsInner .chip.on")).map(x=>x.textContent.trim());
+    const revA = parseInt(revMin.value,10), revB = parseInt(revMax.value,10);
+    const minRev = Math.min(revA, revB), maxRev = Math.max(revA, revB);
+
+    const metrics = Array.from(metricBox.querySelectorAll(".sliderRow")).map(row=>{
+      const label = row.firstChild.textContent.trim();
+      const val = Number(row.querySelector("input[type=range]").value||"8");
+      return { label, value: val };
+    });
+
+    return {
+      host: state.host,
+      lineText: oneLine.textContent.trim(),
+      productTags: tags,
+      sectorHints: state.industries.filter(x=>!state.muted.has(x)),
+      mutedSectors: Array.from(state.muted),
+      general: { aiFinalize: $("#letAi").checked },
+      metrics,
+      targeting: {
+        sector,
+        titles,
+        cities,
+        revenueMinM: minRev,
+        revenueMaxM: maxRev,
+        employees: Number(emp.value||0)
+      }
+    };
+  }
+
+  async function applyToApi(){
+    const base = ensureApi(); if (!base) return;
+    const payload = collectPersona();
+    try{
+      const res = await fetch(join(base,"/prefs/upsert"), {
+        method:"POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(payload)
+      });
+      const ok = res.ok; const txt = await res.text();
+      if (ok) { try{ localStorage.setItem("fp.supplier.host", state.host); }catch{} }
+      $("#statusLine").textContent = ok ? "Profile applied." : ("Apply failed: " + (txt||res.status));
+      $("#statusLine").className = ok? "ok" : "bad";
+    }catch{
+      $("#statusLine").textContent = "Network error applying profile.";
+      $("#statusLine").className = "bad";
+    }
+  }
+
+  function saveLocal(){
+    try{
+      const persona = collectPersona();
+      localStorage.setItem(LS.persona, JSON.stringify(persona));
+      localStorage.setItem("fp.supplier.host", state.host);
+      $("#statusLine").textContent="Saved locally.";
+      $("#statusLine").className="ok";
+    }catch{
+      $("#statusLine").textContent="Save failed.";
+      $("#statusLine").className="bad";
+    }
+  }
+
+  document.getElementById("apply").addEventListener("click", applyToApi);
+  document.getElementById("saveLocal").addEventListener("click", saveLocal);
+  document.getElementById("finish").addEventListener("click", ()=>{
+    saveLocal();
+    try{ localStorage.setItem("fp.autoImport","1"); }catch{}
+    location.href = "/free-panel/";
+  });
+
+  /* ---------- product refinement (shrink/film heuristic) ---------- */
+  function refineProductTags(host, list){
+    const L = (list||[]).map(s=>String(s).toLowerCase());
+    const shrinky = L.some(t => /shrink|stretch|film/.test(t));
+    if (!shrinky) return list||[];
+    const drop = new Set(["boxes","box","cartons","carton","bottles","jars","labels","mailer_bags","mailers"]);
+    const keep = [];
+    for (const t of list||[]){
+      const k = String(t).toLowerCase();
+      if (drop.has(k)) continue;
+      keep.push(t);
+    }
+    return keep;
+  }
+
+  /* ---------- load classify + hydrate ---------- */
+  async function loadFromSite(h){
+    updApiBadge();
+    if (!h){ oneLine.textContent = "Missing website/domain."; return; }
+    document.getElementById("statusLine").textContent = `Reading ${h}…`;
+    const data = await fetchClassify(h);
+    if (!data || data.ok===false){
+      document.getElementById("statusLine").textContent = `Couldn’t read ${h}: ${data?.detail||"error"}`;
+      document.getElementById("statusLine").className = "warn"; return;
+    }
+    state.classify = data;
+    state.metricsBySector = data.hotMetricsBySector || {};
+    state.geo = data.geoHints || {citiesTop:[],statesTop:[]};
+    state.host = data.host || h;
+
+    // favicon
+    const fav = data.favicon || `https://${(state.host||"").replace(/^www\./,"")}/favicon.ico`;
+    setFavicon(fav, state.host);
+
+    const serverLine = (typeof data.summary === "string" && data.summary.trim()) ? data.summary.trim() : "";
+    oneLine.textContent = serverLine || composeOneLiner(data);
+
+    // industries
+    buildIndustries(data);
+
+    // products
+    let prods = Array.isArray(data.productTags)? data.productTags.slice(0,12) : [];
+    prods = refineProductTags(state.host, prods);
+    document.getElementById("tagChips").innerHTML="";
+    const tagBox=document.createElement("div"); tagBox.id="tagChipsInner";
+    document.getElementById("tagChips").appendChild(tagBox);
+    prods.forEach(t=> chip(t, tagBox, true));
+
+    // cities (sanitized)
+    document.getElementById("cityChips").innerHTML="";
+    const cityBox=document.createElement("div"); cityBox.id="cityChipsInner";
+    document.getElementById("cityChips").appendChild(cityBox);
+    sanitizeCities(state.geo.citiesTop || []).forEach(c=> chip(c, cityBox, true));
+
+    document.getElementById("statusLine").textContent = "Pre-filled from your site.";
+    document.getElementById("statusLine").className = "ok";
+
+    revMin.value = 0; revMax.value = clamp(revMax.value|0, 0, 200); syncDual();
+    emp.value = 120; syncEmp();
+  }
+
+  /* ---------- inputs wiring ---------- */
+  function addOnEnter(input, box){
+    input.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); const v=input.value.trim(); if(!v) return; chip(v, box, true); input.value=""; }
+    });
+  }
+  addOnEnter(document.getElementById("cityInput"), document.getElementById("cityChips"));
+  addOnEnter(document.getElementById("tagInput"), document.getElementById("tagChips"));
+  document.getElementById("setApi").addEventListener("click", ()=>{
+    const cur = getApiBase();
+    const v = prompt("API base (with or without /api).", cur||"")||"";
+    if (v) setApiBase(v);
+    updApiBadge();
+  });
+
+  /* ---------- boot ---------- */
+  updApiBadge();
+  const initHost = state.host || prompt("Your website / domain? (e.g., acme.com)","")||"";
+  state.host = normHost(initHost);
+  try{ if (state.host) localStorage.setItem("fp.supplier.host", state.host); }catch{}
+  loadFromSite(state.host);
+  syncDual(); syncEmp();
+})();
+</script>
+</body>
+</html>
