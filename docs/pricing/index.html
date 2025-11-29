@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
 
 <base href="/">
-   
+
 <style>
 /* =========================
    KNOBS (tweak freely)
@@ -181,7 +181,7 @@ main{position:relative; z-index:1; padding-top:calc(56px + 20px)}
 .compare{padding:var(--section-top) 0 var(--section-bottom)}
 .compare h2{margin-bottom:12px; text-align:center}
 .table-wrap{overflow:auto; position:relative}
-.table-wrap:after{ /* subtle scroll hint on mobile */
+.table-wrap:after{
   content:""; position:absolute; right:0; top:0; bottom:0; width:24px;
   background:linear-gradient(90deg, rgba(10,14,20,0), rgba(10,14,20,1) 60%);
   pointer-events:none; display:none;
@@ -221,13 +221,20 @@ tbody td{border-bottom:1px solid var(--line)}
 
   <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge">G</span></a>
+      <a href="/" class="brand" aria-label="Galactly" data-track-id="nav-brand">
+        <span class="brand-badge">G</span>
+      </a>
+
       <nav id="nav-primary" aria-label="Primary">
-        <a class="nav-link" href="index.html#get-started">How it works</a>
-        <a class="nav-link" href="sectors.html">Sectors</a>
-        <a class="nav-link is-active" href="pricing.html">Pricing</a>
+        <a class="nav-link" href="/#get-started" data-track-id="nav-how">How it works</a>
+        <a class="nav-link" href="/sectors/" data-track-id="nav-sectors">Sectors</a>
+        <a class="nav-link is-active" href="/pricing/" data-track-id="nav-pricing">Pricing</a>
       </nav>
-      <a class="nav-link" href="start.html" style="padding:8px 12px;border:1px solid rgba(255,255,255,.10);border-radius:999px;background:rgba(255,255,255,.02)">Start Free</a>
+
+      <a class="nav-link" href="/auth/signup/" data-track-id="nav-start"
+         style="padding:8px 12px;border:1px solid rgba(255,255,255,.10);border-radius:999px;background:rgba(255,255,255,.02)">
+        Start Free
+      </a>
     </div>
   </header>
 
@@ -269,7 +276,7 @@ tbody td{border-bottom:1px solid var(--line)}
             <li><span class="dot"></span> 1 seat</li>
           </ul>
           <div class="micro" id="free-micro"></div>
-          <a class="cta" href="start.html">Start free</a>
+          <a class="cta" href="/auth/signup/" data-track-id="pricing-cta-free">Start free</a>
         </article>
 
         <!-- Pro -->
@@ -289,7 +296,7 @@ tbody td{border-bottom:1px solid var(--line)}
             <li><span class="dot"></span> 3 seats • email support</li>
           </ul>
           <div class="micro" id="pro-micro"></div>
-          <a class="cta" href="start.html">Get started</a>
+          <a class="cta" href="/auth/signup/" data-track-id="pricing-cta-pro">Get started</a>
         </article>
 
         <!-- VIP -->
@@ -324,7 +331,7 @@ tbody td{border-bottom:1px solid var(--line)}
             <li><span class="dot"></span> 8 seats</li>
           </ul>
           <div class="micro" id="vip-micro"></div>
-          <a class="cta" href="start.html">Talk to sales</a>
+          <a class="cta" href="/auth/signup/" data-track-id="pricing-cta-vip">Talk to sales</a>
         </article>
       </div>
 
@@ -512,5 +519,193 @@ document.getElementById('ld-lb').textContent = DATA.leaderboard.labelsHot + " Ho
 /* init */
 setYearly(false);
 </script>
+
+<!-- Link normalizer + tracking + canonical routing -->
+<script>
+(function () {
+  // ---- tiny analytics bridge (uses what's present, no-ops otherwise) ----
+  function trackNav(id, href, extras) {
+    try {
+      if (window.plausible) window.plausible('nav_click', { props: { id, href, ...extras }, callback: function(){} });
+      if (window.gtag)      window.gtag('event', 'nav_click', {
+        event_category:'navigation', event_label:id, destination:href, ...extras
+      });
+      if (window.dataLayer) window.dataLayer.push({ event:'nav_click', id, href, ...extras });
+      if (window.analytics && window.analytics.track) window.analytics.track('Nav Click', { id, href, ...extras });
+    } catch(_) {}
+  }
+
+  // ---- mapping: old → canonical (path-only; query/hash preserved) --------
+  const map = new Map([
+    // existing
+    ['start.html', '/auth/signup/'],
+    ['signup.html','/auth/signup/'],
+    ['/start',     '/auth/signup/'],
+    ['/signup',    '/auth/signup/'],
+
+    ['login.html', '/auth/login/'],
+    ['/login',     '/auth/login/'],
+
+    // home
+    ['index.html',  '/'],
+    ['/index.html', '/'],
+
+    // sectors
+    ['sectors.html',        '/sectors/'],
+    ['/sectors',            '/sectors/'],
+    ['/sectors/index.html', '/sectors/'],
+    ['sectors',             '/sectors/'],
+
+    // pricing
+    ['pricing.html',        '/pricing/'],
+    ['/pricing',            '/pricing/'],
+    ['/pricing/index.html', '/pricing/'],
+    ['pricing',             '/pricing/']
+  ]);
+
+  function norm(v){ return (v||'').replace(/^https?:\/\/[^/]+/i,'').replace(/^\.\//,'').replace(/\/{2,}/g,'/'); }
+  function splitRest(v){ const m = (v||'').match(/^([^?#]*)(.*)$/); return [m ? m[1] : '', m ? m[2] : '']; }
+
+  // normalize anchors & forms at load (keeps hash/query)
+  document.querySelectorAll('a[href], form[action]').forEach(el => {
+    const attr = el.tagName === 'FORM' ? 'action' : 'href';
+    const raw = el.getAttribute(attr); if (!raw) return;
+    let v = norm(raw); const parts = splitRest(v); const path = parts[0], rest = parts[1];
+    if (map.has(path)) el.setAttribute(attr, map.get(path) + rest);
+  });
+
+  // normalize data-go targets as well
+  document.querySelectorAll('[data-go]').forEach(el => {
+    const t = norm(el.getAttribute('data-go') || '');
+    if (/start\.html|(^|\/)signup\/?$/i.test(t))   el.setAttribute('data-go','/auth/signup/');
+    if (/login\.html|(^|\/)login\/?$/i.test(t))    el.setAttribute('data-go','/auth/login/');
+    if (/pricing(\.html|\/index\.html)?$/i.test(t) || t === '/pricing') el.setAttribute('data-go','/pricing/');
+    if (/sectors(\.html|\/index\.html)?$/i.test(t) || t === '/sectors') el.setAttribute('data-go','/sectors/');
+  });
+
+  // ---- click handler: track first, then route (preserves default where safe)
+  document.addEventListener('click', function (e) {
+    const el = e.target.closest('a, [data-go], button[formaction]');
+    if (!el) return;
+
+    const id   = (el.getAttribute('data-track-id') || '').trim();
+    const page = location.pathname;
+
+    // figure target
+    let href = '';
+    if (el.tagName === 'A') {
+      href = norm(el.getAttribute('href') || '');
+    } else {
+      href = norm(el.getAttribute('data-go') || el.getAttribute('formaction') || '');
+    }
+
+    if (id) trackNav(id, href || '(no href)', { page });
+
+    // canonicalize pricing/sectors clicks so you always land on folder URL
+    const isPricing = id === 'nav-pricing' || /(^|\/)pricing(\/|$)/i.test(href);
+    const isSectors = id === 'nav-sectors' || /(^|\/)sectors(\/|$)/i.test(href);
+
+    // Don't hijack in-page anchors like "#get-started"
+    const isHashOnly = el.tagName === 'A' && (/^#/.test(el.getAttribute('href')||''));
+
+    if (!isHashOnly && (isPricing || isSectors)) {
+      e.preventDefault();
+      const to = isPricing ? '/pricing/' : '/sectors/';
+      setTimeout(() => { location.href = to; }, 60);
+      return;
+    }
+
+    // data-go buttons: controlled nav after tracking
+    if (el.hasAttribute('data-go')) {
+      e.preventDefault();
+      setTimeout(() => { location.href = el.getAttribute('data-go'); }, 40);
+    }
+  }, true);
+})();
+</script>
+
+<!-- Session-aware smart CTAs: logged out → signup, free → checkout, paid → portal -->
+<script>
+(function(){
+  // ---- endpoints your server should expose (examples) ----
+  const ENDPOINTS = {
+    session: '/api/session',                 // returns { authenticated:boolean, plan:'free'|'pro'|'vip'|null }
+    checkout: (plan)=> `/api/billing/checkout?plan=${encodeURIComponent(plan)}`,
+    portal: '/api/billing/portal',
+    app: '/app/',
+    onboarding: '/app/onboarding/',
+    signup: (next)=> `/auth/signup/${next ? ('?next=' + encodeURIComponent(next)) : ''}`
+  };
+
+  function setHref(sel, href){
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.setAttribute('href', href);
+    el.setAttribute('data-go', href); // keeps router/analytics working
+  }
+  function setText(sel, txt){
+    const el = document.querySelector(sel);
+    if (el && txt) el.textContent = txt;
+  }
+
+  async function getSession(){
+    try{
+      const r = await fetch(ENDPOINTS.session, { credentials:'include' });
+      if (!r.ok) throw new Error('session not ok');
+      return await r.json();
+    }catch(_){
+      return { authenticated:false, plan:null };
+    }
+  }
+
+  function wireLoggedOut(){
+    // Header “Start Free” → signup and bounce back here
+    setHref('[data-track-id="nav-start"]', ENDPOINTS.signup('/pricing/'));
+
+    // Pricing CTAs → signup with intent hints
+    setHref('[data-track-id="pricing-cta-free"]', ENDPOINTS.signup('/app/onboarding/'));
+    setHref('[data-track-id="pricing-cta-pro"]',  ENDPOINTS.signup('/pricing/checkout-pro'));
+    setHref('[data-track-id="pricing-cta-vip"]',  ENDPOINTS.signup('/pricing/checkout-vip'));
+  }
+
+  function wireFreeUser(){
+    // Start → onboarding/home
+    setHref('[data-track-id="nav-start"]', ENDPOINTS.onboarding);
+
+    // Free card stays free
+    setHref('[data-track-id="pricing-cta-free"]', ENDPOINTS.onboarding);
+
+    // Upgrades go straight to Checkout
+    setHref('[data-track-id="pricing-cta-pro"]', ENDPOINTS.checkout('pro'));
+    setText('[data-track-id="pricing-cta-pro"]', 'Upgrade to Pro');
+
+    setHref('[data-track-id="pricing-cta-vip"]', ENDPOINTS.checkout('vip'));
+    // keep label “Talk to sales” if you want sales-assisted VIP; otherwise:
+    // setText('[data-track-id="pricing-cta-vip"]', 'Upgrade to VIP');
+  }
+
+  function wirePaidUser(){
+    // Start → app
+    setHref('[data-track-id="nav-start"]', ENDPOINTS.app);
+
+    // Free card → app
+    setHref('[data-track-id="pricing-cta-free"]', ENDPOINTS.app);
+
+    // Pro/VIP CTAs → Customer Portal
+    setHref('[data-track-id="pricing-cta-pro"]', ENDPOINTS.portal);
+    setHref('[data-track-id="pricing-cta-vip"]', ENDPOINTS.portal);
+    setText('[data-track-id="pricing-cta-pro"]', 'Manage billing');
+    setText('[data-track-id="pricing-cta-vip"]', 'Manage billing');
+  }
+
+  (async function init(){
+    const s = await getSession();
+    if (!s.authenticated) return wireLoggedOut();
+    if (s.plan === 'pro' || s.plan === 'vip') return wirePaidUser();
+    return wireFreeUser(); // logged-in but Free
+  })();
+})();
+</script>
+
 </body>
 </html>
