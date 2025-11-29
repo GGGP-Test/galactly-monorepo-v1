@@ -8,15 +8,17 @@
 
   <script>
     (function () {
+      // Turn /auth/login/index.html → /auth/login/ (preserve ? and #)
       if (/\/index\.html$/i.test(location.pathname)) {
-        var q = location.search || '';
-        var h = location.hash || '';
-        history.replaceState(null, '', '/' + (q.startsWith('?') ? q.slice(1) : q) + h);
+        var q = location.search || '', h = location.hash || '';
+        var p = location.pathname.replace(/index\.html$/i, '');
+        if (!/\/$/.test(p)) p += '/';
+        history.replaceState(null, '', p + q + h);
       }
     })();
   </script>
 
-  <link rel="canonical" href="https://galactly.com/">
+  <link rel="canonical" href="https://galactly.com/auth/login">
 
 
   <!-- Jakarta for headings -->
@@ -645,7 +647,7 @@
           </div>
           <div class="small-row" id="loginRow">
             <span>Already have an account?</span>
-            <a id="staticLoginLink" href="login.html">Log in</a>
+            <a id="staticLoginLink" href="/auth/login">Login</a>
           </div>
         </div>
       </section>
@@ -987,7 +989,7 @@
 
     (async function initFirebase(){
       try{
-        if(firebase?.apps?.length){
+        if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length){
           auth = firebase.auth();
           try{ db = firebase.firestore(); }catch(_){}
           return;
@@ -1649,19 +1651,231 @@
 </script>
 
 <script>
-  // ==== start.html -> bridge.html handoff ====
   function goToBridge(from){
     const email = (document.getElementById('email')?.value || '').trim();
     const hostFromEmail = (email.match(/@([^@\s>]+)/)?.[1] || '').toLowerCase();
-    const urlParams = new URLSearchParams({
+    const params = new URLSearchParams({
       from: from || 'unknown',
       role: (window.onboarding?.getRole?.() || window.role || '') || '',
       email,
       site: hostFromEmail || (localStorage.getItem('preWebsite') || sessionStorage.getItem('preWebsite') || '')
     });
+    const nx = sessionStorage.getItem('gg_next') || '';
+    if (nx) params.set('next', nx);
+
     document.body.classList.add('leaving');
-    setTimeout(()=>{ location.href = `bridge.html?${urlParams}`; }, 1500); // matches --leave-ms
+    setTimeout(()=>{ location.href = `/auth/bridge/?${params}`; }, 1500);
   }
 </script>
+
+<script>
+/* ---------------------- LOGIN receiver + overrides ---------------------- */
+(function(){
+  /* 1) Capture & sanitize ?next= intent and remember it */
+  function captureNext(){
+    const p = new URLSearchParams(location.search);
+    let next = p.get('next') || sessionStorage.getItem('gg_next') || '';
+    if (!next) return '';
+    try { next = decodeURIComponent(next); } catch(_){}
+    if (/^https?:/i.test(next)) {
+      try {
+        const u = new URL(next, location.origin);
+        next = (u.origin === location.origin) ? (u.pathname + u.search + u.hash) : '';
+      } catch(_) { next = ''; }
+    }
+    if (next && !next.startsWith('/')) next = '';
+    if (next) sessionStorage.setItem('gg_next', next);
+    return next;
+  }
+  const nextPath = captureNext();
+
+  /* 2) Prefill email from ?email= or last stored */
+  (function prefillEmail(){
+    const p = new URLSearchParams(location.search);
+    const em = (p.get('email') || localStorage.getItem('gg_pending_email') || '').trim();
+    if (!em) return;
+    const inp = document.getElementById('email');
+    if (inp) {
+      inp.value = em;
+      try { inp.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){}
+    }
+  })();
+
+  /* 3) Canonicalize any legacy anchors/forms on this page */
+  (function canonicalize(){
+    const map = new Map([
+      ['login.html','/auth/login/'],['/login','/auth/login/'],
+      ['signup.html','/auth/signup/'],['/signup','/auth/signup/'],
+      ['bridge.html','/auth/bridge/']
+    ]);
+    const norm = v => (v||'').replace(/^https?:\/\/[^/]+/i,'').replace(/^\.\//,'');
+    const split = v => { const m=String(v||'').match(/^([^?#]*)(.*)$/); return [m?m[1]:'',m?m[2]:'']; };
+    document.querySelectorAll('a[href], form[action]').forEach(el=>{
+      const attr = el.tagName==='FORM' ? 'action' : 'href';
+      const raw  = el.getAttribute(attr); if(!raw) return;
+      if (attr==='href' && /^#/.test(raw)) return;
+      const [path, rest] = split(norm(raw));
+      if (map.has(path)) el.setAttribute(attr, map.get(path) + rest);
+    });
+  })();
+
+  /* 4) Keep the static login link “smart” (same route style) */
+  (function wireSmartLoginLink(){
+    const a = document.getElementById('staticLoginLink');
+    const inp = document.getElementById('email');
+    function setHref(){
+      if (!a) return;
+      const em = (inp?.value || '').trim();
+      const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(em);
+      const url = new URL('/auth/login/', location.origin);
+      if (valid) url.searchParams.set('email', em);
+      const nx = sessionStorage.getItem('gg_next'); if (nx) url.searchParams.set('next', nx);
+      a.href = url.pathname + (url.search || '');
+    }
+    inp?.addEventListener('input', setHref);
+    inp?.addEventListener('blur', setHref);
+    setHref();
+  })();
+
+  /* 5) Make verification email continue URL preserve ?next=… (if used here) */
+  if (typeof window.sendVerifyLink === 'function') {
+    const original = window.sendVerifyLink;
+    window.sendVerifyLink = async function(){
+      try{
+        if (!window.auth || !window.auth.currentUser) throw new Error('no_auth');
+        const nx = sessionStorage.getItem('gg_next') || '';
+        const url = new URL('/auth/bridge/', location.origin);
+        if (nx) url.searchParams.set('next', nx);
+        await window.auth.currentUser.sendEmailVerification({ url: url.href, handleCodeInApp: false });
+        try { localStorage.setItem('gg_pending_email', window.auth.currentUser.email || ''); } catch(_){}
+        return true;
+      }catch(_){
+        return original();
+      }
+    };
+  }
+
+  /* ---------------------- LOGIN semantics overrides ---------------------- */
+  // We override the existing click handlers by capturing the event early and stopping it.
+  const emailNext = document.getElementById('emailNext');
+  const pwdNext   = document.getElementById('pwdNext');
+  const emailBox  = document.getElementById('emailBox');
+  const emailInp  = document.getElementById('email');
+  const pwdInp    = document.getElementById('password');
+  const statusEl  = document.getElementById('inlineStatus');
+  const s2TopStart= document.getElementById('s2-top-start');
+  const s2TopPass = document.getElementById('s2-top-pass');
+  const s2Or      = document.getElementById('s2-or');
+  const pwdWrap   = document.getElementById('pwdWrap');
+  const googleBtn = document.getElementById('googleBtn');
+
+  const looksValidEmail = v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(v||'').trim());
+  function showStatus(msg){ if(!statusEl) return; statusEl.textContent = msg||'Unable to continue.'; statusEl.hidden=false; }
+  function hideStatus(){ if(!statusEl) return; statusEl.hidden=true; statusEl.textContent=''; }
+  function pulseEmail(){ if(!emailBox) return; const prev=emailBox.style.boxShadow; emailBox.style.transition='box-shadow 180ms ease'; emailBox.style.boxShadow='0 0 0 2px rgba(255,107,107,.45), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -3px 6px rgba(0,0,0,.6), inset 0 12px 26px rgba(0,0,0,.22)'; setTimeout(()=>emailBox.style.boxShadow=prev,260); }
+  function toPasswordStage(){
+    s2Or.hidden=true; s2TopStart.hidden=true; s2TopPass.hidden=false;
+    pwdWrap.hidden=false; try{ pwdInp.focus({preventScroll:true}); }catch(_){}
+  }
+
+  // a) EMAIL → check existence; if none, offer signup
+  emailNext?.addEventListener('click', async (e)=>{
+    e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
+    hideStatus();
+    const email = (emailInp?.value||'').trim();
+    if(!looksValidEmail(email)){ pulseEmail(); showStatus('Enter a valid email.'); return; }
+    if(!window.auth){ showStatus('Authentication isn’t configured. Add Firebase keys.'); return; }
+
+    try{
+      const methods = await window.auth.fetchSignInMethodsForEmail(email);
+      // Has a password or any method we can log in with → ask for password step
+      if (Array.isArray(methods) && methods.length){
+        toPasswordStage();
+        return;
+      }
+      // No account → suggest Signup (carry email + next)
+      const url = new URL('/auth/signup/', location.origin);
+      url.searchParams.set('email', email);
+      const nx = sessionStorage.getItem('gg_next'); if (nx) url.searchParams.set('next', nx);
+      showStatus(`No account found. <a href="${url.pathname + url.search}">Create one?</a>`);
+    }catch(_){
+      showStatus('Couldn’t check that email right now. Try again in a moment.');
+    }
+  }, true);
+
+  // b) PASSWORD → sign in (not create)
+  pwdNext?.addEventListener('click', async (e)=>{
+    e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
+    hideStatus();
+    const email = (emailInp?.value||'').trim();
+    const pwd   = (pwdInp?.value||'');
+    if(!looksValidEmail(email)){ pulseEmail(); showStatus('Enter a valid email first.'); return; }
+    if((pwd||'').length<6){ showStatus('Password looks too short.'); return; }
+    if(!window.auth){ showStatus('Authentication isn’t configured. Add Firebase keys.'); return; }
+
+    try{
+      await window.auth.signInWithEmailAndPassword(email, pwd);
+      try{ localStorage.setItem('gg_pending_email', email); }catch(_){}
+      goToBridge('password');
+    }catch(err){
+      if (err?.code === 'auth/wrong-password'){ showStatus('Wrong password. Try again or reset.'); return; }
+      if (err?.code === 'auth/user-not-found'){ 
+        const u = new URL('/auth/signup/', location.origin);
+        u.searchParams.set('email', email);
+        const nx = sessionStorage.getItem('gg_next'); if (nx) u.searchParams.set('next', nx);
+        showStatus(`No account found. <a href="${u.pathname+u.search}">Create one?</a>`);
+        return;
+      }
+      if (err?.code === 'auth/too-many-requests'){ showStatus('Too many attempts. Try later.'); return; }
+      if (err?.code === 'auth/network-request-failed'){ showStatus('Network problem. Try again.'); return; }
+      showStatus('We couldn’t log you in. Please try again.');
+    }
+  }, true);
+
+  // c) GOOGLE → existing users go to Bridge; brand-new go to Signup
+  googleBtn?.addEventListener('click', async (e)=>{
+    e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
+    hideStatus();
+    if (!window.auth){ showStatus('Google sign-in isn’t configured. Add Firebase keys.'); return; }
+
+    try{
+      // reuse your invisible human check if present
+      if (typeof window.getHumanToken === 'function' && typeof window.verifyHumanServerSide === 'function'){
+        const tok = await window.getHumanToken('google_login');
+        if(!tok.ok){ showStatus('Please retry the check.'); return; }
+        const vr = await window.verifyHumanServerSide({ provider: tok.provider, token: tok.token, action:'google_login' });
+        if(vr && vr.ok === false){ showStatus('Human verification failed.'); return; }
+      }
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const cred = await window.auth.signInWithPopup(provider);
+      const isNew = cred?.additionalUserInfo?.isNewUser === true;
+      const email = cred?.user?.email || '';
+
+      if (isNew){
+        try { await window.auth.signOut(); } catch(_){}
+        const u = new URL('/auth/signup/', location.origin);
+        if (email) u.searchParams.set('email', email);
+        const nx = sessionStorage.getItem('gg_next'); if (nx) u.searchParams.set('next', nx);
+        location.href = u.pathname + u.search;
+        return;
+      }
+
+      try{ localStorage.setItem('gg_pending_email', email); }catch(_){}
+      goToBridge('google');
+    }catch(err){
+      if (err?.code === 'auth/popup-closed-by-user') return;
+      if (err?.code === 'auth/network-request-failed'){ showStatus('Network problem. Try again.'); return; }
+      if (err?.code === 'auth/operation-not-allowed'){ showStatus('Google sign-in is disabled for this project.'); return; }
+      showStatus('We couldn’t complete Google sign-in. Try again.');
+    }
+  }, true);
+
+  /* 6) Defensive: avoid ReferenceError if firebase isn’t on the page yet */
+  try { if (typeof firebase === 'undefined') window.firebase = undefined; } catch(_){}
+})();
+</script>
+
 </body>
 </html>
