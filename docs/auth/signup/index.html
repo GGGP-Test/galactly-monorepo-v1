@@ -7,16 +7,17 @@
 
 
   <script>
-    (function () {
-      if (/\/index\.html$/i.test(location.pathname)) {
-        var q = location.search || '';
-        var h = location.hash || '';
-        history.replaceState(null, '', '/' + (q.startsWith('?') ? q.slice(1) : q) + h);
-      }
-    })();
+  (function () {
+    if (/\/index\.html$/i.test(location.pathname)) {
+      var q = location.search || '', h = location.hash || '';
+      var p = location.pathname.replace(/index\.html$/i, '');
+      if (!/\/$/.test(p)) p += '/';
+      history.replaceState(null, '', p + q + h); // /auth/signup/?site=foo
+    }
+  })();
   </script>
 
-  <link rel="canonical" href="https://galactly.com/">
+  <link rel="canonical" href="https://galactly.com/auth/signup">
 
 
   <!-- Jakarta for headings -->
@@ -731,7 +732,7 @@
       if (!staticLoginLink) return;
       const em = (emailInput?.value || '').trim();
       const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(em);
-      staticLoginLink.href = valid ? `login.html?email=${encodeURIComponent(em)}` : `login.html`;
+      staticLoginLink.href = valid ? `/auth/login/?email=${encodeURIComponent(em)}` : `/auth/login/`;
     }
 
     function showStatus(msg){
