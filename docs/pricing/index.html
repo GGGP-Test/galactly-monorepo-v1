@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Pricing — Galactly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
+
+<style>
+/* =========================
+   KNOBS (tweak freely)
+   ========================= */
+:root{
+  /* brand + gold */
+  --bg:#0a0e14; --text:#e9f1f7; --muted:#9fb3c7;
+  --gold-100:#f7e7b7; --gold-300:#f2dca0; --gold-500:#e6c36b;
+  --gold-700:#6c5525; /* darker gold tip */
+
+  /* layout */
+  --container-max:clamp(1000px,86vw,1200px);
+  --gutter:clamp(18px,4vw,36px);
+  --section-top:56px;
+  --section-bottom:64px;
+
+  /* cards */
+  --card-bg:#0e1117;
+  --card-border:#2a2f3a;
+  --card-radius:12px;
+  --card-pad:18px;
+  --cards-gap:18px;
+  --plan-title-size:16px;
+  --price-size:30px;
+  --per-size:14px;
+  --feat-gap:8px;
+  --cta-h:42px;
+
+  /* toggle */
+  --toggle-h:40px;
+  --toggle-pad:6px;
+
+  /* table */
+  --line:rgba(255,255,255,.10);
+  --row-h:44px;
+
+  /* FAQ */
+  --faq-q-size:18px;
+  --faq-plus-size:28px;
+  --faq-spacer:18px;
+
+  /* wallpaper */
+  --p-r1: rgba(230,195,107,.16);
+  --p-r2: rgba(72,115,178,.10);
+  --p-r3: rgba(255,255,255,.06);
+}
+
+/* ===== base ===== */
+*{box-sizing:border-box}
+html,body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:16px/1.55 Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  max-width:100%; overflow-x:hidden; /* lock horizontal */
+}
+img, svg, table{max-width:100%}
+h1,h2{font-family:"Newsreader",Georgia,serif;font-weight:600;margin:0}
+a{color:inherit;text-decoration:none}
+
+/* cloudy wallpaper */
+.page-wallpaper{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 16% -10%, var(--p-r1), transparent 55%),
+    radial-gradient(130% 90% at 85% 8%,  var(--p-r2), transparent 62%),
+    radial-gradient(120% 90% at 50% 110%, var(--p-r3), transparent 64%),
+    linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, #070b12 100%);
+  filter:blur(.3px);
+}
+
+/* header */
+.site-header{position:fixed; inset:0 0 auto 0; height:56px; z-index:50; display:grid; place-items:center;
+  background:rgba(12,18,28,.38); backdrop-filter:blur(12px) saturate(140%); border-bottom:1px solid rgba(255,255,255,.06)}
+.site-header .inner{width:100%; max-width:var(--container-max); padding:0 calc(var(--gutter) + env(safe-area-inset-left)) 0 calc(var(--gutter) + env(safe-area-inset-right));
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; contain:layout}
+.brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold-500),var(--gold-700));
+  display:grid;place-items:center;color:#1b1405;font-weight:800;font-size:14px; box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
+nav#nav-primary{display:flex;gap:22px;justify-content:center;min-width:0;overflow:hidden}
+.nav-link{position:relative;padding:8px 2px;font-weight:600;color:#cfe0ee;opacity:.92;white-space:nowrap}
+.nav-link::after{content:"";position:absolute;left:50%;bottom:4px;height:2px;width:0;
+  background:linear-gradient(90deg,var(--gold-300),var(--gold-700));transform:translateX(-50%);transition:width .18s}
+.nav-link:hover{opacity:1}.nav-link:hover::after{width:60%}
+.nav-link.is-active{opacity:1;text-shadow:0 0 16px rgba(230,195,107,.35)}
+.nav-link.is-active::after{width:60%}
+
+main{position:relative; z-index:1; padding-top:calc(56px + 20px)}
+.container{max-width:var(--container-max); margin:0 auto; padding:0 calc(var(--gutter) + env(safe-area-inset-left))}
+
+/* ===== hero ===== */
+.hero{padding:var(--section-top) 0 10px; text-align:center}
+.hero h1{max-width:22ch; margin:0 auto}
+.hero p{color:#c7d7e6; margin:8px auto 14px; max-width:46ch}
+
+/* ===== darker-gold glass toggle (auto-size; mobile-safe) ===== */
+.billing-toggle{display:flex; justify-content:center; margin:12px 0 4px; padding:0 var(--gutter)}
+.toggle{
+  --thumb-x: 0px; --thumb-w: 0px;
+  position:relative; display:inline-flex; align-items:center; gap:8px;
+  height:var(--toggle-h); padding:var(--toggle-pad);
+  border-radius:999px; border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  backdrop-filter:blur(10px) saturate(140%); overflow:hidden;
+}
+.toggle button{
+  position:relative; z-index:1; cursor:pointer;
+  padding:0 16px; border:0; background:transparent;
+  color:#cfe0ee; font-weight:800; white-space:nowrap; line-height:1; font-size:14px;
+}
+.toggle .save{opacity:.8; font-weight:800; margin-left:6px}
+@media (max-width:480px){ .toggle .save{display:none} }
+.toggle .thumb{
+  position:absolute; top:var(--toggle-pad);
+  left:calc(var(--thumb-x) + var(--toggle-pad));
+  width:var(--thumb-w);
+  height:calc(100% - var(--toggle-pad)*2);
+  border-radius:999px;
+  background:linear-gradient(180deg,#caa34a,#6c5525);
+  box-shadow:0 10px 22px rgba(202,163,74,.25), inset 0 0 0 1px rgba(255,255,255,.08);
+  transition:left .18s ease,width .18s ease;
+}
+
+/* ===== cards (minimal black; mobile tuned) ===== */
+.cards{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--cards-gap); margin-top:16px; padding:0 var(--gutter)}
+@media (max-width:980px){ .cards{grid-template-columns:1fr; gap:20px} }
+
+.card{
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:var(--card-radius);
+  padding:var(--card-pad);
+  box-shadow:0 10px 26px rgba(0,0,0,.28);
+  opacity:0; transform:translateY(10px);
+  transition:opacity .35s ease, transform .35s ease;
+}
+.card.show{opacity:1; transform:none}
+@media (prefers-reduced-motion:reduce){ .card{transition:none; opacity:1; transform:none} }
+
+.card .plan{font-size:var(--plan-title-size); font-weight:800; letter-spacing:.2px; margin-bottom:6px}
+.card .price{font-size:var(--price-size); font-weight:800; margin:0}
+.card .per{font-size:var(--per-size); color:#a8bbcd; font-weight:600}
+@media (max-width:480px){
+  .card .price{font-size:26px}
+  .card .per{font-size:13px}
+}
+.card ul{list-style:none; padding:0; margin:12px 0 0; display:grid; gap:var(--feat-gap)}
+.card li{display:flex; align-items:flex-start; gap:10px}
+.card .dot{flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:#737b8a;margin-top:7px}
+.card .cta{
+  margin-top:14px; display:block; width:100%; height:var(--cta-h); border-radius:10px;
+  border:1px solid #333a47; background:#131823; color:var(--text); font-weight:800; text-align:center; line-height:var(--cta-h);
+  -webkit-tap-highlight-color: transparent;
+}
+.card .micro{margin-top:10px;color:#a8bbcd;font-size:12px}
+
+/* Hover/tap cards */
+.hovercard{position:relative; display:inline-block}
+.hovercard .trigger{color:#b5d2ff; text-decoration:underline dotted 2px; cursor:help; -webkit-tap-highlight-color: transparent;}
+.hovercard .hc{
+  position:absolute; left:0; bottom:calc(100% + 10px); min-width:240px; max-width:min(88vw,360px);
+  background:#0b111a; color:#d9e6f2; border:1px solid rgba(255,255,255,.10); border-radius:12px;
+  padding:12px 14px; box-shadow:0 20px 40px rgba(0,0,0,.35); opacity:0; transform:translateY(6px);
+  pointer-events:none; transition:opacity .16s ease, transform .16s ease; z-index:20;
+}
+.hovercard .hc::after{content:""; position:absolute; left:24px; top:100%; border:8px solid transparent; border-top-color:#0b111a}
+.hovercard:hover .hc,
+.hovercard.open .hc{opacity:1; transform:translateY(0); pointer-events:auto}
+@media (hover:none){ .hovercard .trigger{cursor:pointer} }
+
+/* ===== compare (centered, lines only) ===== */
+.compare{padding:var(--section-top) 0 var(--section-bottom)}
+.compare h2{margin-bottom:12px; text-align:center}
+.table-wrap{overflow:auto; position:relative}
+.table-wrap:after{ /* subtle scroll hint on mobile */
+  content:""; position:absolute; right:0; top:0; bottom:0; width:24px;
+  background:linear-gradient(90deg, rgba(10,14,20,0), rgba(10,14,20,1) 60%);
+  pointer-events:none; display:none;
+}
+@media (max-width:980px){ .table-wrap:after{display:block} }
+
+table{width:100%; border-collapse:separate; border-spacing:0; min-width:800px; table-layout:fixed}
+colgroup col:nth-child(1){width:34%}
+colgroup col:nth-child(n+2){width:22%}
+th,td{height:var(--row-h); padding:10px 10px; text-align:left}
+thead th{font-weight:800; border-bottom:1px solid var(--line)}
+tbody td{border-bottom:1px solid var(--line)}
+.t-center{text-align:center}
+
+/* ===== sector workflow lines ===== */
+.workflows{margin-top:18px; padding:0 var(--gutter)}
+.workflows .line{display:flex; justify-content:space-between; gap:16px; padding:10px 2px; border-bottom:1px solid var(--line); font-size:14px}
+.workflows .line b{font-weight:800}
+
+/* ===== FAQs ===== */
+.faqs{padding:calc(var(--section-top) + 12px) 0 var(--section-bottom)}
+.faqs h2{text-align:center; margin-bottom:14px}
+.faq{border-bottom:1px solid var(--line)}
+.faq summary{
+  list-style:none; cursor:pointer; display:flex; align-items:flex-start; gap:12px;
+  padding:var(--faq-spacer) 0; font-size:var(--faq-q-size); font-weight:800;
+}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:"+"; font-size:var(--faq-plus-size); line-height:1; color:#cfe0ee; margin-top:2px; width:20px; text-align:center}
+.faq[open] summary::before{content:"–"}
+.faq .ans{color:#cfe0ee; padding:0 0 var(--faq-spacer) 32px}
+.small{font-size:12px;color:#9fb3c7}
+</style>
+</head>
+<body>
+  <div class="page-wallpaper" aria-hidden="true"></div>
+
+  <header class="site-header" aria-label="Site">
+    <div class="inner">
+      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge">G</span></a>
+      <nav id="nav-primary" aria-label="Primary">
+        <a class="nav-link" href="index.html#get-started">How it works</a>
+        <a class="nav-link" href="sectors.html">Sectors</a>
+        <a class="nav-link is-active" href="pricing.html">Pricing</a>
+      </nav>
+      <a class="nav-link" href="start.html" style="padding:8px 12px;border:1px solid rgba(255,255,255,.10);border-radius:999px;background:rgba(255,255,255,.02)">Start Free</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Section 1 -->
+    <section class="container hero">
+      <h1>Plans that scale with real buyer intent</h1>
+      <p>Start free. Upgrade when the live signals and closed-won math say it’s worth it.</p>
+
+      <div class="billing-toggle">
+        <div id="toggle" class="toggle" role="tablist" aria-label="Billing period">
+          <div class="thumb" aria-hidden="true"></div>
+          <button id="bill-m" role="tab" aria-selected="true">Monthly</button>
+          <button id="bill-y" role="tab" aria-selected="false">Yearly <span class="save">— save 21.3%</span></button>
+        </div>
+      </div>
+
+      <div class="cards" id="plan-cards">
+        <!-- Free -->
+        <article class="card" data-plan="free">
+          <div class="plan">Free</div>
+          <p class="price"><span data-price-m="0" data-price-y="0">0</span><span class="per"> / <span data-per>month</span></span></p>
+          <ul>
+            <li><span class="dot"></span> Live Signals (throttled)</li>
+            <li><span class="dot"></span> 3
+              <span class="hovercard">
+                <span class="trigger" role="button" tabindex="0" aria-expanded="false">Warm Buyers/mo</span>
+                <span class="hc" role="dialog"><strong>Warm Buyers</strong><br/>Verified companies showing mid-level intent; fit + timing look promising.</span>
+              </span>
+            </li>
+            <li><span class="dot"></span> Fair-Play score &amp; tags</li>
+            <li><span class="dot"></span> Heat Shield (basic)</li>
+            <li><span class="dot"></span> Outcome Receipts
+              <span class="hovercard">
+                <span class="trigger" role="button" tabindex="0" aria-expanded="false">(anonymized)</span>
+                <span class="hc" role="dialog"><strong>Outcome Receipts</strong><br/>Before→after snapshots you can share; logo off by default.</span>
+              </span>
+            </li>
+            <li><span class="dot"></span> 1 seat</li>
+          </ul>
+          <div class="micro" id="free-micro"></div>
+          <a class="cta" href="start.html">Start free</a>
+        </article>
+
+        <!-- Pro -->
+        <article class="card" data-plan="pro">
+          <div class="plan">Pro</div>
+          <p class="price">$<span data-price-m="97" data-price-y="76.34">97</span><span class="per"> / <span data-per>month</span></span></p>
+          <ul>
+            <li><span class="dot"></span> Everything in Free</li>
+            <li><span class="dot"></span>
+              Access to <span class="hovercard"><span class="trigger" role="button" tabindex="0" aria-expanded="false">Hot Buyers</span>
+              <span class="hc" role="dialog"><strong>Hot Buyers</strong><br/>High-fit buyers with multiple strong signals; ready to talk.</span></span>
+            </li>
+            <li><span class="dot"></span> Operator AI (prioritize + draft next step)</li>
+            <li><span class="dot"></span> CRM/CMS integrations (HubSpot, SFDC)</li>
+            <li><span class="dot"></span> API access</li>
+            <li><span class="dot"></span> Outcome Receipts + logo controls</li>
+            <li><span class="dot"></span> 3 seats • email support</li>
+          </ul>
+          <div class="micro" id="pro-micro"></div>
+          <a class="cta" href="start.html">Get started</a>
+        </article>
+
+        <!-- VIP -->
+        <article class="card" data-plan="vip">
+          <div class="plan">VIP</div>
+          <p class="price">$<span data-price-m="497" data-price-y="391.14">497</span><span class="per"> / <span data-per>month</span></span></p>
+          <ul>
+            <li><span class="dot"></span> Everything in Pro</li>
+            <li><span class="dot"></span>
+              Access to <span class="hovercard"><span class="trigger" role="button" tabindex="0" aria-expanded="false">Hot+ Buyers</span>
+              <span class="hc" role="dialog"><strong>Hot+ Buyers</strong><br/>Top intent tier with multi-source confirmation and recency spikes.</span></span>
+            </li>
+            <li><span class="dot"></span>
+              <span class="hovercard"><span class="trigger" role="button" tabindex="0" aria-expanded="false">Sales AI</span>
+              <span class="hc" role="dialog"><strong>Sales AI</strong><br/>We sell for you: multi-channel outreach, appointment setting, and hand-offs.</span></span> + automation
+            </li>
+            <li><span class="dot"></span>
+              <span class="hovercard">
+                <span class="trigger" role="button" tabindex="0" aria-expanded="false">Leaderboard access</span>
+                <span class="hc" role="dialog">
+                  <strong>Top signals this month</strong><br/>
+                  <table style="width:100%;margin-top:6px;font-size:12px;border-collapse:separate;border-spacing:0">
+                    <tr><td>Stretch film</td><td style="text-align:right" id="ld-sf">—</td></tr>
+                    <tr><td>Corrugated</td><td style="text-align:right" id="ld-cg">—</td></tr>
+                    <tr><td>Labels</td><td style="text-align:right" id="ld-lb">—</td></tr>
+                  </table>
+                </span>
+              </span>
+            </li>
+            <li><span class="dot"></span> Custom scoring &amp; sectors • orchestration layer</li>
+            <li><span class="dot"></span> Case-study concierge • priority support</li>
+            <li><span class="dot"></span> 8 seats</li>
+          </ul>
+          <div class="micro" id="vip-micro"></div>
+          <a class="cta" href="start.html">Talk to sales</a>
+        </article>
+      </div>
+
+      <p class="small" style="text-align:center;margin-top:10px">Yearly shows effective monthly price and is billed annually.</p>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="container compare">
+      <h2>Compare plans</h2>
+      <div class="table-wrap">
+        <table aria-describedby="compare-plans">
+          <colgroup><col/><col/><col/><col/></colgroup>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="t-center">Free</th>
+              <th class="t-center">Pro</th>
+              <th class="t-center">VIP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Live Signals feed</td><td class="t-center">✓</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Verified companies / mo</td><td class="t-center">50</td><td class="t-center">Unlimited*</td><td class="t-center">Unlimited*</td></tr>
+            <tr><td>Warm Buyers / mo</td><td class="t-center">3</td><td class="t-center">5–15</td><td class="t-center">Custom</td></tr>
+            <tr><td>Hot Buyers access</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Hot+ Buyers</td><td class="t-center">—</td><td class="t-center">—</td><td class="t-center">✓</td></tr>
+            <tr><td>AI “Next step” suggestions</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Operator / Orchestrator</td><td class="t-center">—</td><td class="t-center">Operator</td><td class="t-center">Operator + Orchestrator</td></tr>
+            <tr><td>CRM / CMS sync</td><td class="t-center">CSV</td><td class="t-center">HubSpot / SFDC</td><td class="t-center">Custom</td></tr>
+            <tr><td>API access</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Seats</td><td class="t-center">1</td><td class="t-center">3</td><td class="t-center">8</td></tr>
+            <tr><td>Support</td><td class="t-center">Community</td><td class="t-center">Email</td><td class="t-center">Priority + SLA</td></tr>
+          </tbody>
+        </table>
+        <p class="small" style="margin-top:8px">*Reasonable-use policy to keep the ecosystem healthy.</p>
+      </div>
+
+      <!-- Workflow snapshots -->
+      <div class="workflows" id="wf-lines"></div>
+    </section>
+
+    <!-- Section 3: FAQs -->
+    <section class="container faqs">
+      <h2>FAQs</h2>
+
+      <details class="faq">
+        <summary>Can I stay on Free as long as I want?</summary>
+        <div class="ans">Yes. Free is to prove real demand. Upgrade when signals and ROI justify it.</div>
+      </details>
+
+      <details class="faq">
+        <summary>What happens on Yearly?</summary>
+        <div class="ans">You’re billed once for 12 months at a 21.3% discount. The toggle shows effective monthly pricing.</div>
+      </details>
+
+      <details class="faq">
+        <summary>Do you offer onboarding help?</summary>
+        <div class="ans">Pro includes quick-start guidance. VIP includes a dedicated success engineer and custom scoring.</div>
+      </details>
+
+      <details class="faq">
+        <summary>Security &amp; compliance?</summary>
+        <div class="ans">Least-privilege access, audit trails, and vendor reviews. VIP supports custom DPA/SLA.</div>
+      </details>
+    </section>
+  </main>
+
+<script>
+/* ===== knobs + demo data ===== */
+const CONFIG = { discount: 0.213, decimals: 2 };
+const DATA = {
+  micro: {
+    free: { text: "New this month: 50 verified companies • 3 Warm Buyers" },
+    pro:  { text: "Avg 7 days: 9 Hot Buyers • +$18.4k pipeline" },
+    vip:  { text: "Avg 30 days: 12 Hot+ • +$72.6k pipeline • 3 case studies" }
+  },
+  leaderboard: { stretchHot: 41, corrHot: 36, labelsHot: 29 },
+  workflows: [
+    { sector:"Stretch film",   window:"7 days",  hotRate:0.38, hotPlus:0.12, pipeline:18400 },
+    { sector:"Corrugated",     window:"30 days", hotRate:0.31, hotPlus:0.09, pipeline:32400 },
+    { sector:"Labels",         window:"14 days", hotRate:0.27, hotPlus:0.07, pipeline:15200 },
+    { sector:"Folding carton", window:"21 days", hotRate:0.22, hotPlus:0.06, pipeline:16750 },
+    { sector:"Flexible film",  window:"30 days", hotRate:0.33, hotPlus:0.10, pipeline:28950 },
+    { sector:"etc.",           window:"—",      hotRate:null,  hotPlus:null, pipeline:null }
+  ]
+};
+
+/* ===== Toggle (auto-sized; darker gold) ===== */
+const track  = document.getElementById('toggle');
+const btnM   = document.getElementById('bill-m');
+const btnY   = document.getElementById('bill-y');
+const priceEls = Array.from(document.querySelectorAll('[data-price-m]'));
+const perEls   = Array.from(document.querySelectorAll('[data-per]'));
+const fix = (n,d)=> (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);
+
+function updateThumb(){
+  const selected = track.querySelector('[aria-selected="true"]');
+  if(!selected) return;
+  const rTrack = track.getBoundingClientRect();
+  const rBtn   = selected.getBoundingClientRect();
+  track.style.setProperty('--thumb-x',  (rBtn.left - rTrack.left) + 'px');
+  track.style.setProperty('--thumb-w',  rBtn.width + 'px');
+}
+function setYearly(on){
+  btnM.setAttribute('aria-selected', on ? 'false' : 'true');
+  btnY.setAttribute('aria-selected', on ? 'true'  : 'false');
+  priceEls.forEach(el=>{
+    const m = parseFloat(el.getAttribute('data-price-m')||'0');
+    const provided = parseFloat(el.getAttribute('data-price-y')||'NaN');
+    const y = isNaN(provided) ? m*(1-CONFIG.discount) : provided;
+    el.textContent = on ? fix(y, CONFIG.decimals) : (m===0 ? '0' : String(m));
+  });
+  perEls.forEach(el=> el.textContent = on ? 'year' : 'month');
+  requestAnimationFrame(updateThumb);
+}
+btnM.addEventListener('click',()=>setYearly(false));
+btnY.addEventListener('click',()=>setYearly(true));
+window.addEventListener('resize', updateThumb);
+window.addEventListener('load', updateThumb);
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(updateThumb); }
+
+/* ===== Hovercards: make them work on mobile (tap to toggle) ===== */
+let openHC = null;
+function closeHC(){
+  if(!openHC) return;
+  openHC.classList.remove('open');
+  const trig = openHC.querySelector('.trigger');
+  if(trig) trig.setAttribute('aria-expanded','false');
+  openHC = null;
+}
+document.addEventListener('click', (e)=>{
+  const hc = e.target.closest('.hovercard');
+  if(hc){
+    const trig = e.target.closest('.trigger');
+    if(trig){
+      e.preventDefault();
+      const opening = openHC !== hc;
+      closeHC();
+      if(opening){
+        hc.classList.add('open');
+        trig.setAttribute('aria-expanded','true');
+        openHC = hc;
+        // Flip to above/below based on space
+        const box = hc.querySelector('.hc');
+        const r = box.getBoundingClientRect();
+        if(r.top < 8){ box.style.bottom = 'auto'; box.style.top = 'calc(100% + 10px)'; box.style.transform = 'translateY(0)'; }
+        else { box.style.top = ''; box.style.bottom = 'calc(100% + 10px)'; }
+      }
+    }
+  }else{
+    closeHC();
+  }
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeHC(); });
+
+/* ===== Appear animation for cards ===== */
+const cards = document.querySelectorAll('.card');
+const io = new IntersectionObserver((ents)=>{
+  ents.forEach(ent=>{ if(ent.isIntersecting) ent.target.classList.add('show'); });
+},{threshold:.12});
+cards.forEach(c=>io.observe(c));
+
+/* ===== inject copy + leaderboard + workflows ===== */
+document.getElementById('free-micro').textContent = DATA.micro.free.text;
+document.getElementById('pro-micro').textContent  = DATA.micro.pro.text;
+document.getElementById('vip-micro').textContent  = DATA.micro.vip.text;
+document.getElementById('ld-sf').textContent = DATA.leaderboard.stretchHot + " Hot";
+document.getElementById('ld-cg').textContent = DATA.leaderboard.corrHot + " Hot";
+document.getElementById('ld-lb').textContent = DATA.leaderboard.labelsHot + " Hot";
+
+(function renderWorkflows(){
+  const wrap = document.getElementById('wf-lines'); wrap.innerHTML="";
+  DATA.workflows.forEach(w=>{
+    const li=document.createElement('div'); li.className='line';
+    const left=document.createElement('div'); left.innerHTML=`<b>${w.sector}</b>`;
+    const right=document.createElement('div');
+    if(w.hotRate==null){ right.textContent="…and more sectors"; }
+    else{
+      right.textContent = `${Math.round(w.hotRate*100)}% Hot in ${w.window} • ${Math.round(w.hotPlus*100)}% Hot+ • ~$${w.pipeline.toLocaleString()} pipeline`;
+    }
+    li.append(left,right); wrap.append(li);
+  });
+})();
+
+/* init */
+setYearly(false);
+</script>
+</body>
+</html>
