@@ -3220,7 +3220,7 @@
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="/" class="brand" aria-label="Galactly">
+      <a href="/" class="brand" aria-label="Galactly" data-track-id="nav-brand">
         <span class="brand-mark" aria-hidden="true">
           <!-- Triad Nest — no background circle, stepped inner lines -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 48 48" width="64" height="64" role="img" focusable="false" aria-label="Galactly logo">
@@ -3239,32 +3239,35 @@
           </svg>
         </span>
       </a>
+  
       <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="#get-started" data-track-id="nav-how">How it works</a>
         <a class="nav-link" href="/sectors/" data-track-id="nav-sectors">Sectors</a>
-        <a href="/pricing/">Pricing</a>
+        <a class="nav-link" href="/pricing/" data-track-id="nav-pricing">Pricing</a>
       </nav>
+  
       <div class="nav-actions">
-        <a class="nav-login" href="/login/" data-track-id="nav-login">Login</a>
+        <a href="/auth/login/" data-track-id="nav-login">Login</a>
         <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener" data-track-id="nav-demo">Get Demo</a>
         <a class="nav-cta" href="#get-started" id="navStart" data-track-id="nav-start">Start Free</a>
       </div>
+  
       <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false" data-track-id="burger">
         <span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
     </div>
   </header>
-
+  
   <!-- Mobile glass menu -->
   <div id="mobileMenu" aria-hidden="true">
     <div class="sheet" role="menu">
       <a id="mobileStart" class="mm-cta" href="#get-started" role="menuitem" data-track-id="mm-start">✨ Start Free</a>
-      <a class="mm-link" href="/login/" role="menuitem" data-track-id="mm-login">Login</a>
+      <a class="mm-link" href="/auth/login/" role="menuitem" data-track-id="mm-login">Login</a>
       <a class="mm-link" href="https://www.youtube.com" target="_blank" rel="noopener" role="menuitem" data-track-id="mm-demo">Get Demo</a>
       <hr>
       <a class="mm-link" href="#get-started" role="menuitem" data-track-id="mm-how">How it works</a>
       <a class="mm-link" href="/sectors/" role="menuitem" data-track-id="mm-sectors">Sectors</a>
-      <a href="/pricing/">Pricing</a>
+      <a class="mm-link" href="/pricing/" role="menuitem" data-track-id="mm-pricing">Pricing</a>
     </div>
   </div>
 
