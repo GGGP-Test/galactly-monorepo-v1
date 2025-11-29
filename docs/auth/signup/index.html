@@ -479,7 +479,7 @@
 
   <!-- top chrome -->
   <div class="topbar">
-    <a class="brand" href="#" aria-label="Galactly">
+    <a class="brand" href="/" aria-label="Galactly">
       <img alt="Galactly" src="" id="brandLogo"/>
       <span>MyWebApp</span>
     </a>
@@ -757,7 +757,7 @@
       const requestBtn = `<a href="#" id="requestAccessLink">Request access</a>`;
       showStatusHTML(
         `<strong>${header}</strong> ${body} ` +
-        `<a href="login.html?email=${encodeURIComponent(em)}">Log in?</a> · ${requestBtn}`
+        `<a href="/auth/login/?email=${encodeURIComponent(em)}">Log in?</a> · ${requestBtn}`
       );
       try { statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
       setTimeout(()=>{
@@ -1055,7 +1055,7 @@
         showStatus("Create your account first, then verify.");
         throw new Error('no_auth');
       }
-      const continueUrl = new URL("bridge.html", location.origin).href;
+      const continueUrl = new URL("/auth/bridge/", location.origin).href;
       await withTimeout(auth.currentUser.sendEmailVerification({
         url: continueUrl,
         handleCodeInApp: false
@@ -1661,7 +1661,7 @@
       site: hostFromEmail || (localStorage.getItem('preWebsite') || sessionStorage.getItem('preWebsite') || '')
     });
     document.body.classList.add('leaving');
-    setTimeout(()=>{ location.href = `bridge.html?${urlParams}`; }, 1500); // matches --leave-ms
+    setTimeout(()=>{ location.href = `/auth/bridge/?${urlParams}`; }, 1500); // matches --leave-ms
   }
 </script>
 </body>
