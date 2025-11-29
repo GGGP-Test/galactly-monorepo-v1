@@ -4905,6 +4905,49 @@ window.SCOREBOARD_KNOBS = {
         data-root="fragments/"></script>
 
 
+<script>
+(function () {
+  // old → new
+  const map = new Map([
+    ['start.html', '/auth/signup/'],
+    ['signup.html', '/auth/signup/'],
+    ['/start', '/auth/signup/'],
+    ['/signup', '/auth/signup/'],
+
+    ['login.html', '/auth/login/'],
+    ['/login', '/auth/login/']
+  ]);
+
+  // anchors + forms
+  document.querySelectorAll('a[href], form[action]').forEach(el => {
+    const attr = el.tagName === 'FORM' ? 'action' : 'href';
+    let v = el.getAttribute(attr);
+    if (!v) return;
+
+    // normalize to a path (strip origin, leading ./)
+    v = v.replace(/^https?:\/\/[^/]+/i, '').replace(/^\.\//, '');
+    if (map.has(v)) el.setAttribute(attr, map.get(v));
+  });
+
+  // buttons or elements that use data-go or onclick to navigate
+  document.querySelectorAll('[data-go]').forEach(el => {
+    const t = el.getAttribute('data-go') || '';
+    if (/start\.html|(^|\/)signup\/?$/i.test(t)) el.setAttribute('data-go', '/auth/signup/');
+    if (/login\.html|(^|\/)login\/?$/i.test(t)) el.setAttribute('data-go', '/auth/login/');
+  });
+
+  // delegate click for data-go buttons
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-go]');
+    if (!el) return;
+    e.preventDefault();
+    location.href = el.getAttribute('data-go');
+  });
+})();
+</script>
+
+
+
 
 </body>
 </html>
