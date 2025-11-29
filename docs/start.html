@@ -18,12 +18,25 @@
   <link rel="manifest" href="site.webmanifest?v=3">
   <link rel="shortcut icon" href="favicon.ico?v=3">
 
-  <!-- Security config (fill in your keys or set window.__SECURITY__) -->
-  <meta name="security-config" content='{
-    "turnstileSiteKey": "",
-    "hcaptchaSiteKey": "",
-    "humanVerifyEndpoint": "/api/verify-human"
-  }'>
+
+  <script>
+    window.__FIREBASE_CONFIG__ = {
+      apiKey: "AIzaSyCBf7LHL4PfxD2rH7-HdYSE2dXIGfb3Vz4",
+      authDomain: "artemiss-42e40.firebaseapp.com",
+      projectId: "artemiss-42e40",
+      appId: "1:384891834378:web:53624662894e0650a74ff3",
+      // include these if present in your snippet:
+      storageBucket: "…",
+      messagingSenderId: "…"
+    };
+  </script>
+
+  <script>
+    window.__SECURITY__ = {
+      turnstileSiteKey: "0x4AAAAAACDlednuZg0WgvLG",
+      humanVerifyEndpoint: "/api/verify-human"
+    };
+  </script>
 
   <style>
     /* ========================== KNOBS ========================== */
