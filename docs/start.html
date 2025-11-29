@@ -18,6 +18,13 @@
   <link rel="manifest" href="site.webmanifest?v=3">
   <link rel="shortcut icon" href="favicon.ico?v=3">
 
+  <!-- Security config (fill in your keys or set window.__SECURITY__) -->
+  <meta name="security-config" content='{
+    "turnstileSiteKey": "",
+    "hcaptchaSiteKey": "",
+    "humanVerifyEndpoint": "/api/verify-human"
+  }'>
+
   <style>
     /* ========================== KNOBS ========================== */
     :root{
@@ -262,7 +269,7 @@
     /* Make links inside the red banner match the banner text */
     .inline-error a,
     .inline-error a:visited {
-      color: currentColor;          /* inherits #ffd7d7 from the banner */
+      color: currentColor;
       text-decoration: underline;
       text-underline-offset: 2px;
       font-weight: 600;
@@ -412,15 +419,12 @@
       border:1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
     .site-badge .host{ font-weight:800; letter-spacing:.2px; }
     .site-badge .info{ display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; width:24px; height:24px; border-radius:999px; line-height:0; border:1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); color:var(--fg); cursor:pointer; }
-    /* Size of the vector inside */
     .site-badge .info svg,
     .site-badge .info img{
       width: 24px;
       height: 24px;
-      display: block;     /* avoids inline gaps */
+      display: block;
     }
-    
-    /* Tooltip stays WHITE per your spec */
     .site-badge .tip{ position:absolute; top: calc(100% + 8px); left:50%; transform: translateX(-50%); z-index: 40; padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap; color:#0e1420; background: rgba(255,255,255,.95); border:1px solid rgba(0,0,0,.14); box-shadow: 0 6px 18px rgba(0,0,0,.28); opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease; }
     .site-badge:hover .tip, .site-badge:focus-within .tip, .site-badge:focus-within .tip{ opacity:1; transform: translate(-50%, -2px); pointer-events:auto; }
 
@@ -437,6 +441,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <!-- Firestore for domain registry checks/claims (logic-only addition) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- Cloudflare Turnstile (invisible) -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <!-- hCaptcha (invisible fallback) -->
+  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
 <body>
 
@@ -563,7 +572,7 @@
                 </svg>
               </span>
               <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Email"/>
-              <!-- inside-field glass NEXT button -->
+              <!-- inside-field GLASS NEXT button -->
               <button id="emailNext" class="field-cta" type="button" aria-label="Next">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 18l6-6-6-6"></path>
@@ -621,6 +630,12 @@
 
     </div>
   </main>
+
+  <!-- Hidden containers for invisible captcha render targets (do not affect design) -->
+  <div id="human-zone" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;">
+    <div id="cf-turnstile"></div>
+    <div id="hcaptcha"></div>
+  </div>
 
   <script>
     /* ---------- logo loader ---------- */
@@ -706,19 +721,21 @@
     }
 
     function goLogin(email){
-      // No auto-redirect — show an inline prompt with a clickable Login link.
       const em = (email || emailInput?.value || '').trim();
-      const raw = (statusEl?.textContent || '').toLowerCase();
+      const raw = (statusEl?.textContent || statusEl?.innerText || '').toLowerCase();
       const isCompany = raw.includes('company') || raw.includes('website');
       const header = isCompany ? 'Company already registered.' : 'Account exists.';
       const body   = isCompany ? 'That website is already linked to an account.' : 'This email is already in use.';
-
+      const requestBtn = `<a href="#" id="requestAccessLink">Request access</a>`;
       showStatusHTML(
         `<strong>${header}</strong> ${body} ` +
-        `<a href="login.html?email=${encodeURIComponent(em)}">Log in?</a>`
+        `<a href="login.html?email=${encodeURIComponent(em)}">Log in?</a> · ${requestBtn}`
       );
       try { statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-      // Intentionally NOT redirecting.
+      setTimeout(()=>{
+        const req = byId('requestAccessLink');
+        req?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); });
+      }, 0);
     }
 
     emailInput?.addEventListener('input', updateLoginLink);
@@ -847,7 +864,7 @@
     function updateEmailCTA(){
       const v = emailInput.value;
       const valid = looksValidEmail(v);
-      const lockEmailCTA = !pwdWrap.hidden; // once password stage is visible, keep email CTA hidden
+      const lockEmailCTA = !pwdWrap.hidden;
       const show = valid && !lockEmailCTA;
       emailBox.classList.toggle('show-cta', show);
       emailNext.toggleAttribute('disabled', !show);
@@ -982,7 +999,9 @@
       domainCheck: 2500,
       createUser: 10000,
       sendVerify: 7000,
-      claimAfter: 5000
+      claimAfter: 5000,
+      accessRequest: 5000,
+      humanVerify: 6000
     };
 
     function withTimeout(promise, ms, label){
@@ -1036,6 +1055,112 @@
       emailBox.style.boxShadow = '0 0 0 2px rgba(255,107,107,.45), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -3px 6px rgba(0,0,0,.6), inset 0 12px 26px rgba(0,0,0,.22)';
       setTimeout(()=>{ emailBox.style.boxShadow = prev; }, 260);
     }
+
+    /* ======================= HUMAN VERIFICATION (Turnstile → hCaptcha fallback) ======================= */
+    const META_SEC = (()=>{ try{
+      const m=document.querySelector('meta[name="security-config"]');
+      return m && m.content ? JSON.parse(m.content) : null;
+    }catch(e){ return null; }})();
+    const SECURITY = (window.__SECURITY__ && typeof window.__SECURITY__==='object' && window.__SECURITY__) || META_SEC || {};
+
+    let humanProvider = null; // 'turnstile' | 'hcaptcha' | null
+    let humanWidgetId = null;
+    let humanReady = false;
+
+    function initHuman(){
+      const cfKey = SECURITY.turnstileSiteKey && SECURITY.turnstileSiteKey.trim();
+      const hcKey = SECURITY.hcaptchaSiteKey && SECURITY.hcaptchaSiteKey.trim();
+
+      // Prefer Turnstile
+      if (cfKey && window.turnstile && typeof window.turnstile.render === 'function'){
+        try{
+          humanWidgetId = window.turnstile.render('#cf-turnstile', {
+            sitekey: cfKey,
+            theme: 'dark',
+            size: 'invisible',
+            retry: 'auto',
+            'error-callback': ()=>{},
+            'timeout-callback': ()=>{},
+            callback: ()=>{}
+          });
+          humanProvider = 'turnstile';
+          humanReady = true;
+          return;
+        }catch(_){}
+      }
+
+      // Fallback to hCaptcha
+      if (hcKey && window.hcaptcha && typeof window.hcaptcha.render === 'function'){
+        try{
+          humanWidgetId = window.hcaptcha.render('hcaptcha', {
+            sitekey: hcKey,
+            size: 'invisible',
+            theme: 'dark',
+            callback: ()=>{}
+          });
+          humanProvider = 'hcaptcha';
+          humanReady = true;
+          return;
+        }catch(_){}
+      }
+
+      humanProvider = null;
+      humanReady = false;
+    }
+
+    function resetHuman(){
+      try{
+        if(humanProvider === 'turnstile' && window.turnstile && humanWidgetId){ window.turnstile.reset(humanWidgetId); }
+        if(humanProvider === 'hcaptcha' && window.hcaptcha && humanWidgetId){ window.hcaptcha.reset(humanWidgetId); }
+      }catch(_){}
+    }
+
+    async function getHumanToken(reason){
+      // No provider configured → allow (development)
+      if(!humanProvider || !humanReady) return { ok:true, provider:null, token:null, dev:true };
+
+      try{
+        if(humanProvider === 'turnstile'){
+          const token = await new Promise((resolve, reject)=>{
+            try{
+              window.turnstile.execute(humanWidgetId, { action: reason || 'onboarding' }).then(resolve).catch(reject);
+            }catch(e){ reject(e); }
+          });
+          return { ok: !!token, provider:'turnstile', token };
+        }
+
+        if(humanProvider === 'hcaptcha'){
+          const token = await new Promise((resolve, reject)=>{
+            try{
+              window.hcaptcha.execute(humanWidgetId, { async: true }).then(resolve).catch(reject);
+            }catch(e){ reject(e); }
+          });
+          return { ok: !!token, provider:'hcaptcha', token };
+        }
+      }catch(_){}
+
+      return { ok:false, provider:humanProvider, token:null };
+    }
+
+    async function verifyHumanServerSide(payload){
+      const url = SECURITY.humanVerifyEndpoint && SECURITY.humanVerifyEndpoint.trim();
+      if(!url) return { ok:true, skipped:true }; // no endpoint configured
+      try{
+        const res = await withTimeout(fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        }), TIMEOUTS.humanVerify, 'humanVerify');
+        if(!res.ok) return { ok:false, status:res.status };
+        const data = await res.json().catch(()=>({}));
+        return { ok: data?.ok !== false, data };
+      }catch(e){
+        return { ok:false, error: String(e?.message||e||'error') };
+      }
+    }
+
+    window.addEventListener('load', ()=>{ try{ initHuman(); }catch(_){} });
 
     /* ================= DOMAIN REGISTRY (one-account-per-domain) ================= */
     function domainFromEmail(email){ return extractHostFromEmail(email) || ''; }
@@ -1117,13 +1242,53 @@
       if(window.onboarding?.emailContinue){ window.onboarding.emailContinue(emailInput.value.trim()); }
     }
 
+    /* ---------- Access Request (inline; no new page) ---------- */
+    async function openAccessRequest(){
+      try{
+        const email = (emailInput?.value || '').trim();
+        const domain = domainFromEmail(email);
+        const tok = await getHumanToken('request_access');
+        if(!tok.ok){ showStatus("Please try again."); return; }
+        const serverCheck = await verifyHumanServerSide({ provider: tok.provider, token: tok.token, action: 'request_access' });
+        if(serverCheck && serverCheck.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
+
+        if(!db){ showStatus("Unable to send request at the moment."); return; }
+
+        setBusy(true);
+        await withTimeout(
+          db.collection('accessRequests').add({
+            email,
+            domain,
+            role: window.role || null,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            human: { provider: tok.provider || null, token: tok.token || null }
+          }),
+          TIMEOUTS.accessRequest,
+          'accessRequest'
+        );
+        showStatus("Request sent. We’ll reach out soon.");
+      }catch(_){
+        showStatus("Couldn’t send request. Try again later.");
+      }finally{
+        setBusy(false);
+        resetHuman();
+      }
+    }
+
     /* ---------- Email CTA: decide route BEFORE password ---------- */
     emailNext.addEventListener('click', async ()=>{
       if(globalBusy) return;
       hideStatus();
       const email = emailInput.value.trim();
+
       if(!looksValidEmail(email) || !isBusinessEmail(email)){ pulseEmail(); showStatus("Use a valid work email to continue."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
+
+      // Human check (invisible)
+      const human = await getHumanToken('email_precheck');
+      if(!human.ok){ showStatus("Please retry the check."); resetHuman(); return; }
+      const humanResult = await verifyHumanServerSide({ provider: human.provider, token: human.token, action: 'email_precheck' });
+      if(humanResult && humanResult.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
 
       setBusy(true);
       showStatus("Checking your email…");
@@ -1134,12 +1299,11 @@
         const exists = await emailExists(email);
         if(exists === true){
           showStatusHTML(`<strong>Account exists.</strong> `);
-          goLogin(email); // immediate inline prompt, no redirect
+          goLogin(email);
           setBusy(false);
           return;
         }
         if(exists === 'timeout'){
-          // Don’t proceed blindly; invite login
           goLogin(email);
           setBusy(false);
           return;
@@ -1159,7 +1323,8 @@
 
       }catch(_){
         setBusy(false);
-        // emailExists already surfaced a message
+      }finally{
+        resetHuman();
       }
     });
 
@@ -1174,13 +1339,18 @@
       if (pwd.length < 6) { showStatus("Password is too short."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
 
+      // Human check
+      const human = await getHumanToken('password_signup');
+      if(!human.ok){ showStatus("Please retry the check."); resetHuman(); return; }
+      const humanResult = await verifyHumanServerSide({ provider: human.provider, token: human.token, action: 'password_signup' });
+      if(humanResult && humanResult.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
+
       const domain = domainFromEmail(email);
 
       setBusy(true);
       showStatus("Creating your account…");
 
       try{
-        // Re-check email to avoid race
         const exists = await emailExists(email);
         if(exists === true){
           showStatusHTML(`<strong>Account exists.</strong> `);
@@ -1212,11 +1382,10 @@
 
         const user = cred.user;
 
-        // Enforce domain claim (quick guard; do not hang UI)
+        // Enforce domain claim (quick guard)
         showStatus("Verifying your company…");
         const claim = await claimDomainAfterSignup(domain, email, user?.uid);
         if(!claim.ok){
-          // Keep the newly created user but be explicit
           if(claim.reason === 'claimed-other'){
             await rollbackNewlyCreatedUser();
             showStatusHTML(`<strong>Company already registered.</strong> `);
@@ -1224,11 +1393,9 @@
             setBusy(false);
             return;
           }
-          // registry-timeout / unavailable → proceed with verify but tell them
           showStatus("Company registry is unavailable right now. You can continue once email is verified.");
         }
 
-        // If already verified (rare), go straight to bridge
         try{ await user.reload(); }catch(_){}
         if(user.emailVerified){
           sessionStorage.setItem(VERIFIED_KEY,'1');
@@ -1237,7 +1404,6 @@
           return;
         }
 
-        // Send verification link and show panel
         showStatus("Sending verification link…");
         try{
           await sendVerifyLink();
@@ -1254,6 +1420,8 @@
       }catch(_){
         setBusy(false);
         showStatus("We couldn’t continue. Please try again.");
+      }finally{
+        resetHuman();
       }
     });
 
@@ -1278,7 +1446,7 @@
     // If step2 is already visible (deep link)
     if(step2.classList.contains('active')) syncSiteBadge(true);
 
-    /* ---------- GOOGLE SIGN-IN (business-only + domain-claim) ---------- */
+    /* ---------- GOOGLE SIGN-IN (business-only + domain-claim + human) ---------- */
     const googleBtn  = document.getElementById('googleBtn');
     googleBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -1286,6 +1454,12 @@
       hideStatus();
 
       if (!auth) { showStatus("Google sign-in isn’t configured. Add Firebase keys."); return; }
+
+      // Human check before opening popup
+      const human = await getHumanToken('google_signin');
+      if(!human.ok){ showStatus("Please retry the check."); resetHuman(); return; }
+      const humanResult = await verifyHumanServerSide({ provider: human.provider, token: human.token, action: 'google_signin' });
+      if(humanResult && humanResult.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
 
       setBusy(true);
       showStatus("Opening Google…");
@@ -1300,7 +1474,6 @@
         const domain = (email.split("@")[1] || "").toLowerCase();
         const isNew = cred?.additionalUserInfo?.isNewUser === true;
 
-        // Enforce work domains
         if (!email || PERSONAL.has(domain)) {
           try { await auth.signOut(); } catch {}
           setBusy(false);
@@ -1348,6 +1521,8 @@
         if (err?.code === 'auth/network-request-failed'){ showStatus("Network problem. Try again."); return; }
         if (err?.code === 'auth/operation-not-allowed'){ showStatus("Google sign-in is disabled for this project."); return; }
         showStatus("We couldn't complete Google sign-in. Try again.");
+      } finally {
+        resetHuman();
       }
     });
 
@@ -1449,7 +1624,6 @@
 <script>
   // ==== start.html -> bridge.html handoff ====
   function goToBridge(from){
-    // derive best-guess site host for the bridge screen
     const email = (document.getElementById('email')?.value || '').trim();
     const hostFromEmail = (email.match(/@([^@\s>]+)/)?.[1] || '').toLowerCase();
     const urlParams = new URLSearchParams({
