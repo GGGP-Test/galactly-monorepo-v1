@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Galactly — Setting things up…</title>
 <meta name="color-scheme" content="dark light"/>
+<link rel="canonical" href="https://galactly.com/auth/bridge"/>
+
+<script>
+/* Canonicalize /index.html → folder path (keep ? and #) */
+(function(){
+  if (/\/index\.html$/i.test(location.pathname)) {
+    var q = location.search || '', h = location.hash || '';
+    var p = location.pathname.replace(/index\.html$/i, '');
+    if (!/\/$/.test(p)) p += '/';
+    history.replaceState(null, '', p + q + h);
+  }
+})();
+</script>
 
 <style>
   :root{
@@ -19,15 +32,18 @@
     --card-border: rgba(255,255,255,.08);
     --radius: 16px;
 
-    --main-h: 86px;      /* center card height */
-    --side-h: 64px;      /* top/bottom card height */
+    --main-h: 86px;
+    --side-h: 64px;
     --gap: 16px;
 
-    --rot-ms: 2200ms;    /* per step dwell */
-    --total-min: 10000;  /* 10s min */
-    --total-max: 15000;  /* 15s max */
+    /* dwell range; we can shorten when session is ready */
+    --rot-ms: 2200ms;
+    --total-min: 2600;   /* min when session resolves quickly */
+    --total-max: 5200;   /* nicer snap */
+    --fallback-min: 10000; /* if session slow/unavailable */
+    --fallback-max: 15000;
 
-    --bar-ms: 1400ms;    /* progress shimmer */
+    --bar-ms: 1400ms;
   }
 
   html,body{height:100%;margin:0}
@@ -49,7 +65,6 @@
     padding: 12svh 16px 10svh;
   }
 
-  /* header chip */
   .head{
     width:min(560px, 92vw);
     margin: 0 auto 18px;
@@ -64,13 +79,7 @@
   .head strong{ color:var(--fg); font-weight:700 }
   .ok{ width:10px; height:10px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 6px var(--accent-shadow) }
 
-  /* stack */
-  .stack{
-    width:min(560px, 92vw);
-    display:grid; gap: var(--gap);
-    filter: drop-shadow(0 16px 44px rgba(0,0,0,.55));
-  }
-
+  .stack{ width:min(560px, 92vw); display:grid; gap: var(--gap); filter: drop-shadow(0 16px 44px rgba(0,0,0,.55)); }
   .card{
     position:relative;
     display:grid;
@@ -80,19 +89,15 @@
     border-radius: calc(var(--radius) + 2px);
     background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
     border:1px solid var(--card-border);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.06),
-      0 12px 30px rgba(0,0,0,.35);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 12px 30px rgba(0,0,0,.35);
     transition: transform .6s cubic-bezier(.22,1,.36,1), opacity .6s ease, height .6s ease, filter .6s ease;
     overflow:hidden;
   }
   .card .title{ font-weight:700; font-size:14px; letter-spacing:.2px }
   .card .meta{ color:var(--muted); font-size:12px; margin-top:3px }
-
   .ic{ width:24px; height:24px; display:grid; place-items:center; color:#dfe7f5; opacity:.95 }
   .ic svg{ width:20px; height:20px; display:block }
 
-  /* progress bar (only visible on active) */
   .bar{ height:8px; border-radius:999px; background: rgba(255,255,255,.06); overflow:hidden; margin-top:8px }
   .fill{
     width:22%; height:100%;
@@ -104,21 +109,14 @@
   }
   @keyframes slide{ from{transform:translateX(-120%)} to{transform:translateX(220%)} }
 
-  /* slots */
   .slot-top    { height: var(--side-h);   opacity:.55; transform: scale(.94); filter: blur(.2px) }
   .slot-main   { height: var(--main-h);   opacity:1;    transform: scale(1);   filter: blur(0) }
   .slot-bottom { height: var(--side-h);   opacity:.55; transform: scale(.94); filter: blur(.2px) }
 
-  /* state helpers */
   .is-pending .bar{ display:none }
   .is-done    .bar{ display:none }
-  .is-done .ic svg{ stroke: currentColor }
-  .is-done .ic svg .ok{ display:block }
 
-  .actions{
-    margin-top: 18px;
-    display:flex; justify-content:center; gap:12px; opacity:.85;
-  }
+  .actions{ margin-top: 18px; display:flex; justify-content:center; gap:12px; opacity:.85; }
   .link{
     appearance:none; background:transparent; color:var(--fg);
     border:1px solid var(--card-border); border-radius:10px;
@@ -127,6 +125,7 @@
   .link:hover{ border-color: rgba(255,255,255,.22); }
 
   .sr{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden }
+
   @media (prefers-reduced-motion: reduce){
     *{ animation-duration:1ms !important; transition:none !important }
   }
@@ -156,74 +155,49 @@
 </div>
 
 <script>
-/* ===================== INPUTS ===================== */
+/* ===================== Endpoints & helpers ===================== */
+const ENDPOINTS = {
+  session: '/api/session',                // { authenticated:boolean, plan:'free'|'pro'|'vip'|null }
+  app: '/app/',
+  onboarding: '/app/onboarding/',
+  signup: '/auth/signup/',
+  login: '/auth/login/',
+  portal: '/api/billing/portal'           // optional; used when next asks for checkout but user is already paid
+};
+
 const qs     = new URLSearchParams(location.search);
 const email  = (qs.get('email') || '').trim();
 const role   = (qs.get('role') || '').trim();       // 'supplier' | 'buyer' | ''
-const site   = (qs.get('site') || '').replace(/^https?:\/\//,'').replace(/^www\./,'').trim();
+const site   = (qs.get('site') || '').replace(/^(https?:)?\/\//i,'').replace(/^www\./i,'').trim();
 const from   = (qs.get('from') || '').trim();       // 'google' | 'password' | 'unknown'
+const nextQ  = (qs.get('next') || '').trim();
 
+/* Persist a lightweight origin hint if a previous page set it */
+const originHint = (sessionStorage.getItem('gg_origin') || '').trim(); // 'signup'|'login' (recommended enhancement)
+
+/* Header fill */
 document.getElementById('h-email').textContent = email || 'new user';
 document.getElementById('h-site').textContent  = site ? `• ${site}` : '';
 
-/* Where to go after success */
-const STEP3_URL  = 'step3.html';       // can be absolute if you prefer
-const STATUS_URL = '';                 // optional: e.g. '/api/onboarding/status'
-
-/* ===================== COPY ===================== */
-const forSupplier = [
-  ['Verifying details',      email || 'Signing in'],
-  ['Matching your domain',   site || 'Detecting business website'],
-  ['Scanning website',       'Public pages & metadata'],
-  ['Finding buyers with intent', 'Recent signals'],
-  ['Training outreach agent','Tone & guardrails'],
-  ['Creating your workspace','Teams, roles & defaults'],
-];
-
-const forBuyer = [
-  ['Verifying details',        email || 'Signing in'],
-  ['Matching your domain',     site || 'Detecting business website'],
-  ['Scanning website',         'Public pages & metadata'],
-  ['Finding vetted suppliers', 'Category & region'],
-  ['Collecting timelines',     'MOQ, lead times, MOQs'],
-  ['Creating your workspace',  'Projects & defaults'],
-];
-
-const defaultSteps = [
-  ['Verifying details',      email || 'Signing in'],
-  ['Matching your domain',   site || 'Detecting business website'],
-  ['Scanning website',       'Public pages & metadata'],
-  ['Enriching company data', 'Signals & contacts'],
-  ['Configuring defaults',   'Preferences & roles'],
-  ['Creating your workspace','Final touches'],
-];
-
-const stepsSource = role === 'supplier' ? forSupplier : role === 'buyer' ? forBuyer : defaultSteps;
-
-/* ===================== VALIDATIONS ===================== */
-/* Client-only heuristics. Backend should still verify authoritatively. */
-const PERSONAL = new Set([
-  "gmail.com","googlemail.com","yahoo.com","ymail.com","outlook.com","hotmail.com","live.com","msn.com",
-  "icloud.com","me.com","mac.com","aol.com","proton.me","protonmail.com","pm.me","mail.com","yandex.com","yandex.ru",
-  "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"
-]);
-
-const emailHost = (()=>{ const m = email.match(/@([^@\s>]+)$/); return m ? m[1].toLowerCase() : ''; })();
-
-/* baseDomain("foo.bar.example.com") -> "example.com" (simple heuristic) */
-function baseDomain(h){
-  if(!h) return '';
-  const parts = h.toLowerCase().split('.').filter(Boolean);
-  if(parts.length <= 2) return parts.join('.');
-  // naive ccTLD handling for common 2-level TLDs
-  const tlds2 = new Set(['co.uk','com.au','com.br','co.jp','co.in','com.mx','com.tr','com.cn','co.za','com.sg']);
-  const last2 = parts.slice(-2).join('.');
-  const last3 = parts.slice(-3).join('.');
-  return tlds2.has(last2) ? last3 : last2;
+/* Normalize/whitelist next path: internal only, no protocol */
+function sanitizeNext(raw){
+  if(!raw) return '';
+  try{ raw = decodeURIComponent(raw); }catch(_){}
+  if (/^https?:/i.test(raw)) {
+    try {
+      const u = new URL(raw, location.origin);
+      if (u.origin !== location.origin) return '';
+      raw = u.pathname + u.search + u.hash;
+    }catch(_){ return ''; }
+  }
+  if (!raw.startsWith('/')) return '';
+  // Optional: strip duplicate slashes
+  raw = raw.replace(/\/{2,}/g,'/');
+  return raw;
 }
-function looksBusinessEmail(){ return !!emailHost && !PERSONAL.has(emailHost); }
+const nextSafe = sanitizeNext(nextQ);
 
-/* try to see if host is reachable by loading its favicon as an image (CORS-safe) */
+/* Simple reachability probe for site */
 function imgReachable(host, timeoutMs=3500){
   return new Promise((resolve)=>{
     if(!host) return resolve(false);
@@ -238,50 +212,51 @@ function imgReachable(host, timeoutMs=3500){
   });
 }
 
-/* bounce back to start with an inline error message token */
-function bounceToStart(code, msg){
-  const back = 'start.html?err=' + encodeURIComponent(code) + (msg ? '&msg=' + encodeURIComponent(msg) : '') +
-               (email ? '&email=' + encodeURIComponent(email) : '') + (site ? '&site=' + encodeURIComponent(site) : '') +
-               (role ? '&role=' + encodeURIComponent(role) : '') + (from ? '&from=' + encodeURIComponent(from) : '');
-  location.replace(back);
+/* Domain utils */
+const PERSONAL = new Set([
+  "gmail.com","googlemail.com","yahoo.com","ymail.com","outlook.com","hotmail.com","live.com","msn.com",
+  "icloud.com","me.com","mac.com","aol.com","proton.me","protonmail.com","pm.me","mail.com","yandex.com","yandex.ru",
+  "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"
+]);
+const emailHost = (()=>{
+  const m = String(email).match(/@([^@\s>]+)$/);
+  return m ? m[1].toLowerCase() : '';
+})();
+function baseDomain(h){
+  if(!h) return '';
+  const parts = h.toLowerCase().split('.').filter(Boolean);
+  if(parts.length <= 2) return parts.join('.');
+  const tlds2 = new Set(['co.uk','com.au','com.br','co.jp','co.in','com.mx','com.tr','com.cn','co.za','com.sg']);
+  const last2 = parts.slice(-2).join('.');
+  const last3 = parts.slice(-3).join('.');
+  return tlds2.has(last2) ? last3 : last2;
+}
+function isBusinessEmailHost(h){ return !!h && !PERSONAL.has(h); }
+
+/* Bounce back with inline error banner and a step-2 hint */
+function bounce(backTo, code, msg){
+  const url = new URL(backTo || ENDPOINTS.signup, location.origin);
+  if(code) url.searchParams.set('err', code);
+  if(msg)  url.searchParams.set('msg', msg);
+  if(email) url.searchParams.set('email', email);
+  if(site)  url.searchParams.set('site', site);
+  if(role)  url.searchParams.set('role', role);
+  if(nextSafe) url.searchParams.set('next', nextSafe);
+  // Hint the form page to auto-open its Step 2 (see note below)
+  url.searchParams.set('auto','step2');
+  // Also add an anchor most routers can observe without code changes
+  const full = url.pathname + url.search + '#s2';
+  location.replace(full);
 }
 
-/* run validations early. Return true to proceed, false to bounce. */
-async function runValidations(){
-  // 1) require a site hint (we use email host if site query is empty)
-  const hostFromSite  = (site || '').toLowerCase();
-  const hostFromEmail = emailHost;
-  const guessSite = hostFromSite || hostFromEmail;
-
-  if(!guessSite){
-    bounceToStart('no_site', 'Add your company website (work email or site).');
-    return false;
-  }
-
-  // 2) business email check (only if we have an email)
-  if(email && !looksBusinessEmail()){
-    bounceToStart('personal_email', 'Use a work email (Gmail/Outlook/Yahoo are not allowed).');
-    return false;
-  }
-
-  // 3) mismatch: base domains differ (example: email @rtfgb.com but site is brand.io)
-  if(hostFromSite && hostFromEmail && baseDomain(hostFromSite) !== baseDomain(hostFromEmail)){
-    bounceToStart('domain_mismatch', `Your email domain (${baseDomain(hostFromEmail)}) doesn’t match the website (${baseDomain(hostFromSite)}).`);
-    return false;
-  }
-
-  // 4) quick reachability probe (best effort; still heuristic)
-  const reachable = await imgReachable(guessSite);
-  if(!reachable){
-    bounceToStart('site_unreachable', 'We couldn’t reach that site. Check that it’s public and spelled correctly.');
-    return false;
-  }
-
-  // Passed client-side checks
-  return true;
+/* Heuristic: where to bounce if not authenticated */
+function pickOrigin(){
+  // If a previous page set it, use that. Otherwise guess: if role/site provided, likely signup.
+  if (originHint === 'login' || originHint === 'signup') return originHint;
+  return (role || site) ? 'signup' : 'login';
 }
 
-/* ===================== ROTOR UI ===================== */
+/* ===================== UI rotor ===================== */
 const sr = (t)=>{ const el=document.getElementById('sr'); if(el) el.textContent=t; };
 
 function renderCard(el, title, meta, state){
@@ -290,7 +265,7 @@ function renderCard(el, title, meta, state){
   if(el.id === 'card-top')    el.classList.add('slot-top');
   if(el.id === 'card-main')   el.classList.add('slot-main');
   if(el.id === 'card-bottom') el.classList.add('slot-bottom');
-  el.classList.add('is-' + state);
+  el.classList.add('is-' + (state||'pending'));
 
   el.innerHTML = `
     <div class="ic" aria-hidden="true">
@@ -311,92 +286,195 @@ function renderCard(el, title, meta, state){
   `;
 }
 
+/* Steps copy */
+const forSupplier = [
+  ['Verifying details',      email || 'Signing in'],
+  ['Matching your domain',   site || 'Detecting business website'],
+  ['Scanning website',       'Public pages & metadata'],
+  ['Finding buyers with intent', 'Recent signals'],
+  ['Training outreach agent','Tone & guardrails'],
+  ['Creating your workspace','Teams, roles & defaults'],
+];
+const forBuyer = [
+  ['Verifying details',        email || 'Signing in'],
+  ['Matching your domain',     site || 'Detecting business website'],
+  ['Scanning website',         'Public pages & metadata'],
+  ['Finding vetted suppliers', 'Category & region'],
+  ['Collecting timelines',     'MOQ, lead times'],
+  ['Creating your workspace',  'Projects & defaults'],
+];
+const defaultSteps = [
+  ['Verifying details',      email || 'Signing in'],
+  ['Matching your domain',   site || 'Detecting business website'],
+  ['Scanning website',       'Public pages & metadata'],
+  ['Enriching company data', 'Signals & contacts'],
+  ['Configuring defaults',   'Preferences & roles'],
+  ['Creating your workspace','Final touches'],
+];
+const stepsSource = role === 'supplier' ? forSupplier : role === 'buyer' ? forBuyer : defaultSteps;
+
 /* initialize three slots */
 const topEl    = document.getElementById('card-top');
 const mainEl   = document.getElementById('card-main');
 const bottomEl = document.getElementById('card-bottom');
 
 let queue = stepsSource.map(([t,m]) => ({title:t, meta:m}));
-let idxMain = 1;                                // main shows queue[1] at boot
 if(queue.length < 3){ queue = queue.concat(queue).slice(0,3); }
-
 renderCard(topEl,    queue[0].title, queue[0].meta, 'done');
 renderCard(mainEl,   queue[1].title, queue[1].meta, 'active');
 renderCard(bottomEl, queue[2].title, queue[2].meta, 'pending');
 
 function rotateOnce(nextTask){
-  // main -> top (now done)
   renderCard(topEl, mainEl.querySelector('.title').textContent, mainEl.querySelector('.meta').textContent, 'done');
-  // bottom -> main (now active)
   renderCard(mainEl, bottomEl.querySelector('.title').textContent, bottomEl.querySelector('.meta').textContent, 'active');
-  // new task -> bottom (pending)
   renderCard(bottomEl, nextTask.title, nextTask.meta, 'pending');
   sr(mainEl.querySelector('.title').textContent + '…');
 }
 
-/* ===================== FLOW ===================== */
+/* ===================== Session & routing ===================== */
+async function getSession(){
+  try{
+    const r = await fetch(ENDPOINTS.session, { credentials:'include', cache:'no-store' });
+    if(!r.ok) throw new Error('bad session');
+    const j = await r.json();
+    // expected: { authenticated:boolean, plan:'free'|'pro'|'vip'|null }
+    return { ok:true, ...j };
+  }catch(_){
+    return { ok:false, authenticated:false, plan:null };
+  }
+}
+
+function decideDestination(session){
+  // If a safe next is provided, use it — with a small guard around checkout vs portal.
+  if (nextSafe) {
+    const toCheckoutPro = /^\/pricing\/checkout-pro/i.test(nextSafe);
+    const toCheckoutVip = /^\/pricing\/checkout-vip/i.test(nextSafe);
+    if ((toCheckoutPro || toCheckoutVip) && session.authenticated && (session.plan==='pro' || session.plan==='vip')) {
+      return ENDPOINTS.portal; // already paid → portal instead of checkout
+    }
+    return nextSafe;
+  }
+
+  // No explicit next → choose by plan
+  if (session.authenticated && (session.plan==='pro' || session.plan==='vip')) {
+    return ENDPOINTS.app;
+  }
+  // unauthenticated or free
+  return ENDPOINTS.onboarding;
+}
+
+/* ===================== Validations before routing ===================== */
+async function runValidations(){
+  const hostFromSite  = (site || '').toLowerCase();
+  const hostFromEmail = emailHost;
+
+  // If email present, nudge toward business domains
+  if (email && !isBusinessEmailHost(hostFromEmail)) {
+    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+    bounce(backTo, 'personal_email', 'Use a work email (Gmail/Outlook/Yahoo are not allowed).');
+    return false;
+  }
+
+  // If both are present, ensure base domain alignment
+  if (hostFromSite && hostFromEmail && baseDomain(hostFromSite) !== baseDomain(hostFromEmail)) {
+    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+    bounce(backTo, 'domain_mismatch', `Your email domain (${baseDomain(hostFromEmail)}) doesn’t match the website (${baseDomain(hostFromSite)}).`);
+    return false;
+  }
+
+  // Try to infer a site if not provided
+  const guessSite = hostFromSite || hostFromEmail || '';
+  if (!guessSite) {
+    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+    bounce(backTo, 'no_site', 'Add your company website (work email or site).');
+    return false;
+  }
+
+  // Best-effort reachability (don’t hard-block onboarding for transient failures)
+  const reachable = await imgReachable(guessSite);
+  if(!reachable){
+    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+    bounce(backTo, 'site_unreachable', 'We couldn’t reach that site. Check that it’s public and spelled correctly.');
+    return false;
+  }
+  return true;
+}
+
+/* Back button: try browser history, else origin */
+document.getElementById('backBtn').addEventListener('click', ()=>{
+  if (history.length > 1) { history.back(); return; }
+  const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+  location.href = backTo + (nextSafe ? ('?next='+encodeURIComponent(nextSafe)) : '');
+});
+
+/* ===================== Flow ===================== */
 async function startFlow(){
-  // Early guard/validation — keeps animation smooth but exits fast on failure.
+  // Run cheap validations first (fast failures bounce with messages)
   const ok = await runValidations();
   if(!ok) return;
 
-  // Optional backend status mode
-  if(STATUS_URL){
-    try{
-      await pollBackend();
-      return;
-    }catch{ /* fall through to demo rotor */ }
-  }
+  // Kick off session fetch
+  const sessionPromise = getSession();
 
-  // Timed rotor (10–15s)
-  const totalMs = Math.floor(Math.random()*(Number(getComputedStyle(document.documentElement).getPropertyValue('--total-max')) - Number(getComputedStyle(document.documentElement).getPropertyValue('--total-min'))) + Number(getComputedStyle(document.documentElement).getPropertyValue('--total-min')));
+  // Rotor timing — if session resolves quickly, keep this snappy; else use fallback window
+  let totalMs;
+  let session = null;
+  let sessionResolved = false;
 
+  const sessionTimer = sessionPromise.then(s => { sessionResolved = true; session = s; });
+
+  // Soft-animate at least a couple of swaps while we wait
   let spent = 0;
-  let p = 2; // next item index in queue
-  while(spent < totalMs - 600){                      // leave a small cushion for the final settle
-    const dwell = Math.floor(1800 + Math.random()*1200); // 1.8–3.0s per card
-    p = (p + 1) % queue.length;
-    const nextTask = queue[p];
-    rotateOnce(nextTask);
-    await new Promise(r=>setTimeout(r, dwell));
-    spent += dwell;
+  let p = 2;
+  async function spinWindow(msMin, msMax){
+    const until = Math.floor(msMin + Math.random()*(msMax-msMin));
+    while(spent < until - 600){
+      const dwell = Math.floor(1500 + Math.random()*900);
+      p = (p + 1) % queue.length;
+      rotateOnce(queue[p]);
+      await new Promise(r=>setTimeout(r, dwell));
+      spent += dwell;
+      if (sessionResolved) break;
+    }
   }
 
-  // Final “Creating your workspace” center focus before leaving
-  const final = {title:'Creating your workspace', meta:'Final checks'};
-  rotateOnce(final);
-  await new Promise(r=>setTimeout(r, 620));
+  // First small window
+  await spinWindow(1600, 2400);
 
-  // hand-off to step3
-  goNext();
-}
-
-/* Backend polling (optional) */
-async function pollBackend(){
-  const start = Date.now();
-  let done = false;
-  while(!done && Date.now()-start < 15000){
-    const res = await fetch(STATUS_URL + '?' + qs.toString(), {cache:'no-store'});
-    if(!res.ok) throw new Error('bad status');
-    const j = await res.json(); // {stage:'verify|scan|create|...', done:boolean, redirectTo?}
-    const next = {title: j.label || j.stage || 'Working', meta: j.meta || ''};
-    rotateOnce(next);
-    if(j.done){ done=true; if(j.redirectTo){ location.href = j.redirectTo; return; } }
-    await new Promise(r=>setTimeout(r, j.nextInMs || 1200));
+  // If session hasn’t resolved, allow a longer fallback window
+  if(!sessionResolved){
+    await spinWindow(Number(getComputedStyle(document.documentElement).getPropertyValue('--fallback-min'))|0,
+                     Number(getComputedStyle(document.documentElement).getPropertyValue('--fallback-max'))|0);
   }
-  goNext();
-}
 
-/* Go to step3 with all params preserved */
-function goNext(){
-  const url = STEP3_URL + (STEP3_URL.includes('?') ? '&' : '?') + qs.toString();
-  location.href = url;
-}
+  // Ensure we have session before deciding
+  if(!sessionResolved){ session = await sessionPromise; }
 
-/* Back button */
-document.getElementById('backBtn').addEventListener('click', ()=>{
-  history.length > 1 ? history.back() : location.href = 'start.html';
-});
+  // Final “Creating your workspace”
+  rotateOnce({title:'Creating your workspace', meta:'Final checks'});
+  await new Promise(r=>setTimeout(r, 520));
+
+  // Route based on session
+  if(!session || session.ok === false){
+    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+    bounce(backTo, 'not_authenticated', 'We couldn’t confirm your sign-in. Please try again.');
+    return;
+  }
+
+  if(!session.authenticated){
+    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+    // If user came from signup (common path), guide them back to Step 2 to finish/verify
+    const msg = (from==='password' || from==='google')
+      ? 'Almost there—complete sign-in or verification to continue.'
+      : 'We couldn’t confirm your sign-in. Please try again.';
+    bounce(backTo, 'not_authenticated', msg);
+    return;
+  }
+
+  const dest = decideDestination(session);
+  // Navigate
+  location.href = dest;
+}
 
 /* Boot */
 startFlow();
