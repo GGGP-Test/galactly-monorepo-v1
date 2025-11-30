@@ -11,7 +11,7 @@
     if (/\/index\.html$/i.test(location.pathname)) {
       var q = location.search || '', h = location.hash || '';
       var p = location.pathname.replace(/index\.html$/i, '');
-      if (!/\/$/.test(p)) p += '/';
+      if (p !== '/' && /\/$/.test(p)) p = p.slice(0, -1);
       history.replaceState(null, '', p + q + h); // /auth/signup/?site=foo
     }
   })();
@@ -1707,8 +1707,8 @@
     const map = new Map([
       ['login.html','/auth/login/'],
       ['/login','/auth/login/'],
-      ['index.html','/auth/signup/'],
-      ['/auth/signup','/auth/signup/']
+      ['index.html','/auth/signup'],
+      ['/auth/signup/','/auth/signup']
     ]);
     const norm = v => (v||'').replace(/^https?:\/\/[^/]+/i,'').replace(/^\.\//,'');
     const split = v => { const m=String(v||'').match(/^([^?#]*)(.*)$/); return [m?m[1]:'',m?m[2]:'']; };
