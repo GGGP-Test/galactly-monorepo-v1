@@ -22,14 +22,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
 
   <!-- Primary: SVG favicon -->
-  <link rel="icon" href="/docs/favicon.ico">
+  <link rel="icon" href="/favicon.ico">
   
-      <!-- PNG fallbacks -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/docs/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/docs/favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/docs/apple-touch-icon.png">
-  <link rel="manifest" href="/docs/site.webmanifest">
-  <link rel="shortcut icon" href="/docs/favicon.ico">
+  <!-- PNG fallbacks -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="shortcut icon" href="/favicon.ico">
 
   <!-- === Config: Firebase + Security (adaptive challenge knobs) === -->
   <script>
@@ -45,18 +45,17 @@
   </script>
   <script>
     window.__SECURITY__ = {
-      turnstileSiteKey: "0x4AAAAAACDlednuZg0WgvLG",
-      // optional fallback test key for dev (won’t validate in prod):
-      hcaptchaSiteKey:  "10000000-ffff-ffff-ffff-000000000001",
-      humanVerifyEndpoint: "/api/verify-human",
-      // --- Adaptive challenge policy ---
+      turnstileSiteKey: "",
+      hcaptchaSiteKey:  "",
+      humanVerifyEndpoint: "",
+      // --- Adaptive challenge policy (disable challenges on static page) ---
       policy: {
-        windowMs: 10*60*1000,           // lookback window for attempts (10m)
-        warmupTries: 2,                 // first N attempts skip any challenge
-        maxTriesBeforeChallenge: 3,     // after this in window → require challenge
-        distinctEmailsBeforeChallenge: 3,// many different emails → challenge
-        throttleMs: 1200,               // rapid-fire attempts (< this) raise suspicion
-        humanPassTtlMs: 24*60*60*1000   // once passed, skip challenges for 24h
+        windowMs: 10*60*1000,
+        warmupTries: 999999999,
+        maxTriesBeforeChallenge: 999999999,
+        distinctEmailsBeforeChallenge: 999999999,
+        throttleMs: 1200,
+        humanPassTtlMs: 24*60*60*1000
       }
     };
   </script>
@@ -890,14 +889,15 @@
       return `Human check failed (${p}: ${code}). Disable blockers or try again.`;
     }
 
-    // Unified entry: only challenge if policy says so
+    // Unified entry: FAIL-OPEN if provider/server unavailable
     async function performHumanCheck(reason, meta){
       riskRecord(reason+'_attempt', { email: meta?.email || '', domain: meta?.domain || '' });
       if (!riskShouldChallenge(reason, meta)) return { ok:true, skipped:true };
+      if (!humanProvider || !humanReady) return { ok:true, skipped:true, reason:'no_provider' };
       const tok = await getHumanTokenInternal(reason);
-      if(!tok.ok) return tok;
+      if(!tok.ok || !tok.token) return { ok:true, skipped:true, reason:'no_token' };
       const server = await verifyHumanServerSide({ provider: tok.provider, token: tok.token, action: reason });
-      if(!server.ok) return { ok:false, provider: tok.provider, token: tok.token, status: server.status, error: server.error||'server_verify_failed' };
+      if(!server.ok) return { ok:true, skipped:true, reason:'no_server' };
       riskNoteHumanPass();
       return { ok:true, provider: tok.provider, token: tok.token };
     }
@@ -947,6 +947,21 @@
     async function rollbackNewlyCreatedUser(){
       try{ await auth.currentUser?.delete(); }catch(_){}
       try{ await auth.signOut(); }catch(_){}
+    }
+
+    /* ---------- Missing helpers (used below) ---------- */
+    async function emailExists(email){
+      try{
+        const methods = await withTimeout(auth.fetchSignInMethodsForEmail(email), TIMEOUTS.emailExists, 'emailExists');
+        return Array.isArray(methods) && methods.length > 0;
+      }catch(_){ return 'timeout'; }
+    }
+    async function sendVerifyLink(){
+      if(!auth?.currentUser) throw new Error('no_user');
+      const url = new URL('/auth/bridge/', location.origin);
+      await withTimeout(auth.currentUser.sendEmailVerification({ url: url.href, handleCodeInApp: false }), TIMEOUTS.sendVerify, 'sendVerify');
+      try { localStorage.setItem(EMAIL_KEY, auth.currentUser.email || ''); } catch(_){}
+      return true;
     }
 
     /* ---------- Swap to Password stage ---------- */
