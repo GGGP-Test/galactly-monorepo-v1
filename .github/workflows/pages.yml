@@ -35,10 +35,14 @@ jobs:
           # ----- allow-list: ONLY these files/dirs are deployed -----
           # Core public pages
           cp -v "$PUBLIC_SRC/index.html"      "$PUBLIC_OUT/" || true
-          cp -v "$PUBLIC_SRC/start.html"      "$PUBLIC_OUT/" || true
-          cp -v "$PUBLIC_SRC/login.html"      "$PUBLIC_OUT/" || true
-          cp -v "$PUBLIC_SRC/bridge.html"     "$PUBLIC_OUT/" || true   # <- NEW
-          cp -v "$PUBLIC_SRC/step3.html"      "$PUBLIC_OUT/" || true
+
+          # >>> Moved pages to /auth/* (create dirs, write as index.html)
+          mkdir -p "$PUBLIC_OUT/auth/signup"  && cp -v "$PUBLIC_SRC/start.html"  "$PUBLIC_OUT/auth/signup/index.html"  || true
+          mkdir -p "$PUBLIC_OUT/auth/login"   && cp -v "$PUBLIC_SRC/login.html"  "$PUBLIC_OUT/auth/login/index.html"   || true
+          mkdir -p "$PUBLIC_OUT/auth/bridge"  && cp -v "$PUBLIC_SRC/bridge.html" "$PUBLIC_OUT/auth/bridge/index.html"  || true
+          mkdir -p "$PUBLIC_OUT/auth/step3"   && cp -v "$PUBLIC_SRC/step3.html"  "$PUBLIC_OUT/auth/step3/index.html"   || true
+          # <<<
+
           cp -v "$PUBLIC_SRC/pricing.html"    "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/free-panel.html" "$PUBLIC_OUT/" || true
           [ -f "$PUBLIC_SRC/404.html" ]    && cp -v "$PUBLIC_SRC/404.html"    "$PUBLIC_OUT/404.html"    || true
@@ -57,7 +61,6 @@ jobs:
           do
             [ -f "$PUBLIC_SRC/$f" ] && cp -v "$PUBLIC_SRC/$f" "$PUBLIC_OUT/$f" || true
           done
-          # (Optional) if you keep them under docs/favicons/, also lift them to root:
           if [ -d "$PUBLIC_SRC/favicons" ]; then
             for f in apple-touch-icon.png favicon-16x16.png favicon-32x32.png android-chrome-192x192.png android-chrome-512x512.png site.webmanifest; do
               [ -f "$PUBLIC_SRC/favicons/$f" ] && cp -v "$PUBLIC_SRC/favicons/$f" "$PUBLIC_OUT/$f" || true
@@ -86,7 +89,7 @@ jobs:
           : > "$PUBLIC_OUT/.nojekyll"
 
           echo "Public site contents:"
-          find "$PUBLIC_OUT" -maxdepth 2 -type f | sort
+          find "$PUBLIC_OUT" -maxdepth 3 -type f | sort
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
