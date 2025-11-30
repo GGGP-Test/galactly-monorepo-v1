@@ -33,18 +33,28 @@ jobs:
           mkdir -p "$PUBLIC_OUT"
 
           # ----- allow-list: ONLY these files/dirs are deployed -----
-          # Core public pages
-          cp -v "$PUBLIC_SRC/index.html"      "$PUBLIC_OUT/" || true
+          # Core public pages at site root
+          cp -v "$PUBLIC_SRC/index.html" "$PUBLIC_OUT/" || true
 
-          # >>> Moved pages to /auth/* (create dirs, write as index.html)
-          mkdir -p "$PUBLIC_OUT/auth/signup"  && cp -v "$PUBLIC_SRC/start.html"  "$PUBLIC_OUT/auth/signup/index.html"  || true
-          mkdir -p "$PUBLIC_OUT/auth/login"   && cp -v "$PUBLIC_SRC/login.html"  "$PUBLIC_OUT/auth/login/index.html"   || true
-          mkdir -p "$PUBLIC_OUT/auth/bridge"  && cp -v "$PUBLIC_SRC/bridge.html" "$PUBLIC_OUT/auth/bridge/index.html"  || true
-          mkdir -p "$PUBLIC_OUT/auth/step3"   && cp -v "$PUBLIC_SRC/step3.html"  "$PUBLIC_OUT/auth/step3/index.html"   || true
-          # <<<
+          # ===== moved auth pages (folder-style /auth/*/ paths) =====
+          mkdir -p "$PUBLIC_OUT/auth/signup" \
+            && cp -v "$PUBLIC_SRC/auth/signup/index.html" "$PUBLIC_OUT/auth/signup/index.html" || true
 
+          mkdir -p "$PUBLIC_OUT/auth/login" \
+            && cp -v "$PUBLIC_SRC/auth/login/index.html" "$PUBLIC_OUT/auth/login/index.html" || true
+
+          mkdir -p "$PUBLIC_OUT/auth/bridge" \
+            && cp -v "$PUBLIC_SRC/auth/bridge/index.html" "$PUBLIC_OUT/auth/bridge/index.html" || true
+
+          mkdir -p "$PUBLIC_OUT/auth/step3" \
+            && cp -v "$PUBLIC_SRC/auth/step3/index.html" "$PUBLIC_OUT/auth/step3/index.html" || true
+          # ==========================================================
+
+          # Other single-file pages still at root (unchanged)
           cp -v "$PUBLIC_SRC/pricing.html"    "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/free-panel.html" "$PUBLIC_OUT/" || true
+
+          # Standard auxiliaries
           [ -f "$PUBLIC_SRC/404.html" ]    && cp -v "$PUBLIC_SRC/404.html"    "$PUBLIC_OUT/404.html"    || true
           [ -f "$PUBLIC_SRC/robots.txt" ]  && cp -v "$PUBLIC_SRC/robots.txt"  "$PUBLIC_OUT/robots.txt"  || true
           [ -f "$PUBLIC_SRC/sitemap.xml" ] && cp -v "$PUBLIC_SRC/sitemap.xml" "$PUBLIC_OUT/sitemap.xml" || true
@@ -61,6 +71,8 @@ jobs:
           do
             [ -f "$PUBLIC_SRC/$f" ] && cp -v "$PUBLIC_SRC/$f" "$PUBLIC_OUT/$f" || true
           done
+
+          # If you also keep them under docs/favicons/, lift to root as well
           if [ -d "$PUBLIC_SRC/favicons" ]; then
             for f in apple-touch-icon.png favicon-16x16.png favicon-32x32.png android-chrome-192x192.png android-chrome-512x512.png site.webmanifest; do
               [ -f "$PUBLIC_SRC/favicons/$f" ] && cp -v "$PUBLIC_SRC/favicons/$f" "$PUBLIC_OUT/$f" || true
@@ -69,10 +81,10 @@ jobs:
           # ============================================
 
           # Shared assets
-          [ -d "$PUBLIC_SRC/assets" ]   && rsync -a --delete "$PUBLIC_SRC/assets/"   "$PUBLIC_OUT/assets/"   || true
-          [ -d "$PUBLIC_SRC/img" ]      && rsync -a --delete "$PUBLIC_SRC/img/"      "$PUBLIC_OUT/img/"      || true
-          [ -d "$PUBLIC_SRC/css" ]      && rsync -a --delete "$PUBLIC_SRC/css/"      "$PUBLIC_OUT/css/"      || true
-          [ -d "$PUBLIC_SRC/js" ]       && rsync -a --delete "$PUBLIC_SRC/js/"       "$PUBLIC_OUT/js/"       || true
+          [ -d "$PUBLIC_SRC/assets" ]    && rsync -a --delete "$PUBLIC_SRC/assets/"    "$PUBLIC_OUT/assets/"    || true
+          [ -d "$PUBLIC_SRC/img" ]       && rsync -a --delete "$PUBLIC_SRC/img/"       "$PUBLIC_OUT/img/"       || true
+          [ -d "$PUBLIC_SRC/css" ]       && rsync -a --delete "$PUBLIC_SRC/css/"       "$PUBLIC_OUT/css/"       || true
+          [ -d "$PUBLIC_SRC/js" ]        && rsync -a --delete "$PUBLIC_SRC/js/"        "$PUBLIC_OUT/js/"        || true
           [ -d "$PUBLIC_SRC/fragments" ] && rsync -a --delete "$PUBLIC_SRC/fragments/" "$PUBLIC_OUT/fragments/" || true
 
           # Sections
