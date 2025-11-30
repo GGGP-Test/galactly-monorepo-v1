@@ -12,7 +12,7 @@
       var q = location.search || '', h = location.hash || '';
       var p = location.pathname.replace(/index\.html$/i, '');
       if (!/\/$/.test(p)) p += '/';
-      history.replaceState(null, '', p + q + h); // /auth/signup/?site=foo
+      history.replaceState(null, '', p + q + h);
     }
   })();
   </script>
