@@ -598,7 +598,7 @@
       const header = isCompany ? 'Company already registered.' : 'Account exists.';
       const body   = isCompany ? 'That website is already linked to an account.' : 'This email is already in use.';
       const requestBtn = `<a href="#" id="requestAccessLink">Request access</a>`;
-      showStatusHTML(`<strong>${header}</strong> ${body} <a href="/auth/login/?email=${encodeURIComponent(em)}">Log in?</a> · ${requestBtn}`);
+      showStatusHTML(`<strong>${header}</strong> ${body} <a href="/auth/login/?email=${encodeURIComponent(em)}">Log in?</a>, or ${requestBtn}`);
       try { statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
       setTimeout(()=> byId('requestAccessLink')?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); }), 0);
     }
