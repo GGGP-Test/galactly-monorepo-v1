@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Galactly — Login</title>
 
-  <!-- Remove index.html from the URL bar -->
+  <!-- Strip index.html from URL -->
   <script>
     (function () {
       if (/\/index\.html$/i.test(location.pathname)) {
@@ -19,19 +19,17 @@
 
   <link rel="canonical" href="https://galactly.com/auth/login">
 
-  <!-- (Optional) external config shims you can override at build/deploy time -->
+  <!-- Build-time config shims -->
   <script>
     window.__FIREBASE_CONFIG__ = {
       apiKey: "AIzaSyCBf7LHL4PfxD2rH7-HdYSE2dXIGfb3Vz4",
       authDomain: "artemiss-42e40.firebaseapp.com",
       projectId: "artemiss-42e40",
-      appId: "1:384891834378:web:53624662894e0650a74ff3",
-      // storageBucket: "…",
-      // messagingSenderId: "…"
+      appId: "1:384891834378:web:53624662894e0650a74ff3"
     };
     window.__SECURITY__ = {
       turnstileSiteKey: "0x4AAAAAACDlednuZg0WgvLG",
-      // hcaptchaSiteKey: "your-hcaptcha-sitekey", // optional fallback
+      // hcaptchaSiteKey: "…", // optional
       humanVerifyEndpoint: "/api/verify-human"
     };
   </script>
@@ -39,36 +37,29 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
 
-  <!-- Favicons -->
+  <!-- Favicons (rooted + .ico fixed) -->
   <link rel="icon" type="image/svg+xml" sizes="any"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-24 -24 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='-24' x2='0' y2='24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23E6EEF7'/%3E%3Cstop offset='1' stop-color='%23F2DCA0'/%3E%3C/linearGradient%3E%3ClinearGradient id='dim' x1='24' y1='24' x2='-24' y2='-24' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%230e1420' stop-opacity='.48'/%3E%3Cstop offset='.6' stop-color='%230e1420' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='0' cy='0' r='22' fill='%230e1420'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 -12 A12 12 0 1 0 5 12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M2 0 H12' stroke='url(%23g)' stroke-width='6.6'/%3E%3Cpath d='M5 12 A12 12 0 0 1 8 10' stroke='url(%23dim)' stroke-width='6.6'/%3E%3C/g%3E%3C/svg%3E" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/auth/login/favicon-32x32.png?v=3">
-  <link rel="icon" type="image/png" sizes="16x16" href="/auth/login/favicon-16x16.png?v=3">
-  <link rel="apple-touch-icon" sizes="180x180" href="/auth/login/apple-touch-icon.png?v=3">
-  <link rel="manifest" href="/auth/login/site.webmanifest?v=3">
-  <link rel="shortcut icon" href="/auth/login/favicon.ico?v=3">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=3">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=3">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3">
+  <link rel="manifest" href="/site.webmanifest?v=3">
+  <link rel="icon" type="image/x-icon" href="/FileIcon.ico">
+  <link rel="shortcut icon" href="/FileIcon.ico">
 
   <style>
-    /* ========================== KNOBS ========================== */
     :root{
       --content-w: min(960px, 92vw);
       --title-fs: clamp(28px, 5.6vw, 58px);
       --safe-top: env(safe-area-inset-top);
       --safe-bottom: env(safe-area-inset-bottom);
-
-      /* pressed glass controls */
       --ctl-h: 46px;
       --ctl-r: 16px;
       --bevel-light: rgba(255,255,255,.35);
       --bevel-dark: rgba(0,0,0,.55);
       --pane-bg-2: rgba(0,0,0,.16);
-
-      /* colors */
       --fg: #e9ecf3;
       --muted: #a9b2c2;
-
-      /* spacing */
-      --gap-edge-title: 64px;
       --gap-title-subtitle: 10px;
       --gap-subtitle-chips: 14px;
       --gap-chips-hr: 18px;
@@ -76,21 +67,14 @@
       --gap-error-or: 16px;
       --gap-or-field: 18px;
       --gap-bottom-edge: 64px;
-
-      /* topbar */
       --topbar-pad-x: 20px;
       --topbar-pad-y: 10px;
-
-      /* CTA size */
       --cta-d: 36px;
-
-      /* vertical lift — set to 0 to center */
       --stage-lift-m: 0px;
       --stage-lift-d: 0px;
     }
     @media (min-width: 768px){
       :root{
-        --gap-edge-title: 88px;
         --gap-title-subtitle: 12px;
         --gap-subtitle-chips: 16px;
         --gap-chips-hr: 22px;
@@ -102,41 +86,29 @@
       }
     }
 
-    /* ====================== BASE / BACKDROP ===================== */
-    html,body{height:100%;margin:0; background-color:#0c1020;}
+    html,body{height:100%;margin:0;background-color:#0c1020;}
     body{
       color:var(--fg);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
       background:
         radial-gradient(1200px 800px at 76% 26%, rgba(240,196,90,.28) 0%, transparent 58%),
         radial-gradient(1200px 800px at 24% 78%, rgba(64,186,255,.24) 0%, transparent 60%),
         radial-gradient(700px 500px at 50% -8%, rgba(255,255,255,.08) 0%, transparent 70%),
         linear-gradient(180deg, #171a17, #0f1210);
       background-blend-mode: screen, screen, normal, normal;
-
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      overflow-y: auto;                 /* allow page to scroll on phones */
-      -webkit-overflow-scrolling: touch;
+      overflow-y:auto; -webkit-overflow-scrolling:touch;
     }
 
+    /* Perfect centering of the login block */
     .wrap{
-      min-height:100dvh;               /* dynamic viewport height to avoid iOS bar jump */
+      min-height:100dvh;
       display:grid;
       place-items:center;
       padding: calc(0px + var(--safe-top)) 16px calc(0px + var(--safe-bottom));
     }
-    .stage{
-      width:var(--content-w);
-      transform: translateY(var(--stage-lift-m));
-      transition: transform .2s ease;
-    }
-    @media (min-width:768px){
-      .stage{ transform: translateY(var(--stage-lift-d)); }
-    }
+    .stage{ width:var(--content-w); transform: translateY(var(--stage-lift-m)); transition: transform .2s ease; }
+    @media (min-width:768px){ .stage{ transform: translateY(var(--stage-lift-d)); } }
 
-    /* top chrome */
     .topbar{
       position:fixed; top: calc(var(--safe-top) + var(--topbar-pad-y)); left:0; right:0; z-index:10;
       display:flex; align-items:center; justify-content:space-between; padding:0 var(--topbar-pad-x);
@@ -147,21 +119,16 @@
     .home-link{ display:inline-flex; align-items:center; justify-content:center; padding:6px 8px; background:none; border:0; line-height:0; color: var(--fg); }
     .home-link svg{ width:22px; height:22px; display:block; }
     @media (min-width:1024px){ .home-link svg{ width:28px; height:28px; } }
-    .home-link:hover{ opacity:.85; transform:none; }
 
     h1{ font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui; margin:0 0 18px 0; text-shadow:0 1px 0 rgba(0,0,0,.35); text-align:center; }
     .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
     .center { display:grid; gap:16px; place-items:center; }
 
-    /* ===================== LAYOUT ===================== */
     .cardless{ max-width:860px; margin-inline:auto; }
-
-    .title-row{ text-align:center; margin-bottom:8px }
-    .title-row h1{ font-family:"Plus Jakarta Sans", Inter, system-ui }
+    .title-row{ text-align:center; margin:0 0 8px 0; } /* no top margin → real centering */
     .hr{ width:min(560px, 86vw); height:1px; margin:14px auto var(--gap-hr-error); background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
     .muted{ color:var(--muted); font-size:14px; text-align:center }
 
-    /* --------- GLASS BUTTON (Google) ---------- */
     .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
     .chip{
       --local-h: var(--ctl-h);
@@ -180,7 +147,6 @@
     }
     .chip:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.22); box-shadow: inset 0 1px 0 var(--bevel-light), inset 0 -2px 5px var(--bevel-dark), inset 0 12px 24px var(--pane-bg-2), 0 6px 18px rgba(0,0,0,.32); }
 
-    /* Inline banners */
     .inline-error{
       width:min(560px, 86vw); margin:0 auto; margin-bottom: var(--gap-error-or);
       font-size: 13px; line-height: 1.35; padding: 10px 12px; border-radius: 10px;
@@ -196,7 +162,6 @@
     .small-row{ display:flex; gap:10px; justify-content:center; margin-top:8px; font-size:12px; color:var(--muted); }
     .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
-    /* ===== Fields (pressed glass) ===== */
     .field-wrap{ width:min(320px, 86vw); margin: 24px auto 0 auto; position:relative; }
     .pressed{
       position:relative; display:grid; grid-template-columns: 26px 1fr; align-items:center;
@@ -228,7 +193,6 @@
     }
     input::placeholder{ color:rgba(233,236,243,.62); }
 
-    /* inside-field GLASS CTA */
     .field-cta{
       position:absolute; right:6px; top:50%; width:var(--cta-d); height:var(--cta-d);
       transform: translate(10px,-50%) scale(.9); opacity:0; pointer-events:none;
@@ -248,10 +212,6 @@
     }
     .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
 
-    /* back arrow row */
-    .single-action{ display:grid; place-items:center; margin-top:14px; }
-
-    /* ==== page-leave ==== */
     :root{ --leave-ms: 1200ms; }
     body.leaving .stage{
       opacity: 0; transform: translateY(12px) scale(.985); filter: blur(2px);
@@ -264,7 +224,6 @@
     }
     body.leaving::after{ opacity:1; }
 
-    /* Buttons reused */
     .btn-icon{
       display:inline-flex; align-items:center; justify-content:center;
       width:44px; height:44px; border-radius:999px; color:var(--fg);
@@ -281,19 +240,17 @@
 
     .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
-    /* hides */
+    .single-action{ display:grid; place-items:center; margin-top:14px; }
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
   </style>
 
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
   <!-- Human verification (invisible) -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
@@ -318,7 +275,7 @@
   <main class="wrap">
     <div class="stage cardless" aria-live="polite">
 
-      <div class="title-row" style="margin-top: var(--gap-edge-title);">
+      <div class="title-row">
         <h1 class="anim-title">Login</h1>
         <p class="subtitle anim-sub">Sign in with</p>
       </div>
@@ -406,30 +363,21 @@
     </div>
   </main>
 
-  <!-- Hidden containers for invisible captcha render targets -->
+  <!-- Invisible captcha targets -->
   <div id="human-zone" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;">
     <div id="cf-turnstile"></div>
     <div id="hcaptcha"></div>
   </div>
 
+  <!-- Brand icon render -->
   <style>
-    .site-header .brand,
-    .topbar .brand{
-      display:flex; align-items:center;
-      --icon-w: 36px; --brand-gap: 4px; gap: var(--brand-gap);
-    }
-    .brand-icon{ --gg-gap-x: 10px; --left-dim: 0.65; --stroke-w: 3.0; }
+    .site-header .brand, .topbar .brand{ display:flex; align-items:center; --icon-w:36px; --brand-gap:4px; gap:var(--brand-gap);}
+    .brand-icon{ --gg-gap-x:10px; --left-dim:.65; --stroke-w:3; }
     .brand-icon svg{ width:var(--icon-w); height:var(--icon-w); display:block; }
-    .brand-word{
-      font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:linear-gradient(180deg,#FFFFFF,#E6EEF7);
-      -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap;
-    }
+    .brand-word{ font:800 22px/1 "Plus Jakarta Sans", Inter, system-ui; background:linear-gradient(180deg,#FFF,#E6EEF7); -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.2px; white-space:nowrap; }
     .brand-icon .stroke{ vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
     .brand-icon .piece{ transform-box: view-box; transform-origin: 50% 50%; }
   </style>
-
-  <!-- Logo + brand icon -->
   <script>
     (function tryLogo(){
       const candidates = [
@@ -492,7 +440,7 @@
   </script>
 
   <script>
-    /* ---------------- URL helpers, canonical links, and next-param capture ---------------- */
+    /* --------------- next= capture & canonicalize legacy links --------------- */
     (function(){
       function captureNext(){
         const p = new URLSearchParams(location.search);
@@ -500,10 +448,8 @@
         if (!next) return '';
         try { next = decodeURIComponent(next); } catch(_){}
         if (/^https?:/i.test(next)) {
-          try {
-            const u = new URL(next, location.origin);
-            next = (u.origin === location.origin) ? (u.pathname + u.search + u.hash) : '';
-          } catch(_) { next = ''; }
+          try { const u = new URL(next, location.origin); next = (u.origin === location.origin) ? (u.pathname + u.search + u.hash) : ''; }
+          catch(_) { next = ''; }
         }
         if (next && !next.startsWith('/')) next = '';
         if (next) sessionStorage.setItem('gg_next', next);
@@ -511,7 +457,6 @@
       }
       captureNext();
 
-      // Canonicalize any legacy .html links/forms on this page
       (function canonicalize(){
         const map = new Map([
           ['login.html','/auth/login/'],['/login','/auth/login/'],
@@ -533,9 +478,9 @@
   </script>
 
   <script>
-    /* ---------------- Page plumbing + state ---------------- */
+    /* ---------------- Page refs ---------------- */
     const byId = (id)=>document.getElementById(id);
-    const statusEl = byId('inlineStatus');
+    const statusEl   = byId('inlineStatus');
     const emailInput = byId('email');
     const emailNext  = byId('emailNext');
     const emailBox   = byId('emailBox');
@@ -560,7 +505,7 @@
       setTimeout(()=>{ el.style.boxShadow = prev; }, 260);
     }
 
-    /* Prefill email + build signup link that preserves next */
+    /* Prefill email + preserve ?next= in signup link */
     (function prefill(){
       const em = qp('email') || localStorage.getItem('gg_pending_email') || '';
       if(em){ emailInput.value = em; }
@@ -576,22 +521,14 @@
 
     /* Stage toggles */
     function setEmailStage(){
-      pwdWrap.hidden = true;
-      backBtn.hidden = true;
-      byId('s2-or').hidden = false;
-      hideStatus();
-      updateEmailCTA();
+      pwdWrap.hidden = true; backBtn.hidden = true; byId('s2-or').hidden = false;
+      hideStatus(); updateEmailCTA();
     }
     function setPasswordStage(){
-      byId('s2-or').hidden = true;
-      pwdWrap.hidden = false;
-      backBtn.hidden = false;
-      hideStatus();
-      updatePwdCTA();
-      try{ pwdInput.focus({preventScroll:true}); }catch{}
+      byId('s2-or').hidden = true; pwdWrap.hidden = false; backBtn.hidden = false;
+      hideStatus(); updatePwdCTA(); try{ pwdInput.focus({preventScroll:true}); }catch{}
     }
 
-    /* inside CTA visibility */
     function updateEmailCTA(){
       const show = looksValidEmail(emailInput.value);
       emailBox.classList.toggle('show-cta', show);
@@ -632,15 +569,13 @@
     (async function initFirebase(){
       try{
         if(firebase?.apps?.length){
-          auth = firebase.auth();
-          try{ db = firebase.firestore(); }catch(_){}
+          auth = firebase.auth(); try{ db = firebase.firestore(); }catch(_){}
           return;
         }
         const looksReal = FIREBASE_CONFIG && Object.values(FIREBASE_CONFIG).every(v => typeof v==='string' && v && !/^YOUR_/i.test(v));
         if(looksReal){
           firebase.initializeApp(FIREBASE_CONFIG);
-          auth = firebase.auth();
-          try{ db = firebase.firestore(); }catch(_){}
+          auth = firebase.auth(); try{ db = firebase.firestore(); }catch(_){}
           return;
         }
         try{
@@ -649,23 +584,20 @@
             const cfg = await res.json();
             if(cfg && cfg.projectId){
               firebase.initializeApp(cfg);
-              auth = firebase.auth();
-              try{ db = firebase.firestore(); }catch(_){}
+              auth = firebase.auth(); try{ db = firebase.firestore(); }catch(_){}
             }
           }
         }catch(_){}
       }catch(e){ auth = null; db = null; }
     })();
 
-    /* -------- Human verification (Turnstile → hCaptcha fallback) -------- */
+    /* -------- Human verification (with grace window) -------- */
     const SECURITY = (window.__SECURITY__ && typeof window.__SECURITY__==='object' && window.__SECURITY__) || {};
     let humanProvider = null, humanWidgetId = null, humanReady = false;
 
     function initHuman(){
       const cfKey = SECURITY.turnstileSiteKey && SECURITY.turnstileSiteKey.trim();
       const hcKey = SECURITY.hcaptchaSiteKey && SECURITY.hcaptchaSiteKey.trim();
-
-      // Prefer Turnstile
       if (cfKey && window.turnstile && typeof window.turnstile.render === 'function'){
         try{
           humanWidgetId = window.turnstile.render('#cf-turnstile', {
@@ -675,7 +607,6 @@
           humanProvider = 'turnstile'; humanReady = true; return;
         }catch(_){}
       }
-      // Fallback to hCaptcha
       if (hcKey && window.hcaptcha && typeof window.hcaptcha.render === 'function'){
         try{
           humanWidgetId = window.hcaptcha.render('hcaptcha', { sitekey: hcKey, size: 'invisible', theme: 'dark', callback: ()=>{} });
@@ -716,6 +647,15 @@
     }
     window.addEventListener('load', ()=>{ try{ initHuman(); }catch(_){} });
 
+    /* Grace window: skip human check for first 3 password/google attempts this session */
+    function getTryCount(){ return parseInt(sessionStorage.getItem('gg_login_tries')||'0',10)||0; }
+    function bumpTryCount(){ sessionStorage.setItem('gg_login_tries', String(getTryCount()+1)); }
+    function humanNeeded(kind){
+      const hard = (kind==='invite' || kind==='create');
+      if (hard) return true;
+      return getTryCount() >= 3; // require only after a few attempts
+    }
+
     /* -------- Helpers -------- */
     const TIMEOUTS = { methods: 3500, sign: 10000, invite: 4000, reset: 6000, create: 12000 };
     function withTimeout(promise, ms, label){
@@ -728,7 +668,7 @@
       return Array.isArray(methods) ? methods : [];
     }
 
-    /* -------- Invite flow (optional) -------- */
+    /* -------- Invite helpers (optional) -------- */
     async function loadInvite(token){
       if(!db) return null;
       try{
@@ -764,13 +704,12 @@
       }catch(_){ return {ok:false, reason:'tx_failed'}; }
     }
 
-    /* -------- Bridge routing -------- */
-    function goToBridge(from){
-      const email = (byId('email')?.value || '').trim();
-      const params = new URLSearchParams({ from: from||'unknown', email });
-      const nx = sessionStorage.getItem('gg_next'); if (nx) params.set('next', nx);
+    /* -------- After-login routing: next → /dashboard -------- */
+    function goAfterLogin(){
+      const nx = sessionStorage.getItem('gg_next');
+      const target = (nx && nx.startsWith('/')) ? nx : '/dashboard';
       document.body.classList.add('leaving');
-      setTimeout(()=>{ location.href = `/auth/bridge/?${params}`; }, 150);
+      setTimeout(()=>{ location.href = target; }, 150);
     }
 
     /* -------- EMAIL NEXT -------- */
@@ -782,37 +721,23 @@
 
       let methods = [];
       try{
-        // optional human check just to dampen abuse
-        const human = await getHumanToken('email_check');
-        if(human && !human.ok){ showStatus("Please retry the check."); resetHuman(); return; }
-        const hr = await verifyHumanServerSide({ provider: human.provider, token: human.token, action:'email_check' });
-        if(hr && hr.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
-
+        // No human check on email step (keeps it smooth)
         methods = await fetchMethods(email);
       }catch(e){
-        resetHuman();
         if(String(e.message||'').startsWith('timeout')){ showStatus("Connection is slow. Try again."); return; }
-        showStatus("We couldn’t check that email. Try again.");
-        return;
+        showStatus("We couldn’t check that email. Try again."); return;
       }
 
-      // Existing → password stage or provider hint
       if(methods.length){
         if(methods.includes('password')){ setPasswordStage(); return; }
         if(methods.includes('google.com')){
           showStatusHTML(`Use <strong>Google</strong> sign-in for ${email.replace(/</g,'&lt;')}.`);
-          googleBtn.focus();
-          return;
+          googleBtn.focus(); return;
         }
-        showStatus("Use your configured sign-in method.");
-        return;
+        showStatus("Use your configured sign-in method."); return;
       }
 
-      // No account found:
-      if(INVITE_CODE){
-        setPasswordStage();  // invited first login → create below
-        return;
-      }
+      if(INVITE_CODE){ setPasswordStage(); return; }
 
       const u = new URL('/auth/signup/', location.origin);
       const nx = sessionStorage.getItem('gg_next'); if (nx) u.searchParams.set('next', nx);
@@ -825,6 +750,7 @@
 
     /* -------- PASSWORD SUBMIT -------- */
     pwdNext.addEventListener('click', async ()=>{
+      bumpTryCount();  // counts toward grace window
       hideStatus();
       const email = (emailInput.value || '').trim();
       const pwd = pwdInput.value;
@@ -832,21 +758,23 @@
       if(pwd.length < 6){ showStatus("Password is too short."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
 
-      // human check (silent)
-      const human = await getHumanToken(INVITE_CODE ? 'invite_login' : 'password_login');
-      if(human && !human.ok){ showStatus("Please retry the check."); resetHuman(); return; }
-      const hr = await verifyHumanServerSide({ provider: human.provider, token: human.token, action: INVITE_CODE ? 'invite_login' : 'password_login' });
-      if(hr && hr.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
-
       let methods = [];
       try{ methods = await fetchMethods(email); }catch(_){}
+
+      // Human check only after grace window OR invite path
+      const needHuman = humanNeeded(INVITE_CODE ? 'invite' : 'login');
+      if (needHuman){
+        const human = await getHumanToken(INVITE_CODE ? 'invite_login' : 'password_login');
+        const hr = await verifyHumanServerSide({ provider: human.provider, token: human.token, action: INVITE_CODE ? 'invite_login' : 'password_login' });
+        if(hr && hr.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
+      }
 
       // Existing account → sign in
       if(methods.includes('password')){
         try{
           await withTimeout(auth.signInWithEmailAndPassword(email, pwd), TIMEOUTS.sign, 'signin');
           try{ localStorage.setItem('gg_pending_email', email); }catch(_){}
-          goToBridge('password');
+          goAfterLogin();
         }catch(e){
           if(e?.code === 'auth/wrong-password'){ showStatus("Wrong password. Try again or reset."); return; }
           if(e?.code === 'auth/user-disabled'){ showStatus("This account is disabled."); return; }
@@ -856,7 +784,7 @@
         return;
       }
 
-      // Invite-based first login → create account and accept invite
+      // Invite-based first login → create + accept
       if(INVITE_CODE){
         if(!db){ showStatus("Invite acceptance isn’t available right now."); resetHuman(); return; }
         try{
@@ -878,17 +806,15 @@
 
           try{ await acceptInvite(INVITE_CODE, email, cred?.user?.uid || null); }catch(_){}
           try{ localStorage.setItem('gg_pending_email', email); }catch(_){}
-          goToBridge('invite');
+          goAfterLogin();
           return;
 
         }catch(_){
           showStatus("We couldn’t accept the invite right now. Try again.");
-          resetHuman();
-          return;
+          resetHuman(); return;
         }
       }
 
-      // Fallback
       showStatus("No account found. Create one first.");
       resetHuman();
     });
@@ -896,14 +822,17 @@
     /* -------- Google sign-in -------- */
     googleBtn?.addEventListener('click', async (e)=>{
       e.preventDefault();
+      bumpTryCount(); // counts toward grace window
       hideStatus();
       if(!auth){ showStatus("Google sign-in isn’t configured. Add Firebase keys."); return; }
 
       try{
-        const tok = await getHumanToken('google_login');
-        if(!tok.ok){ showStatus('Please retry the check.'); return; }
-        const vr = await verifyHumanServerSide({ provider: tok.provider, token: tok.token, action:'google_login' });
-        if(vr && vr.ok === false){ showStatus('Human verification failed.'); return; }
+        const needHuman = humanNeeded(INVITE_CODE ? 'invite' : 'login');
+        if(needHuman){
+          const tok = await getHumanToken('google_login');
+          const vr = await verifyHumanServerSide({ provider: tok.provider, token: tok.token, action:'google_login' });
+          if(vr && vr.ok === false){ showStatus('Human verification failed.'); return; }
+        }
 
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
@@ -941,24 +870,20 @@
           }
           try{ await acceptInvite(INVITE_CODE, email, user?.uid || null); }catch(_){}
           try{ localStorage.setItem('gg_pending_email', email); }catch(_){}
-          goToBridge('google-invite');
+          goAfterLogin();
           return;
         }
 
         try{ localStorage.setItem('gg_pending_email', email); }catch(_){}
-        goToBridge('google');
+        goAfterLogin();
 
       }catch(err){
         if(err?.code === 'auth/popup-closed-by-user') return;
-        if(err?.code === 'auth/account-exists-with-different-credential'){
-          showStatus("Use your original sign-in method for this email."); return;
-        }
+        if(err?.code === 'auth/account-exists-with-different-credential'){ showStatus("Use your original sign-in method for this email."); return; }
         if(err?.code === 'auth/network-request-failed'){ showStatus("Network problem. Try again."); return; }
         if(err?.code === 'auth/operation-not-allowed'){ showStatus("Google sign-in is disabled for this project."); return; }
         showStatus("We couldn't complete Google sign-in. Try again.");
-      } finally {
-        resetHuman();
-      }
+      } finally { resetHuman(); }
     });
 
     /* -------- Forgot password -------- */
