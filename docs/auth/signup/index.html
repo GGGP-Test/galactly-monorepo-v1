@@ -1158,7 +1158,7 @@
       } catch (err) {
         setBusy(false);
         if (err?.code === 'auth/popup-closed-by-user') return;
-        if (err?.code === 'auth/account-exists-with-different-credential') { showStatus("This email already exists with a different sign-in method. Use email + password to log in."); return; }
+        if (err?.code === 'auth/account-exists-with-different-credential') { showStatus("This website already exists with a different sign-in method. Use email + password to log in."); return; }
         if (err?.code === 'auth/network-request-failed'){ showStatus("Network problem. Try again."); return; }
         if (err?.code === 'auth/operation-not-allowed'){ showStatus("Google sign-in is disabled for this project."); return; }
         showStatus("We couldn't complete Google sign-in. Try again.");
