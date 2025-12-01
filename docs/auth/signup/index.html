@@ -597,7 +597,7 @@
       const raw = (statusEl?.textContent || statusEl?.innerText || '').toLowerCase();
       const isCompany = raw.includes('company') || raw.includes('website');
       const header = isCompany ? 'Company already registered.' : 'Account exists.';
-      const body   = isCompany ? 'That website is already linked to an account.' : 'This email is already in use.';
+      const body   = isCompany ? 'That website is already linked to an account.' : 'This website is already in use.';
       const requestBtn = `<a href="#" id="requestAccessLink">Request access</a>`;
       showStatusHTML(`<strong>${header}</strong> ${body} <a href="/auth/login/?email=${encodeURIComponent(em)}">Log in</a>  Or  ${requestBtn}`);
       try { statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
