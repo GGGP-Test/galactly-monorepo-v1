@@ -154,6 +154,19 @@
     }
     .inline-error a{ color: currentColor; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
     .inline-error a:hover, .inline-error a:focus-visible { text-decoration-thickness: 2px; outline: none; }
+
+    /* NEW: white success banner */
+    .inline-success{
+      width:min(560px, 86vw); margin:0 auto; margin-bottom: var(--gap-error-or);
+      font-size: 13px; line-height: 1.35; padding: 10px 12px; border-radius: 10px;
+      border:1px solid rgba(255,255,255,.85);
+      background: rgba(255,255,255,.94);
+      color:#0e1420;
+      box-shadow: 0 2px 14px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.6);
+    }
+    .inline-success a{ color: inherit; text-decoration: underline; text-underline-offset: 2px; font-weight: 700; }
+    .inline-success a:hover, .inline-success a:focus-visible { text-decoration-thickness: 2px; outline: none; }
+
     .inline-note{
       width:min(560px, 86vw); margin: 8px auto 0; font-size: 13px; line-height: 1.35; padding: 10px 12px; border-radius: 10px;
       border:1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: var(--fg);
@@ -297,7 +310,7 @@
 
       <div class="hr anim-divider" aria-hidden="true"></div>
 
-      <!-- Status/error area -->
+      <!-- Status/error area (type toggled via JS) -->
       <div id="inlineStatus" class="inline-error" role="alert" hidden></div>
 
       <!-- Invite banner (shows when ?invite=...) -->
@@ -497,8 +510,14 @@
 
     function qp(name){ return new URLSearchParams(location.search).get(name); }
     function looksValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(v||'').trim()); }
-    function showStatus(msg){ statusEl.textContent = msg || "Something went wrong."; statusEl.hidden = false; }
-    function showStatusHTML(html){ statusEl.innerHTML = html || "Something went wrong."; statusEl.hidden = false; }
+
+    /* Status helpers: error (red), success (white), note (gray) */
+    function setStatusType(type){
+      statusEl.classList.remove('inline-error','inline-success','inline-note');
+      statusEl.classList.add(type === 'success' ? 'inline-success' : (type === 'note' ? 'inline-note' : 'inline-error'));
+    }
+    function showStatus(msg, type){ setStatusType(type||'error'); statusEl.textContent = msg || "Something went wrong."; statusEl.hidden = false; }
+    function showStatusHTML(html, type){ setStatusType(type||'error'); statusEl.innerHTML = html || "Something went wrong."; statusEl.hidden = false; }
     function hideStatus(){ statusEl.hidden = true; statusEl.textContent = ""; }
     function pulse(el){
       if(!el) return;
@@ -510,7 +529,8 @@
 
     /* Prefill email + preserve ?next= in signup link */
     (function prefill(){
-      const em = qp('email') || localStorage.getItem('gg_pending_email') || '';
+      const p = new URLSearchParams(location.search);
+      const em = p.get('email') || localStorage.getItem('gg_pending_email') || '';
       if(em){ emailInput.value = em; }
       updateEmailCTA();
       const link = new URL('/auth/signup/', location.origin);
@@ -738,7 +758,8 @@
           }),
           TIMEOUTS.invite, 'access_request'
         );
-        showStatus("Request sent. We’ll reach out soon.");
+        /* SUCCESS → white banner */
+        showStatus("Request sent to your account admin.", 'success');
       }catch(_){
         showStatus("Couldn’t send request. Try again later.");
       }finally{
@@ -938,7 +959,8 @@
       if(!auth){ showStatus("Reset isn’t available right now."); return; }
       try{
         await withTimeout(auth.sendPasswordResetEmail(email), TIMEOUTS.reset, 'reset');
-        showStatus("Password reset link sent.");
+        /* SUCCESS → white banner */
+        showStatus("Password reset link sent.", 'success');
       }catch(err){
         if(err?.code === 'auth/user-not-found'){ showStatus("No account found for that email."); return; }
         if(err?.code === 'auth/network-request-failed'){ showStatus("Network problem. Try again."); return; }
