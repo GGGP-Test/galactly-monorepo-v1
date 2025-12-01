@@ -44,6 +44,20 @@
     };
   </script>
   <script>
+    /* Seat policy + billing links (admin email uses these). */
+    window.__PLANS__ = {
+      free: { seats: 1, label: "Free" },
+      pro:  { seats: 3, label: "Pro"  },
+      vip:  { seats: 5, label: "VIP"  }
+    };
+    /* Fill these with real Stripe Checkout URLs later. */
+    window.__BILLING__ = {
+      proCheckout: "",         // e.g. "https://checkout.stripe.com/c/session/..."
+      vipCheckout: "",         // e.g. "https://checkout.stripe.com/c/session/..."
+      billingPortal: ""        // optional Stripe billing portal link
+    };
+  </script>
+  <script>
     window.__SECURITY__ = {
       turnstileSiteKey: "",
       hcaptchaSiteKey:  "",
@@ -75,10 +89,17 @@
       --ring-alpha: .34; --ring-speed: 900ms; --ring-size: 110%;
       --fg: #e9ecf3; --muted: #a9b2c2; --error: #ff6b6b;
       --bg-1: #0c1020; --bg-2: #0c1326;
-      --s2-gap-edge-title: 56px; --s2-gap-title-subtitle: 10px;
-      --s2-gap-subtitle-chips: 14px; --s2-gap-chips-hr: 18px;
-      --s2-gap-hr-or: 10px; --s2-gap-or-field: 18px;
-      --s2-gap-field-arrow: 12px; --s2-gap-bottom-edge: 56px;
+
+      /* tightened rhythm */
+      --s2-gap-edge-title: 48px;
+      --s2-gap-title-subtitle: 8px;
+      --s2-gap-subtitle-chips: 12px;
+      --s2-gap-chips-hr: 16px;
+      --s2-gap-hr-or: 8px;
+      --s2-gap-or-field: 16px;
+      --s2-gap-field-arrow: 10px;
+      --s2-gap-bottom-edge: 48px;
+
       --topbar-pad-x: 20px; --topbar-pad-y: 10px;
       --cta-d: 36px; --stage-lift-m: 0px; --stage-lift-d: 0px;
       --chip-sheen-ang: -70deg; --chip-sheen-ang-hover: -110deg;
@@ -90,12 +111,20 @@
       --field-inset-ambient: rgba(0,0,0,.22);
     }
     @property --chip-sheen-ang { syntax: "<angle>"; inherits: true; initial-value: -70deg; }
-    @media (min-width:768px){ :root{ --cta-d: 40px; } }
+    @media (min-width:768px){
+      :root{ --cta-d: 40px; }
+    }
     @media (min-width: 768px){
-      :root{ --s2-gap-edge-title: 80px; --s2-gap-title-subtitle: 12px;
-             --s2-gap-subtitle-chips: 16px; --s2-gap-chips-hr: 22px;
-             --s2-gap-hr-or: 12px; --s2-gap-or-field: 22px;
-             --s2-gap-field-arrow: 16px; --s2-gap-bottom-edge: 80px; }
+      :root{
+        --s2-gap-edge-title: 72px;
+        --s2-gap-title-subtitle: 10px;
+        --s2-gap-subtitle-chips: 14px;
+        --s2-gap-chips-hr: 20px;
+        --s2-gap-hr-or: 10px;
+        --s2-gap-or-field: 20px;
+        --s2-gap-field-arrow: 12px;
+        --s2-gap-bottom-edge: 72px;
+      }
     }
 
     /* ====================== BASE / BACKDROP ===================== */
@@ -130,7 +159,7 @@
     @media (min-width:1024px){ .home-link svg{ width:28px; height:28px; } }
 
     h1{ font:800 var(--title-fs)/1.05 "Plus Jakarta Sans", Inter, system-ui; margin:0 0 18px 0; text-shadow:0 1px 0 rgba(0,0,0,.35); text-align:center; }
-    .subtitle{ color:var(--muted); margin:0 0 22px 0; text-align:center }
+    .subtitle{ color:var(--muted); margin:0 0 18px 0; text-align:center }
     .center { display:grid; gap:16px; place-items:center; }
     #step2 .center { gap: 0; }
 
@@ -183,7 +212,7 @@
     .title-row{ text-align:center; margin-bottom:8px }
     .title-row h1{ font-family:"Plus Jakarta Sans", Inter, system-ui }
 
-    .hr{ width:min(560px, 86vw); height:1px; margin:14px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
+    .hr{ width:min(560px, 86vw); height:1px; margin:12px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
     .muted{ color:var(--muted); font-size:14px; text-align:center }
 
     /* --------- GLASS BUTTON (Google only) ---------- */
@@ -221,7 +250,7 @@
 
     /* Inline error/info banners */
     .inline-error{
-      width:min(560px, 86vw); margin: 8px auto 16px; font-size: 13px; line-height: 1.35;
+      width:min(560px, 86vw); margin: 8px auto 14px; font-size: 13px; line-height: 1.35;
       padding: 10px 12px; border-radius: 10px; border:1px solid rgba(255,107,107,.35);
       background: rgba(255,107,107,.12); color: #ffd7d7;
     }
@@ -236,7 +265,7 @@
     .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
     /* ===== Email/Password fields (pressed) ===== */
-    .field-wrap{ width:min(280px, 86vw); margin: 24px auto 0 auto; position:relative; }
+    .field-wrap{ width:min(280px, 86vw); margin: 20px auto 0 auto; position:relative; }
     .pressed{
       position:relative; display:grid; grid-template-columns: 26px 1fr; align-items:center;
       height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px; background: transparent;
@@ -279,14 +308,14 @@
     .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
 
     /* Back arrow row */
-    .single-action{ display:grid; place-items:center; margin-top:14px; }
+    .single-action{ display:grid; place-items:center; margin-top:12px; }
 
     /* Step 2 spacing */
     #step2 .title-row       { margin-top: var(--s2-gap-edge-title); margin-bottom: 0; }
     #step2 .title-row h1    { margin: 0 0 var(--s2-gap-title-subtitle) 0; }
     #step2 .subtitle        { margin: 0 0 var(--s2-gap-subtitle-chips) 0; text-align: center; }
     #step2 .chip-row        { margin: 0 0 var(--s2-gap-chips-hr) 0; }
-    #step2 .hr              { margin: 12px auto var(--s2-gap-hr-or) auto; }
+    #step2 .hr              { margin: 10px auto var(--s2-gap-hr-or) auto; }
     #step2 .muted           { margin: 0 0 var(--s2-gap-or-field) 0; }
     #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
     #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
@@ -594,12 +623,8 @@
 
     function goLogin(email){
       const em = (email || emailInput?.value || '').trim();
-      const raw = (statusEl?.textContent || statusEl?.innerText || '').toLowerCase();
-      const isCompany = raw.includes('company') || raw.includes('website');
-      const header = isCompany ? 'Company already registered.' : 'Account exists.';
-      const body   = isCompany ? 'That website is already linked to an account.' : 'This website is already in use.';
       const requestBtn = `<a href="#" id="requestAccessLink">Request access</a>`;
-      showStatusHTML(`<strong>${header}</strong> ${body} <a href="/auth/login/?email=${encodeURIComponent(em)}">Log in</a>  Or  ${requestBtn}`);
+      showStatusHTML(`<strong>Company already registered.</strong> <a href="/auth/login/?email=${encodeURIComponent(em)}">Log in</a>  Or  ${requestBtn}`);
       try { statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
       setTimeout(()=> byId('requestAccessLink')?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); }), 0);
     }
@@ -819,12 +844,11 @@
       const s = riskPrune(loadRisk());
       if (s.humanPassUntil && now < s.humanPassUntil) return false; // passport valid
 
-      const { recentCount, totalCount, distinctEmails, lastDelta } = riskStats(); // look at overall pattern, not just action
+      const { recentCount, totalCount, distinctEmails, lastDelta } = riskStats(); // overall pattern
       if (totalCount <= POLICY.warmupTries) return false;
       if (lastDelta < POLICY.throttleMs && totalCount>=2) return true;
       if (totalCount >= POLICY.maxTriesBeforeChallenge) return true;
       if (distinctEmails >= POLICY.distinctEmailsBeforeChallenge) return true;
-      // Heuristic: if user is attempting password signup after a lot of prior email checks
       if (reason === 'password_signup' && recentCount >= 1 && totalCount >= (POLICY.warmupTries+1)) return true;
       return false;
     }
@@ -914,8 +938,8 @@
         if(!snap.exists) return {state:'free'};
         const data = snap.data() || {};
         const owner = (data.owner || data.claimedBy || '').toLowerCase();
-        if(owner && owner === (email||'').toLowerCase()){ return {state:'claimed-self'}; }
-        return {state:'claimed-other'};
+        if(owner && owner === (email||'').toLowerCase()){ return {state:'claimed-self', data}; }
+        return {state:'claimed-other', data};
       }catch(e){
         if(String(e?.message||'').startsWith('timeout')) return {state:'unavailable'};
         return {state:'unavailable'};
@@ -965,6 +989,50 @@
       return true;
     }
 
+    /* ---------- Seat policy (privacy-safe, admin-only) ---------- */
+    function planCap(plan){
+      const caps = window.__PLANS__ || {};
+      const key = String(plan||'').toLowerCase();
+      return (caps[key]?.seats) || null;
+    }
+    async function snapshotSeats({domain, orgId}){
+      // Best-effort, admin-only metadata. We do NOT reveal this to the requester.
+      const out = { plan: null, assigned: null, cap: null, over: null, reason: null, source: null };
+      try{
+        // Prefer a backend snapshot if you add it later.
+        try{
+          const r = await withTimeout(fetch(`/api/org-seat-snapshot?domain=${encodeURIComponent(domain)}${orgId?`&orgId=${encodeURIComponent(orgId)}`:''}`, { credentials:'include' }), 2200, 'seatSnapshot');
+          if(r.ok){
+            const js = await r.json().catch(()=>null);
+            if(js){
+              out.plan = js.plan || null;
+              out.assigned = (typeof js.assigned==='number'?js.assigned:null);
+              out.cap = (typeof js.cap==='number'?js.cap:planCap(js.plan));
+              out.over = (out.cap!=null && out.assigned!=null) ? (out.assigned >= out.cap) : null;
+              out.reason = js.reason || null;
+              out.source = 'api';
+              return out;
+            }
+          }
+        }catch(_){}
+        // Fallback: look at domainClaims + obvious hints (still privacy-safe).
+        if(db && orgId){
+          try{
+            const orgDoc = await withTimeout(db.collection('orgs').doc(orgId).get(), 2000, 'orgDoc');
+            const plan = (orgDoc?.exists && (orgDoc.data()?.plan || orgDoc.data()?.tier)) || null;
+            out.plan = plan || null;
+            out.cap = planCap(out.plan);
+            // Rough guess: assume at least 1 member if domain is claimed.
+            out.assigned = 1;
+            out.over = (out.cap!=null && out.assigned!=null) ? (out.assigned >= out.cap) : null;
+            out.source = 'firestore_guess';
+            return out;
+          }catch(_){}
+        }
+      }catch(_){}
+      return out;
+    }
+
     /* ---------- Swap to Password stage ---------- */
     function toPasswordStage(){
       s2Or.hidden = true; s2TopStart.hidden = true; s2TopPass.hidden  = false;
@@ -977,7 +1045,7 @@
       window.onboarding?.emailContinue?.(emailInput.value.trim());
     }
 
-    /* ---------- Access Request ---------- */
+    /* ---------- Access Request (privacy-safe + seat gate) ---------- */
     async function openAccessRequest(){
       try{
         const email = (emailInput?.value || '').trim();
@@ -988,13 +1056,63 @@
         if(!db){ showStatus("Unable to send request at the moment."); return; }
 
         setBusy(true);
-        await withTimeout(
+
+        // enrich with org metadata (optional)
+        let orgId = null, adminEmails = null, claimData = null;
+        try{
+          const snap = await withTimeout(db.collection('domainClaims').doc(domain).get(), TIMEOUTS.domainCheck, 'domainLookup');
+          if (snap?.exists){
+            claimData = snap.data() || {};
+            orgId = claimData.orgId || claimData.tenantId || null;
+            adminEmails = Array.isArray(claimData.adminEmails) ? claimData.adminEmails.slice(0, 20) : null;
+          }
+        }catch(_){}
+
+        // seat snapshot (best effort; not shown to requester)
+        const seat = await snapshotSeats({ domain, orgId });
+
+        // Reason tag for admin email (we never show this to requester)
+        let reason = 'request_access';
+        if (seat && seat.over === true) reason = 'seat_full';
+        else if ((seat.plan||'').toLowerCase()==='free') reason = 'free_tier_gate';
+
+        const links = {
+          proCheckout: (window.__BILLING__||{}).proCheckout || "",
+          vipCheckout: (window.__BILLING__||{}).vipCheckout || "",
+          billingPortal: (window.__BILLING__||{}).billingPortal || ""
+        };
+
+        const ref = await withTimeout(
           db.collection('accessRequests').add({
             email, domain, role: window.role || null,
+            orgId: orgId || null,
+            status: "pending",
+            reason,                 // used in admin email logic
+            seatSnapshot: seat || null, // for server-side formatting only
+            links,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            human: { provider: human.provider || null }
-          }), TIMEOUTS.accessRequest, 'accessRequest'
+            human: { provider: human.provider || null },
+            userAgent: (navigator && navigator.userAgent) ? navigator.userAgent.substring(0,256) : null,
+            referrer: document.referrer || null,
+            path: location.pathname + location.search
+          }),
+          TIMEOUTS.accessRequest, 'accessRequest'
         );
+
+        // Optional server notify: will format the admin email (with upgrade CTAs).
+        try{
+          await fetch('/api/notify-access-request', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            credentials:'include',
+            body: JSON.stringify({
+              requestId: ref.id, email, domain, orgId, adminEmails,
+              reason, seat, links, role: (window.role||null)
+            })
+          });
+        }catch(_){}
+
+        // Privacy-safe requester message:
         showStatus("Request sent. We’ll reach out soon.");
       }catch(_){
         showStatus("Couldn’t send request. Try again later.");
@@ -1012,7 +1130,6 @@
       if(!looksValidEmail(email) || !isBusinessEmail(email)){ pulseEmail(); showStatus("Use a valid work email to continue."); return; }
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
 
-      // Adaptive human check (usually skipped for first tries)
       const domain = domainFromEmail(email);
       const human = await performHumanCheck('email_precheck', { email, domain });
       if(!human.ok){ showStatus(humanFailMessage(human)); resetHuman(); return; }
@@ -1024,8 +1141,14 @@
         if(exists === 'timeout'){ goLogin(email); setBusy(false); return; }
 
         const d = await checkDomainBeforeSignup(domain, email);
+
+        // If domain is already claimed (by self or other), never auto-onboard here.
         if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
 
+        // If registry is unavailable, take conservative path (no leaks, offer request).
+        if(d.state === 'unavailable'){ showStatusHTML(`We couldn’t verify your company. ${`<a href="#" id="requestAccessLink">Request access</a>`}`); setBusy(false); setTimeout(()=> byId('requestAccessLink')?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); }),0); return; }
+
+        // Domain appears free → continue to create new org/account.
         hideStatus(); setBusy(false); toPasswordStage();
       }catch(_){ setBusy(false); } finally { resetHuman(); }
     });
@@ -1041,8 +1164,6 @@
       if(!auth){ showStatus("Authentication isn’t configured. Add Firebase keys."); return; }
 
       const domain = domainFromEmail(email);
-
-      // Adaptive human check (stricter heuristic kicks in here if needed)
       const human = await performHumanCheck('password_signup', { email, domain });
       if(!human.ok){ showStatus(humanFailMessage(human)); resetHuman(); return; }
 
