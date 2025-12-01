@@ -355,9 +355,12 @@
           </button>
         </div>
 
+        <!-- ⬇️ static row now includes Request access -->
         <div class="small-row" id="signupRow">
           <span>Don’t have an account?</span>
           <a id="goSignup" href="/auth/signup/">Create one</a>
+          <span>·</span>
+          <a id="requestAccessStatic" href="#" role="button">Request access</a>
         </div>
       </section>
     </div>
@@ -712,6 +715,39 @@
       setTimeout(()=>{ location.href = target; }, 150);
     }
 
+    /* -------- Access Request (same destination semantics as signup) -------- */
+    async function openAccessRequest(){
+      hideStatus();
+      const email = (emailInput?.value || '').trim();
+      if(!looksValidEmail(email)){ pulse(emailBox); showStatus("Enter your work email above, then tap request."); return; }
+      const domain = (email.split('@')[1]||'').toLowerCase();
+
+      // optional human check (fail-open like rest of page)
+      const tok = await getHumanToken('request_access');
+      if(tok && tok.ok === false){ showStatus("Please retry the check."); resetHuman(); return; }
+      const vr = await verifyHumanServerSide({ provider: tok.provider, token: tok.token, action:'request_access' });
+      if(vr && vr.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
+
+      if(!db){ showStatus("Request access isn’t available right now."); return; }
+      try{
+        await withTimeout(
+          db.collection('accessRequests').add({
+            email, domain,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            human: { provider: tok.provider || null }
+          }),
+          TIMEOUTS.invite, 'access_request'
+        );
+        showStatus("Request sent. We’ll reach out soon.");
+      }catch(_){
+        showStatus("Couldn’t send request. Try again later.");
+      }finally{
+        resetHuman();
+      }
+    }
+    function wireRequestAccessInline(){ setTimeout(()=>byId('requestAccessLink')?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); }), 0); }
+    byId('requestAccessStatic')?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); });
+
     /* -------- EMAIL NEXT -------- */
     emailNext.addEventListener('click', async ()=>{
       hideStatus();
@@ -742,7 +778,8 @@
       const u = new URL('/auth/signup/', location.origin);
       const nx = sessionStorage.getItem('gg_next'); if (nx) u.searchParams.set('next', nx);
       u.searchParams.set('email', email);
-      showStatusHTML(`No account found. <a href="${u.pathname+u.search}">Create one?</a>`);
+      showStatusHTML(`No account found. <a href="${u.pathname+u.search}">Create one?</a> · <a href="#" id="requestAccessLink">Request access</a>`);
+      wireRequestAccessInline();
     });
 
     /* -------- BACK -------- */
@@ -815,7 +852,12 @@
         }
       }
 
-      showStatus("No account found. Create one first.");
+      // Fallback: offer both links here too
+      const u = new URL('/auth/signup/', location.origin);
+      const nx = sessionStorage.getItem('gg_next'); if (nx) u.searchParams.set('next', nx);
+      u.searchParams.set('email', email);
+      showStatusHTML(`No account found. <a href="${u.pathname+u.search}">Create one?</a> · <a href="#" id="requestAccessLink">Request access</a>`);
+      wireRequestAccessInline();
       resetHuman();
     });
 
@@ -849,7 +891,8 @@
             const u = new URL('/auth/signup/', location.origin);
             const nx = sessionStorage.getItem('gg_next'); if (nx) u.searchParams.set('next', nx);
             if(email) u.searchParams.set('email', email);
-            showStatusHTML(`No account found for <strong>${email.replace(/</g,'&lt;')}</strong>. <a href="${u.pathname+u.search}">Create one?</a>`);
+            showStatusHTML(`No account found for <strong>${email.replace(/</g,'&lt;')}</strong>. <a href="${u.pathname+u.search}">Create one?</a> · <a href="#" id="requestAccessLink">Request access</a>`);
+            wireRequestAccessInline();
             return;
           }
           const iv = await loadInvite(INVITE_CODE);
