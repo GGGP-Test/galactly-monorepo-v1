@@ -110,10 +110,11 @@
         linear-gradient(180deg, #171a17, #0f1210);
       background-blend-mode: screen, screen, normal, normal;
       -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-      overflow: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
-    .wrap{ min-height:100svh; display:grid; place-items:center;
+    .wrap{ min-height:100dvh; display:grid; place-items:center;
       padding: calc(0px + var(--safe-top)) 16px calc(0px + var(--safe-bottom)); }
     .stage{ width:var(--content-w); transform: translateY(var(--stage-lift-m)); transition: transform .2s ease; }
     @media (min-width:768px){ .stage{ transform: translateY(var(--stage-lift-d)); } }
