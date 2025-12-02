@@ -44,20 +44,6 @@
     };
   </script>
   <script>
-    /* Seat policy + billing links (admin email uses these). */
-    window.__PLANS__ = {
-      free: { seats: 1, label: "Free" },
-      pro:  { seats: 3, label: "Pro"  },
-      vip:  { seats: 5, label: "VIP"  }
-    };
-    /* Fill these with real Stripe Checkout URLs later. */
-    window.__BILLING__ = {
-      proCheckout: "",         // e.g. "https://checkout.stripe.com/c/session/..."
-      vipCheckout: "",         // e.g. "https://checkout.stripe.com/c/session/..."
-      billingPortal: ""        // optional Stripe billing portal link
-    };
-  </script>
-  <script>
     window.__SECURITY__ = {
       turnstileSiteKey: "",
       hcaptchaSiteKey:  "",
@@ -224,7 +210,7 @@
       height:var(--local-h); padding:0 18px; border-radius:calc(var(--ctl-r) + 4px);
       color:var(--fg); text-decoration:none; font-weight:600;
       background:
-        linear-gradient(var(--chip-sheen-ang), transparent 44%, rgba(255,255,255,var(--chip-glare-alpha)) 51%, transparent 58%),
+        linear-gradient(var(--chip-sheen-ang), transparent 44%, rgba(255,255,255,.22) 51%, transparent 58%),
         linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
         radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
       background-clip: padding-box;
@@ -623,10 +609,8 @@
 
     function goLogin(email){
       const em = (email || emailInput?.value || '').trim();
-      const requestBtn = `<a href="#" id="requestAccessLink">Request access</a>`;
-      showStatusHTML(`<strong>Company already registered.</strong> <a href="/auth/login/?email=${encodeURIComponent(em)}">Log in</a>  Or  ${requestBtn}`);
+      showStatusHTML(`<strong>Company already registered.</strong> <a href="/auth/login/?email=${encodeURIComponent(em)}">Log in</a>`);
       try { statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-      setTimeout(()=> byId('requestAccessLink')?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); }), 0);
     }
 
     emailInput?.addEventListener('input', updateLoginLink);
@@ -786,7 +770,7 @@
     const VERIFIED_KEY = 'gg_email_verified';
 
     // --- helpers to avoid long hangs ---
-    const TIMEOUTS = { emailExists: 3500, domainCheck: 2500, createUser: 10000, sendVerify: 7000, claimAfter: 5000, accessRequest: 5000, humanVerify: 6000 };
+    const TIMEOUTS = { emailExists: 3500, domainCheck: 2500, createUser: 10000, sendVerify: 7000, claimAfter: 5000, humanVerify: 6000 };
     function withTimeout(promise, ms, label){
       let t; const timer = new Promise((_,rej)=>{ t=setTimeout(()=>rej(new Error('timeout:'+label)), ms); });
       return Promise.race([promise, timer]).finally(()=>clearTimeout(t));
@@ -989,50 +973,6 @@
       return true;
     }
 
-    /* ---------- Seat policy (privacy-safe, admin-only) ---------- */
-    function planCap(plan){
-      const caps = window.__PLANS__ || {};
-      const key = String(plan||'').toLowerCase();
-      return (caps[key]?.seats) || null;
-    }
-    async function snapshotSeats({domain, orgId}){
-      // Best-effort, admin-only metadata. We do NOT reveal this to the requester.
-      const out = { plan: null, assigned: null, cap: null, over: null, reason: null, source: null };
-      try{
-        // Prefer a backend snapshot if you add it later.
-        try{
-          const r = await withTimeout(fetch(`/api/org-seat-snapshot?domain=${encodeURIComponent(domain)}${orgId?`&orgId=${encodeURIComponent(orgId)}`:''}`, { credentials:'include' }), 2200, 'seatSnapshot');
-          if(r.ok){
-            const js = await r.json().catch(()=>null);
-            if(js){
-              out.plan = js.plan || null;
-              out.assigned = (typeof js.assigned==='number'?js.assigned:null);
-              out.cap = (typeof js.cap==='number'?js.cap:planCap(js.plan));
-              out.over = (out.cap!=null && out.assigned!=null) ? (out.assigned >= out.cap) : null;
-              out.reason = js.reason || null;
-              out.source = 'api';
-              return out;
-            }
-          }
-        }catch(_){}
-        // Fallback: look at domainClaims + obvious hints (still privacy-safe).
-        if(db && orgId){
-          try{
-            const orgDoc = await withTimeout(db.collection('orgs').doc(orgId).get(), 2000, 'orgDoc');
-            const plan = (orgDoc?.exists && (orgDoc.data()?.plan || orgDoc.data()?.tier)) || null;
-            out.plan = plan || null;
-            out.cap = planCap(out.plan);
-            // Rough guess: assume at least 1 member if domain is claimed.
-            out.assigned = 1;
-            out.over = (out.cap!=null && out.assigned!=null) ? (out.assigned >= out.cap) : null;
-            out.source = 'firestore_guess';
-            return out;
-          }catch(_){}
-        }
-      }catch(_){}
-      return out;
-    }
-
     /* ---------- Swap to Password stage ---------- */
     function toPasswordStage(){
       s2Or.hidden = true; s2TopStart.hidden = true; s2TopPass.hidden  = false;
@@ -1043,82 +983,6 @@
       syncSiteBadge(false);
       s2Stage = 'password';
       window.onboarding?.emailContinue?.(emailInput.value.trim());
-    }
-
-    /* ---------- Access Request (privacy-safe + seat gate) ---------- */
-    async function openAccessRequest(){
-      try{
-        const email = (emailInput?.value || '').trim();
-        const domain = domainFromEmail(email);
-        const human = await performHumanCheck('request_access', { email, domain });
-        if(!human.ok){ showStatus(humanFailMessage(human)); resetHuman(); return; }
-
-        if(!db){ showStatus("Unable to send request at the moment."); return; }
-
-        setBusy(true);
-
-        // enrich with org metadata (optional)
-        let orgId = null, adminEmails = null, claimData = null;
-        try{
-          const snap = await withTimeout(db.collection('domainClaims').doc(domain).get(), TIMEOUTS.domainCheck, 'domainLookup');
-          if (snap?.exists){
-            claimData = snap.data() || {};
-            orgId = claimData.orgId || claimData.tenantId || null;
-            adminEmails = Array.isArray(claimData.adminEmails) ? claimData.adminEmails.slice(0, 20) : null;
-          }
-        }catch(_){}
-
-        // seat snapshot (best effort; not shown to requester)
-        const seat = await snapshotSeats({ domain, orgId });
-
-        // Reason tag for admin email (we never show this to requester)
-        let reason = 'request_access';
-        if (seat && seat.over === true) reason = 'seat_full';
-        else if ((seat.plan||'').toLowerCase()==='free') reason = 'free_tier_gate';
-
-        const links = {
-          proCheckout: (window.__BILLING__||{}).proCheckout || "",
-          vipCheckout: (window.__BILLING__||{}).vipCheckout || "",
-          billingPortal: (window.__BILLING__||{}).billingPortal || ""
-        };
-
-        const ref = await withTimeout(
-          db.collection('accessRequests').add({
-            email, domain, role: window.role || null,
-            orgId: orgId || null,
-            status: "pending",
-            reason,                 // used in admin email logic
-            seatSnapshot: seat || null, // for server-side formatting only
-            links,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            human: { provider: human.provider || null },
-            userAgent: (navigator && navigator.userAgent) ? navigator.userAgent.substring(0,256) : null,
-            referrer: document.referrer || null,
-            path: location.pathname + location.search
-          }),
-          TIMEOUTS.accessRequest, 'accessRequest'
-        );
-
-        // Optional server notify: will format the admin email (with upgrade CTAs).
-        try{
-          await fetch('/api/notify-access-request', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            credentials:'include',
-            body: JSON.stringify({
-              requestId: ref.id, email, domain, orgId, adminEmails,
-              reason, seat, links, role: (window.role||null)
-            })
-          });
-        }catch(_){}
-
-        // Privacy-safe requester message:
-        showStatus("Request sent. We’ll reach out soon.");
-      }catch(_){
-        showStatus("Couldn’t send request. Try again later.");
-      }finally{
-        setBusy(false); resetHuman();
-      }
     }
 
     /* ---------- Email CTA: decide route BEFORE password ---------- */
@@ -1145,8 +1009,8 @@
         // If domain is already claimed (by self or other), never auto-onboard here.
         if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
 
-        // If registry is unavailable, take conservative path (no leaks, offer request).
-        if(d.state === 'unavailable'){ showStatusHTML(`We couldn’t verify your company. ${`<a href="#" id="requestAccessLink">Request access</a>`}`); setBusy(false); setTimeout(()=> byId('requestAccessLink')?.addEventListener('click', (e)=>{ e.preventDefault(); openAccessRequest(); }),0); return; }
+        // If registry is unavailable, stop here without access request.
+        if(d.state === 'unavailable'){ showStatus("We couldn’t verify your company right now. Please try again later."); setBusy(false); return; }
 
         // Domain appears free → continue to create new org/account.
         hideStatus(); setBusy(false); toPasswordStage();
