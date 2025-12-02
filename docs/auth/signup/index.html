@@ -230,7 +230,6 @@
     }
     .inline-error a,.inline-error a:visited{ color: currentColor; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
     .inline-error a:hover,.inline-error a:focus-visible{ text-decoration-thickness: 2px; outline: none; }
-
     .inline-note{
       width:min(560px, 86vw); margin: 8px auto 0; font-size: 13px; line-height: 1.35;
       padding: 10px 12px; border-radius: 10px; border:1px solid rgba(255,255,255,.18);
@@ -341,8 +340,8 @@
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
 
-    /* Make ONLY the verify panel's inline “log in” link white */
-    #verifyPanel #loginLinkInline{ color:#fff !important; }
+    /* Make the inline verify box link white (only in that box) */
+    #verifyPanel a, #verifyPanel a:visited{ color:#fff !important; }
   </style>
 
   <!-- Google Identity Services -->
@@ -463,8 +462,8 @@
 
         <div class="hr" id="s2-divider" aria-hidden="true"></div>
 
-        <!-- VERIFICATION BOX (moved here, styled red like the old status box) -->
-        <div id="verifyPanel" class="inline-error" hidden>
+        <!-- verification box moved here (replaces the red box position) -->
+        <div id="verifyPanel" class="inline-note" hidden>
           <div id="verifyMsg">
             We sent a verification link to <strong id="vEmail">—</strong>. Open it on this device to verify, then return to <a id="loginLinkInline" href="/auth/login/">log in</a>.
           </div>
@@ -473,7 +472,7 @@
           </div>
         </div>
 
-        <!-- Generic status (kept for other errors, but not used for the verify message) -->
+        <!-- generic red status (kept for other errors) -->
         <div id="inlineStatus" class="inline-error" role="alert" aria-live="polite" hidden></div>
 
         <div id="s2-bottom">
@@ -496,7 +495,7 @@
             </div>
           </div>
 
-          <!-- password -->
+          <!-- password (shown only after prechecks) -->
           <div class="field-wrap" id="pwdWrap" hidden>
             <div class="pressed" id="pwdBox">
               <span class="left-icon" aria-hidden="true">
@@ -641,13 +640,19 @@
       play(divider,'anim-divider'); play(s2Or,'anim-or'); play(emailBox?.closest('.field-wrap'),'anim-field'); play(backRow,'anim-back');
     }
 
-    const s2BackToStart = ()=>{
+    s1Next.addEventListener("click", ()=>{
+      if(!role) return;
+      step1.classList.remove("active"); step2.classList.add("active"); s2Stage = 'start';
+      document.activeElement?.blur?.(); animateStep2Intro(); syncSiteBadge(true);
+      const t = byId("s2-title"); if (t) { if (!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1"); t.focus({ preventScroll: true }); }
+      window.onboarding?.goTo?.(2);
+    });
+
+    function showStartStage(){
       s2TopStart.hidden = false; s2TopPass.hidden  = true; s2Or.hidden = false;
       verifyPanel.hidden = true; pwdWrap.hidden = true; pwdInput.value = ''; pwdBox.classList.remove('show-cta');
       updateEmailCTA(); s2Stage = 'start'; animateStep2Intro(); syncSiteBadge(false); hideStatus();
-    };
-
-    const showStartStage = s2BackToStart;
+    }
     s2Back.addEventListener("click", ()=>{
       if(!step2.classList.contains('active')) return;
       if(s2Stage === 'password'){ showStartStage(); }
@@ -762,7 +767,7 @@
 
     let memRisk = { events:[], humanPassUntil:0, lastAt:0 };
     function loadRisk(){ try{ return JSON.parse(localStorage.getItem(RISK_KEY)) || {...memRisk}; }catch(_){ return {...memRisk}; } }
-    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } }
+    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s); }catch(_){ } }
     function riskNow(){ return Date.now(); }
     function riskPrune(s){
       const cutoff = riskNow() - POLICY.windowMs;
@@ -843,7 +848,7 @@
       return { ok:false, provider:humanProvider, token:null, error:'unknown' };
     }
     async function verifyHumanServerSide(payload){
-      const url = SECURITY.humanVerifyEndpoint && SECURITY.humanVerifyEndpoint.trim();
+      const url = SECURITY.humanVerifyEndpoint && SECURITY.humanVerifyEndpoint.trim()
       if(!url) return { ok:true, skipped:true };
       try{
         const res = await withTimeout(fetch(url, {
@@ -944,6 +949,7 @@
     }
 
     emailNext.addEventListener('click', async ()=>{
+      if(globalBusy) return;
       hideStatus();
       const email = emailInput.value.trim();
 
@@ -954,22 +960,23 @@
       const human = await performHumanCheck('email_precheck', { email, domain });
       if(!human.ok){ showStatus(humanFailMessage(human)); resetHuman(); return; }
 
-      showStatus("Checking your email…");
+      setBusy(true); showStatus("Checking your email…");
       try{
         const exists = await emailExists(email);
-        if(exists === true){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); return; }
-        if(exists === 'timeout'){ goLogin(email); return; }
+        if(exists === true){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); setBusy(false); return; }
+        if(exists === 'timeout'){ goLogin(email); setBusy(false); return; }
 
         const d = await checkDomainBeforeSignup(domain, email);
-        if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); return; }
-        if(d.state === 'unavailable'){ showStatus("We couldn’t verify your company right now. Please try again later."); return; }
+        if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
+        if(d.state === 'unavailable'){ showStatus("We couldn’t verify your company right now. Please try again later."); setBusy(false); return; }
 
-        hideStatus(); toPasswordStage();
-      }catch(_){ } finally { resetHuman(); }
+        hideStatus(); setBusy(false); toPasswordStage();
+      }catch(_){ setBusy(false); } finally { resetHuman(); }
     });
 
-    // Password signup → send verify link, show ONLY the verify panel (no red status message)
+    // IMPORTANT: password signup requires email verification before access
     pwdNext?.addEventListener('click', async ()=>{
+      if(globalBusy) return;
       hideStatus();
       const email = emailInput.value.trim(); const pwd = pwdInput.value;
       if (!looksValidEmail(email)) { showStatus("Enter a valid work email first."); pulseEmail(); return; }
@@ -981,16 +988,17 @@
       const human = await performHumanCheck('password_signup', { email, domain });
       if(!human.ok){ showStatus(humanFailMessage(human)); resetHuman(); return; }
 
-      showStatus("Creating your account…");
+      setBusy(true); showStatus("Creating your account…");
       try{
         const exists = await emailExists(email);
-        if(exists === true){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); return; }
-        if(exists === 'timeout'){ goLogin(email); return; }
+        if(exists === true){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); setBusy(false); return; }
+        if(exists === 'timeout'){ goLogin(email); setBusy(false); return; }
 
         let cred;
         try{
           cred = await withTimeout(auth.createUserWithEmailAndPassword(email, pwd), TIMEOUTS.createUser, 'createUser');
         }catch(e){
+          setBusy(false);
           if(String(e?.message||'').startsWith('timeout')){ showStatus("It’s taking too long to create the account. Check your connection and try again."); return; }
           if(e?.code === 'auth/email-already-in-use'){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); return; }
           if(e?.code === 'auth/operation-not-allowed'){ showStatus("Password sign-up is disabled for this project."); return; }
@@ -1008,59 +1016,52 @@
           if(claim.reason === 'claimed-other'){
             await rollbackNewlyCreatedUser();
             showStatusHTML(`<strong>Company already registered.</strong> `);
-            goLogin(email); return;
+            goLogin(email); setBusy(false); return;
           }
-          // Registry hiccup: allow verifying email anyway
+          showStatus("Company registry is unavailable right now. You can continue once email is verified.");
         }
 
         try{ await user.reload(); }catch(_){}
         if(user.emailVerified){
-          sessionStorage.setItem(VERIFIED_KEY,'1'); goToBridge('password'); return;
+          sessionStorage.setItem(VERIFIED_KEY,'1'); setBusy(false); goToBridge('password'); return;
         }
 
-        // Enforce verify-before-access: send link and show ONLY the top verify panel
+        // Send verify link and show ONLY the moved verify panel
         showStatus("Sending verification link…");
         try{
           await sendVerifyLink();
-          hideStatus(); // remove any red status box
           verifyPanel.hidden = false; vEmail.textContent = user.email || email;
           localStorage.setItem(EMAIL_KEY, user.email || email);
           updateLoginLink();
-          try{ verifyPanel.scrollIntoView({ behavior:'smooth', block:'center' }); }catch(_){}
-        }catch(_){
-          showStatus("We couldn’t send the verification email. Try resending.");
-        }
+          hideStatus(); // remove the red status box message
+        }catch(_){ showStatus("We couldn’t send the verification email. Try resending."); }
+        finally{ setBusy(false); }
 
       }catch(_){
-        showStatus("We couldn’t continue. Please try again.");
-      }finally{
-        resetHuman();
-      }
+        setBusy(false); showStatus("We couldn’t continue. Please try again.");
+      }finally{ resetHuman(); }
     });
 
     resendLink.addEventListener('click', async (e)=>{
-      e.preventDefault(); hideStatus();
+      e.preventDefault(); if(globalBusy) return; hideStatus(); setBusy(true);
       try{ await sendVerifyLink(); showStatus("Verification email resent."); }catch(_){ showStatus("We couldn’t resend right now. Try again later."); }
+      setBusy(false);
     });
     changeEmail.addEventListener('click', (e)=>{ e.preventDefault(); verifyPanel.hidden = true; emailInput.focus(); });
 
     s1Next.disabled = true;
-
-    function animateStep2IntroWrapper(){
-      if(step2.classList.contains('active')){ animateStep2Intro(); syncSiteBadge(true); }
-    }
-    animateStep2IntroWrapper();
+    if(step2.classList.contains('active')) syncSiteBadge(true);
 
     const googleBtn  = document.getElementById('googleBtn');
     googleBtn?.addEventListener('click', async (e) => {
-      e.preventDefault(); hideStatus();
+      e.preventDefault(); if(globalBusy) return; hideStatus();
       if (!auth) { showStatus("Google sign-in isn’t configured. Add Firebase keys."); return; }
 
       const emailHost = extractHostFromEmail(emailInput.value||'') || '';
       const human = await performHumanCheck('google_signin', { email: (emailInput.value||''), domain: emailHost });
       if(!human.ok){ showStatus(humanFailMessage(human)); resetHuman(); return; }
 
-      showStatus("Opening Google…");
+      setBusy(true); showStatus("Opening Google…");
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
@@ -1073,11 +1074,11 @@
 
         if (!email || PERSONAL.has(domain)) {
           try { await auth.signOut(); } catch {}
-          showStatus("Please use a work Google account (no personal Gmail)."); pulseEmail(); return;
+          setBusy(false); showStatus("Please use a work Google account (no personal Gmail)."); pulseEmail(); return;
         }
         if(!isNew){
           try { await auth.signOut(); } catch {}
-          showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); return;
+          setBusy(false); showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); return;
         }
 
         showStatus("Verifying your company…");
@@ -1085,13 +1086,14 @@
         if(!claim.ok){
           try{ await auth.currentUser?.delete(); }catch(_){}
           try{ await auth.signOut(); }catch(_){}
-          if(claim.reason === 'claimed-other'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); return; }
-          showStatus("We couldn’t verify your company right now. Try again later."); return;
+          if(claim.reason === 'claimed-other'){ setBusy(false); showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); return; }
+          setBusy(false); showStatus("We couldn’t verify your company right now. Try again later."); return;
         }
 
-        emailInput.value = email; updateEmailCTA?.(); goToBridge('google');
+        emailInput.value = email; updateEmailCTA?.(); setBusy(false); goToBridge('google');
 
       } catch (err) {
+        setBusy(false);
         if (err?.code === 'auth/popup-closed-by-user') return;
         if (err?.code === 'auth/account-exists-with-different-credential') { showStatus("This website already exists with a different sign-in method. Use email + password to log in."); return; }
         if (err?.code === 'auth/network-request-failed'){ showStatus("Network problem. Try again."); return; }
