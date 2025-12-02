@@ -37,10 +37,7 @@
       apiKey: "AIzaSyCBf7LHL4PfxD2rH7-HdYSE2dXIGfb3Vz4",
       authDomain: "artemiss-42e40.firebaseapp.com",
       projectId: "artemiss-42e40",
-      appId: "1:384891834378:web:53624662894e0650a74ff3",
-      // optional:
-      storageBucket: "…",
-      messagingSenderId: "…"
+      appId: "1:384891834378:web:53624662894e0650a74ff3"
     };
   </script>
   <script>
@@ -48,7 +45,6 @@
       turnstileSiteKey: "",
       hcaptchaSiteKey:  "",
       humanVerifyEndpoint: "",
-      // --- Adaptive challenge policy (disable challenges on static page) ---
       policy: {
         windowMs: 10*60*1000,
         warmupTries: 999999999,
@@ -61,7 +57,6 @@
   </script>
 
   <style>
-    /* ========================== KNOBS ========================== */
     :root{
       --content-w: min(960px, 92vw);
       --title-fs: clamp(28px, 5.6vw, 58px);
@@ -76,7 +71,6 @@
       --fg: #e9ecf3; --muted: #a9b2c2; --error: #ff6b6b;
       --bg-1: #0c1020; --bg-2: #0c1326;
 
-      /* tightened rhythm */
       --s2-gap-edge-title: 48px;
       --s2-gap-title-subtitle: 8px;
       --s2-gap-subtitle-chips: 12px;
@@ -113,7 +107,6 @@
       }
     }
 
-    /* ====================== BASE / BACKDROP ===================== */
     html,body{height:100%;margin:0; background-color:#0c1020;}
     body{
       color:var(--fg);
@@ -134,7 +127,6 @@
     .stage{ width:var(--content-w); transform: translateY(var(--stage-lift-m)); transition: transform .2s ease; }
     @media (min-width:768px){ .stage{ transform: translateY(var(--stage-lift-d)); } }
 
-    /* top chrome */
     .topbar{ position:fixed; top: calc(var(--safe-top) + var(--topbar-pad-y)); left:0; right:0; z-index:10;
       display:flex; align-items:center; justify-content:space-between; padding:0 var(--topbar-pad-x); }
     .brand{ display:flex; align-items:center; gap:10px; color:var(--fg); text-decoration:none; padding:6px 8px; border-radius:12px; }
@@ -149,7 +141,6 @@
     .center { display:grid; gap:16px; place-items:center; }
     #step2 .center { gap: 0; }
 
-    /* ===================== STEP 1 ===================== */
     .cardless{ max-width:860px; margin-inline:auto; }
     .step{ display:none; }
     .step.active{ display:block; }
@@ -194,14 +185,12 @@
     .btn-icon[disabled]{ opacity:.4; pointer-events:none; }
     .btn-icon:hover{ transform: translateY(-1px); border-color:rgba(255,255,255,.26); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 16px 38px rgba(0,0,0,.28); }
 
-    /* ===================== STEP 2 (pressed glass) ===================== */
     .title-row{ text-align:center; margin-bottom:8px }
     .title-row h1{ font-family:"Plus Jakarta Sans", Inter, system-ui }
 
     .hr{ width:min(560px, 86vw); height:1px; margin:12px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent) }
     .muted{ color:var(--muted); font-size:14px; text-align:center }
 
-    /* --------- GLASS BUTTON (Google only) ---------- */
     .chip-row{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center }
     .chip{
       --local-h: var(--ctl-h);
@@ -234,7 +223,6 @@
         0 6px 18px rgba(0,0,0,.32);
     }
 
-    /* Inline error/info banners */
     .inline-error{
       width:min(560px, 86vw); margin: 8px auto 14px; font-size: 13px; line-height: 1.35;
       padding: 10px 12px; border-radius: 10px; border:1px solid rgba(255,107,107,.35);
@@ -250,13 +238,12 @@
     .small-row{ display:flex; gap:10px; justify-content:center; margin-top:8px; font-size:12px; color:var(--muted); }
     .small-row a{ color:var(--fg); text-decoration:underline; cursor:pointer }
 
-    /* ===== Email/Password fields (pressed) ===== */
     .field-wrap{ width:min(280px, 86vw); margin: 20px auto 0 auto; position:relative; }
     .pressed{
       position:relative; display:grid; grid-template-columns: 26px 1fr; align-items:center;
       height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px; background: transparent;
       border:1px solid rgba(255,255,255,.16);
-      box-shadow: inset 0 1px 0 var(--field-inset-top), inset 0 -3px 6px var(--field-inset-bottom), inset 0 12px 26px var(--field-inset-ambient);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.02), inset 0 -3px 6px rgba(0,0,0,.58), inset 0 12px 26px rgba(0,0,0,.22);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       transition: box-shadow .15s ease, border-color .15s ease;
     }
@@ -274,7 +261,6 @@
       padding-right: calc(var(--cta-d) + 14px); }
     input::placeholder{ color:rgba(233,236,243,.62); }
 
-    /* inside-field GLASS CTA */
     .field-cta{
       position:absolute; right:6px; top:50%;
       width:var(--cta-d); height:var(--cta-d);
@@ -293,10 +279,8 @@
     }
     .pressed.show-cta .field-cta{ opacity:1; pointer-events:auto; transform: translate(0,-50%) scale(1); }
 
-    /* Back arrow row */
     .single-action{ display:grid; place-items:center; margin-top:12px; }
 
-    /* Step 2 spacing */
     #step2 .title-row       { margin-top: var(--s2-gap-edge-title); margin-bottom: 0; }
     #step2 .title-row h1    { margin: 0 0 var(--s2-gap-title-subtitle) 0; }
     #step2 .subtitle        { margin: 0 0 var(--s2-gap-subtitle-chips) 0; text-align: center; }
@@ -306,7 +290,6 @@
     #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
     #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
 
-    /* ===== Animations ===== */
     :root{
       --ease-hero: cubic-bezier(.22,1,.36,1);
       --ease-soft: cubic-bezier(.25,.95,.35,1);
@@ -329,7 +312,6 @@
       *{ animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition: none !important; }
     }
 
-    /* ==== page-leave ==== */
     :root{ --leave-ms: 1500ms; }
     body.leaving .stage{
       opacity: 0; transform: translateY(12px) scale(.985); filter: blur(2px);
@@ -344,7 +326,6 @@
     }
     body.leaving::after{ opacity:1; }
 
-    /* ===== Website badge (overlay) ===== */
     .site-badge{ position: relative; display: inline-grid; grid-auto-flow: column; align-items: center; gap:10px; margin: 8px auto 6px; padding: 8px 12px; border-radius: 14px; color: var(--fg); font-weight:600; font-size:13px; background:
       linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015)),
       radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
@@ -356,7 +337,6 @@
     .site-badge .tip{ position:absolute; top: calc(100% + 8px); left:50%; transform: translateX(-50%); z-index: 40; padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap; color:#0e1420; background: rgba(255,255,255,.95); border:1px solid rgba(0,0,0,.14); box-shadow: 0 6px 18px rgba(0,0,0,.28); opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease; }
     .site-badge:hover .tip, .site-badge:focus-within .tip{ opacity:1; transform: translate(-50%, -2px); pointer-events:auto; }
 
-    /* hides */
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
   </style>
@@ -375,7 +355,6 @@
 </head>
 <body>
 
-  <!-- top chrome -->
   <div class="topbar">
     <a class="brand" href="/" aria-label="Galactly">
       <img alt="Galactly" src="" id="brandLogo"/>
@@ -393,7 +372,7 @@
   <main class="wrap">
     <div class="stage cardless">
 
-      <!-- ================= STEP 1 ================= -->
+      <!-- STEP 1 -->
       <section id="step1" class="step active" aria-labelledby="s1-title">
         <h1 id="s1-title" class="title proc-title">What brings you to Galactly?</h1>
         <p class="subtitle">Pick one to tailor your setup.</p>
@@ -433,10 +412,9 @@
         </div>
       </section>
 
-      <!-- ================= STEP 2 ================= -->
+      <!-- STEP 2 -->
       <section id="step2" class="step" aria-labelledby="s2-title">
 
-        <!-- Website overlay badge -->
         <div id="siteBadge" class="site-badge" hidden>
           <span>We'll use&nbsp;<span class="host" id="siteHost">—</span></span>
           <button class="info" id="siteInfo" type="button" aria-label="Why this site?">
@@ -451,7 +429,6 @@
           </span>
         </div>
 
-        <!-- Top group (swap between “start” and “password”) -->
         <div id="s2-top-start" class="top-group">
           <div class="title-row">
             <h1 id="s2-title">Get started with Us</h1>
@@ -461,7 +438,6 @@
             <div class="chip-row">
               <a class="chip" id="googleBtn" href="#" aria-label="Continue with Google (Work)">
                 <span class="glare" aria-hidden="true"></span>
-                <!-- Official Google "G" -->
                 <svg width="20" height="20" viewBox="0 0 533.5 544.3" role="img" aria-hidden="true" focusable="false">
                   <path fill="#4285F4" d="M533.5 278.4c0-18.4-1.7-36-4.9-53.1H272v100.5h146.9c-6.3 34-25 62.8-53.1 82v68h85.7c50.1-46.2 81.9-114.1 81.9-197.4z"/>
                   <path fill="#34A853" d="M272 544.3c72.2 0 132.8-23.9 177.1-64.9l-85.7-68c-23.8 16-54.2 25.5-91.4 25.5-70 0-129.4-47.2-150.6-110.8H33.1v69.6c44.2 87.8 135.2 148.6 238.9 148.6z"/>
@@ -481,15 +457,13 @@
           </div>
         </div>
 
-        <!-- Divider -->
         <div class="hr" id="s2-divider" aria-hidden="true"></div>
         <div id="inlineStatus" class="inline-error" role="alert" aria-live="polite" hidden></div>
 
-        <!-- Below-line group -->
         <div id="s2-bottom">
           <div id="s2-or" class="muted">OR</div>
 
-          <!-- email field -->
+          <!-- email -->
           <div class="field-wrap">
             <div class="pressed" id="emailBox">
               <span class="left-icon" aria-hidden="true">
@@ -506,15 +480,17 @@
             </div>
           </div>
 
-          <!-- verification panel -->
+          <!-- verification -->
           <div id="verifyPanel" class="inline-note" hidden>
-            <div id="verifyMsg">We sent a verification link to <strong id="vEmail">—</strong>. Open it on this device to continue.</div>
+            <div id="verifyMsg">
+              We sent a verification link to <strong id="vEmail">—</strong>. Open it on this device to verify, then return to <a id="loginLinkInline" href="/auth/login/">log in</a>.
+            </div>
             <div class="small-row">
               <a id="resendLink">Resend</a><span>·</span><a id="changeEmail">Use a different email</a>
             </div>
           </div>
 
-          <!-- password field (only after verified) -->
+          <!-- password (shown only after passing prechecks; verification still required before access) -->
           <div class="field-wrap" id="pwdWrap" hidden>
             <div class="pressed" id="pwdBox">
               <span class="left-icon" aria-hidden="true">
@@ -531,7 +507,6 @@
             </div>
           </div>
 
-          <!-- single centered back arrow -->
           <div class="single-action">
             <button type="button" id="s2-back" class="btn-icon" aria-label="Back">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -547,7 +522,6 @@
         </div>
       </section>
 
-      <!-- Validation placeholders -->
       <div id="emailError" class="error hide"></div>
       <div id="domainMismatch" class="error hide"></div>
       <div id="siteUnreachable" class="error hide"></div>
@@ -555,14 +529,12 @@
     </div>
   </main>
 
-  <!-- Hidden containers for invisible captcha render targets -->
   <div id="human-zone" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;">
     <div id="cf-turnstile"></div>
     <div id="hcaptcha"></div>
   </div>
 
   <script>
-    /* ---------- logo loader ---------- */
     (function tryLogo(){
       const candidates = [
         "/assets/logo/galactly-logo.svg","/assets/logo/logo.svg","/assets/brand/galactly-logo.svg","/assets/branding/galactly-logo.svg",
@@ -579,7 +551,6 @@
       })();
     })();
 
-    /* ---------- helpers ---------- */
     const byId = (id)=>document.getElementById(id);
     const qsa = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
 
@@ -595,12 +566,14 @@
     const pwdWrap  = byId("pwdWrap"); const pwdBox = byId("pwdBox"); const pwdInput = byId("password"); const pwdNext = byId("pwdNext");
 
     const siteBadge  = byId('siteBadge'); const siteHostEl = byId('siteHost'); const siteInfo = byId('siteInfo'); const siteTip = byId('siteTip');
-    const statusEl  = byId('inlineStatus'); const staticLoginLink = byId('staticLoginLink');
+    const statusEl  = byId('inlineStatus'); const staticLoginLink = byId('staticLoginLink'); const loginLinkInline = byId('loginLinkInline');
 
     function updateLoginLink(){
       const em = (emailInput?.value || '').trim();
       const valid = /^[^\s@]+@[^\s@]{2,}\.[^\s@]{2,}$/i.test(em);
-      staticLoginLink.href = valid ? `/auth/login/?email=${encodeURIComponent(em)}` : `/auth/login/`;
+      const url = valid ? `/auth/login/?email=${encodeURIComponent(em)}` : `/auth/login/`;
+      staticLoginLink.href = url;
+      if (loginLinkInline) loginLinkInline.href = url;
     }
     function showStatus(msg){ statusEl.textContent = msg || "We couldn't continue."; statusEl.hidden = false; }
     function showStatusHTML(html){ statusEl.innerHTML = html || "We couldn't continue."; statusEl.hidden = false; }
@@ -617,10 +590,9 @@
     emailInput?.addEventListener('blur', updateLoginLink);
     updateLoginLink();
 
-    let s2Stage = 'start'; // 'start' | 'password'
+    let s2Stage = 'start';
     function play(el, cls){ if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 
-    /* url/host utils */
     function cleanHost(raw){
       if(!raw) return null;
       let s = String(raw).trim();
@@ -635,7 +607,6 @@
     }
     function getQueryParam(name){ const p = new URLSearchParams(location.search); return p.get(name); }
 
-    /* ---------- STEP 1: select role ---------- */
     let role = null;
     qsa(".choice", step1).forEach(el=>{
       const r = el.getAttribute("data-role");
@@ -672,7 +643,6 @@
       window.onboarding?.goTo?.(2);
     });
 
-    /* ---------- Back button behavior ---------- */
     function showStartStage(){
       s2TopStart.hidden = false; s2TopPass.hidden  = true; s2Or.hidden = false;
       verifyPanel.hidden = true; pwdWrap.hidden = true; pwdInput.value = ''; pwdBox.classList.remove('show-cta');
@@ -684,15 +654,14 @@
       else { step2.classList.remove("active"); step1.classList.add("active"); window.onboarding?.goTo?.(1); }
     });
 
-    /* ---------- Email & password CTA visibility ---------- */
     const looksValidEmail = (v)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v.trim());
     function updateEmailCTA(){
       const v = emailInput.value; const valid = looksValidEmail(v);
       const lockEmailCTA = !pwdWrap.hidden; const show = valid && !lockEmailCTA;
       emailBox.classList.toggle('show-cta', show); emailNext.toggleAttribute('disabled', !show); emailNext.setAttribute('aria-hidden', show ? 'false' : 'true');
     }
-    emailInput.addEventListener('input', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
-    emailInput.addEventListener('blur', ()=>{ updateEmailCTA(); syncSiteBadge(false); });
+    emailInput.addEventListener('input', ()=>{ updateEmailCTA(); syncSiteBadge(false); updateLoginLink(); });
+    emailInput.addEventListener('blur', ()=>{ updateEmailCTA(); syncSiteBadge(false); updateLoginLink(); });
     emailInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && looksValidEmail(emailInput.value)){ e.preventDefault(); if(pwdWrap.hidden) emailNext.click(); } });
 
     function updatePwdCTA(){
@@ -703,7 +672,6 @@
     pwdInput?.addEventListener('blur', updatePwdCTA);
     pwdInput?.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && pwdInput.value.length >= 6){ e.preventDefault(); pwdNext.click(); } });
 
-    /* ---------- Business email check ---------- */
     const PERSONAL = new Set(["gmail.com","googlemail.com","yahoo.com","ymail.com","outlook.com","hotmail.com","live.com","msn.com",
       "icloud.com","me.com","mac.com","aol.com","proton.me","protonmail.com","pm.me","mail.com","yandex.com","yandex.ru",
       "gmx.com","zoho.com","fastmail.com","hey.com","inbox.com"]);
@@ -712,7 +680,6 @@
       return !!(host && !PERSONAL.has(host.toLowerCase()));
     };
 
-    /* ---------- Website badge ---------- */
     function getPrefilledSite(){
       const cands = [ getQueryParam('site'), getQueryParam('website'), getQueryParam('domain'),
         sessionStorage.getItem('preWebsite'), localStorage.getItem('preWebsite') ];
@@ -738,7 +705,6 @@
     siteTip?.addEventListener('click', (e)=> e.stopPropagation());
     document.addEventListener('click', ()=> siteBadge.classList.remove('show-tip'));
 
-    /* ---------- Firebase init ---------- */
     const META_CFG = (()=>{ try{ const m=document.querySelector('meta[name="firebase-config"]'); return m && m.content ? JSON.parse(m.content) : null; }catch(e){ return null; }})();
     const FIREBASE_CONFIG =
       (window.__FIREBASE_CONFIG__ && typeof window.__FIREBASE_CONFIG__==='object' && window.__FIREBASE_CONFIG__) ||
@@ -769,7 +735,6 @@
     const EMAIL_KEY = 'gg_pending_email';
     const VERIFIED_KEY = 'gg_email_verified';
 
-    // --- helpers to avoid long hangs ---
     const TIMEOUTS = { emailExists: 3500, domainCheck: 2500, createUser: 10000, sendVerify: 7000, claimAfter: 5000, humanVerify: 6000 };
     function withTimeout(promise, ms, label){
       let t; const timer = new Promise((_,rej)=>{ t=setTimeout(()=>rej(new Error('timeout:'+label)), ms); });
@@ -790,7 +755,6 @@
       setTimeout(()=>{ emailBox.style.boxShadow = prev; }, 260);
     }
 
-    /* ======================= ADAPTIVE HUMAN VERIFICATION ======================= */
     const META_SEC = (()=>{ try{ const m=document.querySelector('meta[name="security-config"]'); return m && m.content ? JSON.parse(m.content) : null; }catch(e){ return null; }})();
     const SECURITY = (window.__SECURITY__ && typeof window.__SECURITY__==='object' && window.__SECURITY__) || META_SEC || {};
     const POLICY = SECURITY.policy || { windowMs: 600000, warmupTries: 2, maxTriesBeforeChallenge: 3, distinctEmailsBeforeChallenge: 3, throttleMs: 1200, humanPassTtlMs: 86400000 };
@@ -826,9 +790,9 @@
     function riskShouldChallenge(reason, meta){
       const now = riskNow();
       const s = riskPrune(loadRisk());
-      if (s.humanPassUntil && now < s.humanPassUntil) return false; // passport valid
+      if (s.humanPassUntil && now < s.humanPassUntil) return false;
 
-      const { recentCount, totalCount, distinctEmails, lastDelta } = riskStats(); // overall pattern
+      const { recentCount, totalCount, distinctEmails, lastDelta } = riskStats();
       if (totalCount <= POLICY.warmupTries) return false;
       if (lastDelta < POLICY.throttleMs && totalCount>=2) return true;
       if (totalCount >= POLICY.maxTriesBeforeChallenge) return true;
@@ -838,9 +802,7 @@
     }
     function riskNoteHumanPass(){ const s = riskPrune(loadRisk()); s.humanPassUntil = riskNow() + POLICY.humanPassTtlMs; saveRisk(s); }
 
-    // Provider glue
-    let humanProvider = null; // 'turnstile' | 'hcaptcha' | null
-    let humanWidgetId = null; let humanReady = false;
+    let humanProvider = null, humanWidgetId = null, humanReady = false;
 
     function initHuman(){
       const cfKey = SECURITY.turnstileSiteKey && SECURITY.turnstileSiteKey.trim();
@@ -898,7 +860,6 @@
       return `Human check failed (${p}: ${code}). Disable blockers or try again.`;
     }
 
-    // Unified entry: FAIL-OPEN if provider/server unavailable
     async function performHumanCheck(reason, meta){
       riskRecord(reason+'_attempt', { email: meta?.email || '', domain: meta?.domain || '' });
       if (!riskShouldChallenge(reason, meta)) return { ok:true, skipped:true };
@@ -913,7 +874,6 @@
 
     window.addEventListener('load', ()=>{ try{ initHuman(); }catch(_){} });
 
-    /* ================= DOMAIN REGISTRY (one-account-per-domain) ================= */
     function domainFromEmail(email){ return extractHostFromEmail(email) || ''; }
     async function checkDomainBeforeSignup(domain, email){
       if(!db || !domain) return {state:'unknown'};
@@ -958,7 +918,6 @@
       try{ await auth.signOut(); }catch(_){}
     }
 
-    /* ---------- Missing helpers (used below) ---------- */
     async function emailExists(email){
       try{
         const methods = await withTimeout(auth.fetchSignInMethodsForEmail(email), TIMEOUTS.emailExists, 'emailExists');
@@ -973,7 +932,6 @@
       return true;
     }
 
-    /* ---------- Swap to Password stage ---------- */
     function toPasswordStage(){
       s2Or.hidden = true; s2TopStart.hidden = true; s2TopPass.hidden  = false;
       verifyPanel.hidden = true;
@@ -985,7 +943,6 @@
       window.onboarding?.emailContinue?.(emailInput.value.trim());
     }
 
-    /* ---------- Email CTA: decide route BEFORE password ---------- */
     emailNext.addEventListener('click', async ()=>{
       if(globalBusy) return;
       hideStatus();
@@ -1005,19 +962,14 @@
         if(exists === 'timeout'){ goLogin(email); setBusy(false); return; }
 
         const d = await checkDomainBeforeSignup(domain, email);
-
-        // If domain is already claimed (by self or other), never auto-onboard here.
         if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
-
-        // If registry is unavailable, stop here without access request.
         if(d.state === 'unavailable'){ showStatus("We couldn’t verify your company right now. Please try again later."); setBusy(false); return; }
 
-        // Domain appears free → continue to create new org/account.
         hideStatus(); setBusy(false); toPasswordStage();
       }catch(_){ setBusy(false); } finally { resetHuman(); }
     });
 
-    /* ---------- Password CTA: create ONLY if brand new and domain free ---------- */
+    // IMPORTANT: password signup requires email verification before access
     pwdNext?.addEventListener('click', async ()=>{
       if(globalBusy) return;
       hideStatus();
@@ -1037,7 +989,6 @@
         if(exists === true){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); setBusy(false); return; }
         if(exists === 'timeout'){ goLogin(email); setBusy(false); return; }
 
-        // Create the user
         let cred;
         try{
           cred = await withTimeout(auth.createUserWithEmailAndPassword(email, pwd), TIMEOUTS.createUser, 'createUser');
@@ -1054,7 +1005,6 @@
 
         const user = cred.user;
 
-        // Domain claim
         showStatus("Verifying your company…");
         const claim = await claimDomainAfterSignup(domain, email, user?.uid);
         if(!claim.ok){
@@ -1071,12 +1021,14 @@
           sessionStorage.setItem(VERIFIED_KEY,'1'); setBusy(false); goToBridge('password'); return;
         }
 
+        // Enforce verify-before-access: send link and hold here.
         showStatus("Sending verification link…");
         try{
           await sendVerifyLink();
           verifyPanel.hidden = false; vEmail.textContent = user.email || email;
           localStorage.setItem(EMAIL_KEY, user.email || email);
-          showStatus("Check your inbox for the verification link to continue.");
+          updateLoginLink();
+          showStatus("Check your inbox to verify, then log in to continue.");
         }catch(_){ showStatus("We couldn’t send the verification email. Try resending."); }
         finally{ setBusy(false); }
 
@@ -1085,7 +1037,6 @@
       }finally{ resetHuman(); }
     });
 
-    // resend / change
     resendLink.addEventListener('click', async (e)=>{
       e.preventDefault(); if(globalBusy) return; hideStatus(); setBusy(true);
       try{ await sendVerifyLink(); showStatus("Verification email resent."); }catch(_){ showStatus("We couldn’t resend right now. Try again later."); }
@@ -1093,13 +1044,9 @@
     });
     changeEmail.addEventListener('click', (e)=>{ e.preventDefault(); verifyPanel.hidden = true; emailInput.focus(); });
 
-    // keep s1-next disabled until role chosen
     s1Next.disabled = true;
-
-    // If step2 is already visible (deep link)
     if(step2.classList.contains('active')) syncSiteBadge(true);
 
-    /* ---------- GOOGLE SIGN-IN (adaptive) ---------- */
     const googleBtn  = document.getElementById('googleBtn');
     googleBtn?.addEventListener('click', async (e) => {
       e.preventDefault(); if(globalBusy) return; hideStatus();
@@ -1150,7 +1097,6 @@
       } finally { resetHuman(); }
     });
 
-    /* ----- handle verifyEmail deep link (if you ever switch handleCodeInApp:true) ----- */
     async function handleVerifyOnLoad(){
       if(!auth) return;
       const p = new URLSearchParams(location.search);
@@ -1242,12 +1188,11 @@
       site: hostFromEmail || (localStorage.getItem('preWebsite') || sessionStorage.getItem('preWebsite') || '')
     });
     document.body.classList.add('leaving');
-    setTimeout(()=>{ location.href = `/auth/bridge/?${urlParams}`; }, 1500); // matches --leave-ms
+    setTimeout(()=>{ location.href = `/auth/bridge/?${urlParams}`; }, 1500);
   }
 </script>
 
 <script>
-/* --- signup receiver glue (CTA intents, canonical links, safe handoffs) --- */
 (function(){
   function captureNext(){
     const p = new URLSearchParams(location.search);
@@ -1264,7 +1209,6 @@
   }
   captureNext();
 
-  // Prefill email
   (function prefillEmail(){
     const p = new URLSearchParams(location.search);
     const em = (p.get('email') || localStorage.getItem('gg_pending_email') || '').trim();
@@ -1273,7 +1217,6 @@
     if (inp) { inp.value = em; try { inp.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){ } }
   })();
 
-  // Canonicalize any legacy anchors/forms
   (function canonicalize(){
     const map = new Map([ ['login.html','/auth/login/'], ['/login','/auth/login/'], ['index.html','/auth/signup/'], ['/auth/signup','/auth/signup/'] ]);
     const norm = v => (v||'').replace(/^https?:\/\/[^/]+/i,'').replace(/^\.\//,'');
@@ -1287,7 +1230,6 @@
     });
   })();
 
-  // Preserve ?next during bridge handoff & email verify
   const origGoToBridge = window.goToBridge;
   window.goToBridge = function(from){
     const email = (document.getElementById('email')?.value || '').trim();
