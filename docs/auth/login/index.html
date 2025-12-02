@@ -155,7 +155,7 @@
     .inline-error a{ color: currentColor; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
     .inline-error a:hover, .inline-error a:focus-visible { text-decoration-thickness: 2px; outline: none; }
 
-    /* NEW: white success banner */
+    /* White success banner (kept) */
     .inline-success{
       width:min(560px, 86vw); margin:0 auto; margin-bottom: var(--gap-error-or);
       font-size: 13px; line-height: 1.35; padding: 10px 12px; border-radius: 10px;
@@ -742,11 +742,12 @@
       if(!looksValidEmail(email)){ pulse(emailBox); showStatus("Enter your work email above, then tap request."); return; }
       const domain = (email.split('@')[1]||'').toLowerCase();
 
-      // optional human check (fail-open like rest of page)
-      const tok = await getHumanToken('request_access');
-      if(tok && tok.ok === false){ showStatus("Please retry the check."); resetHuman(); return; }
-      const vr = await verifyHumanServerSide({ provider: tok.provider, token: tok.token, action:'request_access' });
-      if(vr && vr.ok === false){ showStatus("Human verification failed."); resetHuman(); return; }
+      /* Non-blocking human check: never stop the flow */
+      let tok = null;
+      try { tok = await getHumanToken('request_access'); } catch(_) { tok = null; }
+      try {
+        verifyHumanServerSide({ provider: tok?.provider || null, token: tok?.token || null, action:'request_access' });
+      } catch(_) { /* ignore */ }
 
       if(!db){ showStatus("Request access isn’t available right now."); return; }
       try{
@@ -754,7 +755,7 @@
           db.collection('accessRequests').add({
             email, domain,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            human: { provider: tok.provider || null }
+            human: { provider: tok?.provider || null }
           }),
           TIMEOUTS.invite, 'access_request'
         );
@@ -778,7 +779,6 @@
 
       let methods = [];
       try{
-        // No human check on email step (keeps it smooth)
         methods = await fetchMethods(email);
       }catch(e){
         if(String(e.message||'').startsWith('timeout')){ showStatus("Connection is slow. Try again."); return; }
