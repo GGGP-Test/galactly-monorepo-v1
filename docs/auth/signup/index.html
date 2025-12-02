@@ -767,7 +767,7 @@
 
     let memRisk = { events:[], humanPassUntil:0, lastAt:0 };
     function loadRisk(){ try{ return JSON.parse(localStorage.getItem(RISK_KEY)) || {...memRisk}; }catch(_){ return {...memRisk}; } }
-    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s); }catch(_){ } }
+    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } }  <!-- FIXED ) HERE -->
     function riskNow(){ return Date.now(); }
     function riskPrune(s){
       const cutoff = riskNow() - POLICY.windowMs;
@@ -1069,7 +1069,7 @@
         const cred = await auth.signInWithPopup(provider);
         const user = cred.user;
         const email = user?.email || "";
-        const domain = (email.split("@")[1] || "").toLowerCase();
+               const domain = (email.split("@")[1] || "").toLowerCase();
         const isNew = cred?.additionalUserInfo?.isNewUser === true;
 
         if (!email || PERSONAL.has(domain)) {
