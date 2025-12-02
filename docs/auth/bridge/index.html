@@ -6,6 +6,8 @@
 <title>Galactly — Setting things up…</title>
 <meta name="color-scheme" content="dark light"/>
 <link rel="canonical" href="https://galactly.com/auth/bridge"/>
+<!-- Optional: share API base with step-3 convention; can be overridden by localStorage('apiBase') -->
+<meta name="api-base" content="">
 
 <script>
 /* Canonicalize /index.html → folder path (keep ? and #) */
@@ -147,8 +149,12 @@
     <div class="card slot-bottom is-pending" id="card-bottom"></div>
   </div>
 
-  <div class="actions">
+  <div class="actions" id="actDefault">
     <button class="link" id="backBtn" type="button">Back</button>
+  </div>
+  <div class="actions" id="actConfirm" style="display:none">
+    <button class="link" id="yesBtn" type="button">Yes, that's us</button>
+    <button class="link" id="noBtn"  type="button">No, change email</button>
   </div>
 
   <div class="sr" id="sr" aria-live="polite"></div>
@@ -158,22 +164,28 @@
 /* ===================== Endpoints & helpers ===================== */
 const ENDPOINTS = {
   session: '/api/session',                // { authenticated:boolean, plan:'free'|'pro'|'vip'|null }
-  app: '/app/',
-  onboarding: '/app/onboarding/',
+  step3:  '/auth/step-3/',                // Step 3 lives under /auth/step-3/
   signup: '/auth/signup/',
-  login: '/auth/login/',
-  portal: '/api/billing/portal'           // optional; used when next asks for checkout but user is already paid
+  login:  '/auth/login/',
+  portal: '/api/billing/portal'           // optional
 };
 
-const qs     = new URLSearchParams(location.search);
-const email  = (qs.get('email') || '').trim();
-const role   = (qs.get('role') || '').trim();       // 'supplier' | 'buyer' | ''
-const site   = (qs.get('site') || '').replace(/^(https?:)?\/\//i,'').replace(/^www\./i,'').trim();
-const from   = (qs.get('from') || '').trim();       // 'google' | 'password' | 'unknown'
-const nextQ  = (qs.get('next') || '').trim();
+const qs       = new URLSearchParams(location.search);
+const emailQ   = (qs.get('email') || '').trim();
+const roleQ    = (qs.get('role')  || '').trim();       // 'supplier' | 'buyer'
+const siteQ    = (qs.get('site')  || '').replace(/^(https?:)?\/\//i,'').replace(/^www\./i,'').trim();
+const from     = (qs.get('from')  || '').trim();       // 'google' | 'password' | 'unknown'
+const nextQ    = (qs.get('next')  || '').trim();
 
-/* Persist a lightweight origin hint if a previous page set it */
-const originHint = (sessionStorage.getItem('gg_origin') || '').trim(); // 'signup'|'login' (recommended enhancement)
+/* Persist / hydrate lightweight context so Bridge & Step-3 can read them even if query is missing */
+const LS = { role:'gg_role', email:'gg_email', site:'gg_site', origin:'gg_origin', apiBase:'apiBase' };
+const role   = roleQ || localStorage.getItem(LS.role)   || '';
+const email  = emailQ|| localStorage.getItem(LS.email)  || '';
+const site   = siteQ || localStorage.getItem(LS.site)   || '';
+
+if (role)  try{ localStorage.setItem(LS.role, role); }catch{}
+if (email) try{ localStorage.setItem(LS.email,email);}catch{}
+if (site)  try{ localStorage.setItem(LS.site, site);}catch{}
 
 /* Header fill */
 document.getElementById('h-email').textContent = email || 'new user';
@@ -191,26 +203,10 @@ function sanitizeNext(raw){
     }catch(_){ return ''; }
   }
   if (!raw.startsWith('/')) return '';
-  // Optional: strip duplicate slashes
   raw = raw.replace(/\/{2,}/g,'/');
   return raw;
 }
 const nextSafe = sanitizeNext(nextQ);
-
-/* Simple reachability probe for site */
-function imgReachable(host, timeoutMs=3500){
-  return new Promise((resolve)=>{
-    if(!host) return resolve(false);
-    const img = new Image();
-    let done = false;
-    const url = 'https://' + host + '/favicon.ico?__ping=' + Date.now();
-    const timer = setTimeout(()=>{ if(!done){ done=true; resolve(false); } }, timeoutMs);
-    img.onload = ()=>{ if(!done){ done=true; clearTimeout(timer); resolve(true); } };
-    img.onerror= ()=>{ if(!done){ done=true; clearTimeout(timer); resolve(true); } }; // error still means host responded
-    img.referrerPolicy = 'no-referrer';
-    img.src = url;
-  });
-}
 
 /* Domain utils */
 const PERSONAL = new Set([
@@ -242,21 +238,19 @@ function bounce(backTo, code, msg){
   if(site)  url.searchParams.set('site', site);
   if(role)  url.searchParams.set('role', role);
   if(nextSafe) url.searchParams.set('next', nextSafe);
-  // Hint the form page to auto-open its Step 2 (see note below)
   url.searchParams.set('auto','step2');
-  // Also add an anchor most routers can observe without code changes
   const full = url.pathname + url.search + '#s2';
   location.replace(full);
 }
 
 /* Heuristic: where to bounce if not authenticated */
 function pickOrigin(){
-  // If a previous page set it, use that. Otherwise guess: if role/site provided, likely signup.
+  const originHint = (sessionStorage.getItem(LS.origin) || '').trim(); // 'signup'|'login'
   if (originHint === 'login' || originHint === 'signup') return originHint;
   return (role || site) ? 'signup' : 'login';
 }
 
-/* ===================== UI rotor ===================== */
+/* ===================== UI rotor (unchanged visuals) ===================== */
 const sr = (t)=>{ const el=document.getElementById('sr'); if(el) el.textContent=t; };
 
 function renderCard(el, title, meta, state){
@@ -337,52 +331,94 @@ async function getSession(){
     const r = await fetch(ENDPOINTS.session, { credentials:'include', cache:'no-store' });
     if(!r.ok) throw new Error('bad session');
     const j = await r.json();
-    // expected: { authenticated:boolean, plan:'free'|'pro'|'vip'|null }
-    return { ok:true, ...j };
+    return { ok:true, ...j }; // {authenticated, plan}
   }catch(_){
     return { ok:false, authenticated:false, plan:null };
   }
 }
 
 function decideDestination(session){
-  // If a safe next is provided, use it — with a small guard around checkout vs portal.
-  if (nextSafe) {
-    const toCheckoutPro = /^\/pricing\/checkout-pro/i.test(nextSafe);
-    const toCheckoutVip = /^\/pricing\/checkout-vip/i.test(nextSafe);
-    if ((toCheckoutPro || toCheckoutVip) && session.authenticated && (session.plan==='pro' || session.plan==='vip')) {
-      return ENDPOINTS.portal; // already paid → portal instead of checkout
-    }
-    return nextSafe;
-  }
+  // Priority 1: an explicit next= path
+  if (nextSafe) return nextSafe;
 
-  // No explicit next → choose by plan
-  if (session.authenticated && (session.plan==='pro' || session.plan==='vip')) {
-    return ENDPOINTS.app;
-  }
-  // unauthenticated or free
-  return ENDPOINTS.onboarding;
+  // Default: go to Step 3 (post-verify setup)
+  const url = new URL(ENDPOINTS.step3, location.origin);
+  if (email) url.searchParams.set('email', email);
+  if (site)  url.searchParams.set('site', site);
+  if (role)  url.searchParams.set('role', role);
+  return url.pathname + url.search;
 }
 
-/* ===================== Validations before routing ===================== */
+/* ===================== API helpers (shared with step-3 style) ===================== */
+function getApiBase(){
+  const meta = document.querySelector('meta[name="api-base"]')?.content || "";
+  const v = localStorage.getItem(LS.apiBase) || meta || "";
+  return (v||"").trim().replace(/\/+$/,"");
+}
+function setApiBase(raw){
+  const v = (raw||"").trim().replace(/\/+$/,"");
+  if (v) try{ localStorage.setItem(LS.apiBase, v);}catch{}
+}
+function ensureApi(){
+  let base = getApiBase();
+  if (!base) {
+    const v = prompt("API base (with or without /api). Example:\nhttps://YOUR-SUBDOMAIN.code.run/api","")||"";
+    if (v) { setApiBase(v); base = getApiBase(); }
+  }
+  return base;
+}
+function join(b,t){ return b.replace(/\/+$/,"") + "/" + String(t).replace(/^\/+/,""); }
+
+async function fetchClassify(host){
+  const base = ensureApi(); if (!base) return null;
+  const u1 = new URL(join(base,"/classify")); u1.searchParams.set("host", host); u1.searchParams.set("maxPages","8");
+  const u2 = new URL(join(base.replace(/\/api\/?$/i,""),"/api/classify")); u2.searchParams.set("host", host); u2.searchParams.set("maxPages","8");
+  const tryFetch = async (url)=>{
+    try{
+      const r = await fetch(url, {credentials:"omit"});
+      const t = await r.text();
+      try{ return JSON.parse(t); }catch{ return {ok:false, error:"bad_json", raw:t}; }
+    }catch{
+      return {ok:false, error:"network"};
+    }
+  };
+  let d = await tryFetch(u1.toString());
+  if (!d?.ok) d = await tryFetch(u2.toString());
+  return d;
+}
+
+/* ===================== Validations & crawl checks ===================== */
+/* Simple reachability probe for site */
+function imgReachable(host, timeoutMs=3500){
+  return new Promise((resolve)=>{
+    if(!host) return resolve(false);
+    const img = new Image();
+    let done = false;
+    const url = 'https://' + host + '/favicon.ico?__ping=' + Date.now();
+    const timer = setTimeout(()=>{ if(!done){ done=true; resolve(false); } }, timeoutMs);
+    img.onload = ()=>{ if(!done){ done=true; clearTimeout(timer); resolve(true); } };
+    img.onerror= ()=>{ if(!done){ done=true; clearTimeout(timer); resolve(true); } }; // error still means host responded
+    img.referrerPolicy = 'no-referrer';
+    img.src = url;
+  });
+}
+
 async function runValidations(){
   const hostFromSite  = (site || '').toLowerCase();
   const hostFromEmail = emailHost;
 
-  // If email present, nudge toward business domains
   if (email && !isBusinessEmailHost(hostFromEmail)) {
     const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
     bounce(backTo, 'personal_email', 'Use a work email (Gmail/Outlook/Yahoo are not allowed).');
     return false;
   }
 
-  // If both are present, ensure base domain alignment
   if (hostFromSite && hostFromEmail && baseDomain(hostFromSite) !== baseDomain(hostFromEmail)) {
     const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
     bounce(backTo, 'domain_mismatch', `Your email domain (${baseDomain(hostFromEmail)}) doesn’t match the website (${baseDomain(hostFromSite)}).`);
     return false;
   }
 
-  // Try to infer a site if not provided
   const guessSite = hostFromSite || hostFromEmail || '';
   if (!guessSite) {
     const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
@@ -390,7 +426,6 @@ async function runValidations(){
     return false;
   }
 
-  // Best-effort reachability (don’t hard-block onboarding for transient failures)
   const reachable = await imgReachable(guessSite);
   if(!reachable){
     const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
@@ -400,32 +435,50 @@ async function runValidations(){
   return true;
 }
 
-/* Back button: try browser history, else origin */
-document.getElementById('backBtn').addEventListener('click', ()=>{
-  if (history.length > 1) { history.back(); return; }
+/* ===================== Confirm identity UI ===================== */
+const actDefault = document.getElementById('actDefault');
+const actConfirm = document.getElementById('actConfirm');
+const yesBtn = document.getElementById('yesBtn');
+const noBtn  = document.getElementById('noBtn');
+
+function showConfirmCard(payload){
+  // payload: { host, favicon?, summary? }
+  const host = (payload?.host || site || '').replace(/^www\./,'');
+  const fav  = payload?.favicon || ('https://' + host + '/favicon.ico');
+  const summary = (payload?.summary || '').trim();
+  const line = summary || `We found ${host}.`;
+
+  // Promote the main card to a confirmation card (no CSS changes, reuse .card structure)
+  mainEl.className = mainEl.className.replace(/\bis-(active|pending|done)\b/g,'').trim();
+  mainEl.classList.add('card','slot-main','is-active');
+  mainEl.innerHTML = `
+    <div class="ic" aria-hidden="true">
+      <img alt="" src="${fav}" style="width:20px;height:20px;border-radius:4px;object-fit:cover" onerror="this.style.display='none'"/>
+    </div>
+    <div>
+      <div class="title">Is this your company?</div>
+      <div class="meta">${line}</div>
+    </div>
+  `;
+
+  actDefault.style.display = 'none';
+  actConfirm.style.display = 'flex';
+}
+
+function rejectToSignup(code, msg){
   const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
-  location.href = backTo + (nextSafe ? ('?next='+encodeURIComponent(nextSafe)) : '');
-});
+  bounce(backTo, code, msg);
+}
 
 /* ===================== Flow ===================== */
-async function startFlow(){
-  // Run cheap validations first (fast failures bounce with messages)
-  const ok = await runValidations();
-  if(!ok) return;
-
-  // Kick off session fetch
+async function runSessionAndRoute(){
+  // Session fetch + light rotor while waiting
   const sessionPromise = getSession();
-
-  // Rotor timing — if session resolves quickly, keep this snappy; else use fallback window
-  let totalMs;
-  let session = null;
-  let sessionResolved = false;
-
+  let session = null, sessionResolved = false;
   const sessionTimer = sessionPromise.then(s => { sessionResolved = true; session = s; });
 
-  // Soft-animate at least a couple of swaps while we wait
-  let spent = 0;
-  let p = 2;
+  // Small animation dwell to keep experience smooth
+  let spent = 0, p = 2;
   async function spinWindow(msMin, msMax){
     const until = Math.floor(msMin + Math.random()*(msMax-msMin));
     while(spent < until - 600){
@@ -437,44 +490,77 @@ async function startFlow(){
       if (sessionResolved) break;
     }
   }
-
-  // First small window
-  await spinWindow(1600, 2400);
-
-  // If session hasn’t resolved, allow a longer fallback window
+  await spinWindow(1200, 2200);
   if(!sessionResolved){
     await spinWindow(Number(getComputedStyle(document.documentElement).getPropertyValue('--fallback-min'))|0,
                      Number(getComputedStyle(document.documentElement).getPropertyValue('--fallback-max'))|0);
   }
-
-  // Ensure we have session before deciding
   if(!sessionResolved){ session = await sessionPromise; }
 
-  // Final “Creating your workspace”
   rotateOnce({title:'Creating your workspace', meta:'Final checks'});
-  await new Promise(r=>setTimeout(r, 520));
+  await new Promise(r=>setTimeout(r, 420));
 
-  // Route based on session
   if(!session || session.ok === false){
-    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
-    bounce(backTo, 'not_authenticated', 'We couldn’t confirm your sign-in. Please try again.');
+    rejectToSignup('not_authenticated', 'We couldn’t confirm your sign-in. Please try again.');
     return;
   }
-
   if(!session.authenticated){
-    const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
-    // If user came from signup (common path), guide them back to Step 2 to finish/verify
     const msg = (from==='password' || from==='google')
       ? 'Almost there—complete sign-in or verification to continue.'
       : 'We couldn’t confirm your sign-in. Please try again.';
-    bounce(backTo, 'not_authenticated', msg);
+    rejectToSignup('not_authenticated', msg);
     return;
   }
 
   const dest = decideDestination(session);
-  // Navigate
   location.href = dest;
 }
+
+async function startFlow(){
+  // 1) Fast validations (email/host alignment, reachability)
+  const ok = await runValidations();
+  if (!ok) return;
+
+  // 2) Quick classify to detect redirects/robots & collect a friendly summary
+  const host = (site || emailHost || '').toLowerCase();
+  let payload = {host: host, favicon: '', summary: ''};
+  try{
+    const data = await fetchClassify(host);
+    if (data && data.ok){
+      payload.host = (data.host || host).toLowerCase();
+      payload.favicon = data.favicon || '';
+      payload.summary = (typeof data.summary === 'string' ? data.summary : '') || '';
+      // Reject: redirected to a different base domain (likely competitor or wrong site)
+      if (host && payload.host && baseDomain(payload.host) !== baseDomain(host)){
+        rejectToSignup('site_redirect_mismatch', `That domain forwards to ${payload.host}. Use your own company website.`);
+        return;
+      }
+      // Optional rejects if server returns structured reasons
+      if (data.robotsDenied){ rejectToSignup('robots_blocked','Your robots.txt blocks crawling. Please allow public access.'); return; }
+      if (data.crawlError){  rejectToSignup('site_not_readable','We couldn’t read your public pages. Check availability and try again.'); return; }
+    }
+  }catch(_){ /* fallback to reachability-only */ }
+
+  // 3) Ask: "Is this your company?"
+  showConfirmCard(payload);
+
+  // Wire buttons
+  yesBtn.onclick = async ()=>{
+    actConfirm.style.display = 'none';
+    actDefault.style.display = 'flex';
+    await runSessionAndRoute();
+  };
+  noBtn.onclick = ()=>{
+    rejectToSignup('not_you', 'Update your business email to point to the right website.');
+  };
+}
+
+/* Back button */
+document.getElementById('backBtn').addEventListener('click', ()=>{
+  if (history.length > 1) { history.back(); return; }
+  const backTo = pickOrigin()==='login' ? ENDPOINTS.login : ENDPOINTS.signup;
+  location.href = backTo + (nextSafe ? ('?next='+encodeURIComponent(nextSafe)) : '');
+});
 
 /* Boot */
 startFlow();
