@@ -342,20 +342,6 @@
 
     /* Make the inline verify box link white (only in that box) */
     #verifyPanel a, #verifyPanel a:visited{ color:#fff !important; }
-
-    /* === PATCH: keep the Step-1 NEXT button visible on mobile === */
-    @media (max-width: 720px){
-      #step1 .row-actions{
-        position: sticky;
-        bottom: calc(12px + var(--safe-bottom));
-        padding-bottom: calc(8px + var(--safe-bottom));
-        justify-content: center;
-        z-index: 5;
-      }
-      #s1-next{
-        width:56px; height:56px; /* bigger tap target */
-      }
-    }
   </style>
 
   <!-- Google Identity Services -->
@@ -945,7 +931,6 @@
     }
     async function sendVerifyLink(){
       if(!auth?.currentUser) throw new Error('no_user');
-      try{ auth.useDeviceLanguage(); }catch(_){}
       const url = new URL('/auth/bridge/', location.origin);
       await withTimeout(auth.currentUser.sendEmailVerification({ url: url.href, handleCodeInApp: false }), TIMEOUTS.sendVerify, 'sendVerify');
       try { localStorage.setItem(EMAIL_KEY, auth.currentUser.email || ''); } catch(_){}
@@ -1281,7 +1266,7 @@
     window.sendVerifyLink = wrapSendVerify;
   }
 
-  try { if (typeof window.firebase === 'undefined') window.firebase = undefined; } catch(_){}
+  try { if (typeof firebase === 'undefined') window.firebase = undefined; } catch(_){}
 })();
 </script>
 
