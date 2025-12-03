@@ -333,7 +333,7 @@
       radial-gradient(120% 120% at 50% 45%, rgba(255,255,255,.04), rgba(0,0,0,.22));
       border:1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
     .site-badge .host{ font-weight:800; letter-spacing:.2px; }
-    .site-badge .info{ display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; width:24px; height:24px; border-radius:999px; line-height:0; border:1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); color:var(--fg); cursor:pointer; }
+    .site-badge .info{ display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; width:24px; height:24px; border-radius:999px; line-height:0; border:1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 8px rgba(0,0,0,.25); color:var(--fg); cursor:pointer; }
     .site-badge .info svg,
     .site-badge .info img{ width: 24px; height: 24px; display: block; }
     .site-badge .tip{ position:absolute; top: calc(100% + 8px); left:50%; transform: translateX(-50%); z-index: 40; padding:6px 8px; border-radius:8px; font-size:12px; white-space:nowrap; color:#0e1420; background: rgba(255,255,255,.95); border:1px solid rgba(0,0,0,.14); box-shadow: 0 6px 18px rgba(0,0,0,.28); opacity:0; pointer-events:auto; transition: opacity .2s ease, transform .2s ease; }
@@ -754,7 +754,7 @@
     const EMAIL_KEY = 'gg_pending_email';
     const VERIFIED_KEY = 'gg_email_verified';
 
-    const TIMEOUTS = { emailExists: 3500, domainCheck: 2500, createUser: 10000, sendVerify: 7000, claimAfter: 5000, humanVerify: 6000 };
+    const TIMEOUTS = { emailExists: 3500, domainCheck: 2500, createUser: 10000, sendVerify: 7000, claimAfter: 5000, humanVerify: 6000, finalizeClaim: 5000 };
     function withTimeout(promise, ms, label){
       let t; const timer = new Promise((_,rej)=>{ t=setTimeout(()=>rej(new Error('timeout:'+label)), ms); });
       return Promise.race([promise, timer]).finally(()=>clearTimeout(t));
@@ -781,7 +781,7 @@
 
     let memRisk = { events:[], humanPassUntil:0, lastAt:0 };
     function loadRisk(){ try{ return JSON.parse(localStorage.getItem(RISK_KEY)) || {...memRisk}; }catch(_){ return {...memRisk}; } }
-    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } } /* removed stray HTML comment */
+    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } }
     function riskNow(){ return Date.now(); }
     function riskPrune(s){
       const cutoff = riskNow() - POLICY.windowMs;
@@ -894,6 +894,8 @@
     window.addEventListener('load', ()=>{ try{ initHuman(); }catch(_){} });
 
     function domainFromEmail(email){ return extractHostFromEmail(email) || ''; }
+
+    // Read domain-claim with awareness of status (pending vs verified)
     async function checkDomainBeforeSignup(domain, email){
       if(!db || !domain) return {state:'unknown'};
       try{
@@ -901,15 +903,22 @@
         if(!snap.exists) return {state:'free'};
         const data = snap.data() || {};
         const owner = (data.owner || data.claimedBy || '').toLowerCase();
-        if(owner && owner === (email||'').toLowerCase()){ return {state:'claimed-self', data}; }
-        return {state:'claimed-other', data};
+        const status = String(data.status || 'verified').toLowerCase(); // treat legacy as verified
+        const isSelf = owner && owner === (email||'').toLowerCase();
+        if(status === 'verified'){
+          return {state: isSelf ? 'claimed-verified-self' : 'claimed-verified-other', data};
+        }
+        return {state: isSelf ? 'pending-self' : 'pending-other', data};
       }catch(e){
         if(String(e?.message||'').startsWith('timeout')) return {state:'unavailable'};
         return {state:'unavailable'};
       }
     }
-    async function claimDomainAfterSignup(domain, email, uid){
+
+    // Create (or update) a claim; default status is 'pending' until email is verified.
+    async function claimDomainAfterSignup(domain, email, uid, status){
       if(!db || !domain) return {ok:true, skip:true};
+      const claimedStatus = (status || 'pending').toLowerCase();
       try{
         const res = await withTimeout(
           db.runTransaction(async (tx)=>{
@@ -918,11 +927,30 @@
             if(snap.exists){
               const data = snap.data() || {};
               const owner = (data.owner || data.claimedBy || '').toLowerCase();
-              if(owner && owner === (email||'').toLowerCase()) return {ok:true, already:true};
-              return {ok:false, reason:'claimed-other'};
+              if(owner && owner !== (email||'').toLowerCase()){
+                return {ok:false, reason:'claimed-other', data};
+              }
+              // If same owner, upgrade status if needed
+              const next = Object.assign({}, data);
+              next.owner = email;
+              if (uid) next.uid = uid;
+              if ((next.status || 'pending').toLowerCase() !== 'verified' && claimedStatus === 'verified'){
+                next.status = 'verified';
+                next.verifiedAt = firebase.firestore.FieldValue.serverTimestamp();
+              } else if (!next.status) {
+                next.status = claimedStatus;
+              }
+              tx.set(ref, next, { merge:true });
+              return {ok:true, already:true, data: next};
             }
-            tx.set(ref, { owner: email, uid: uid || null, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-            return {ok:true, claimed:true};
+            tx.set(ref, {
+              owner: email,
+              uid: uid || null,
+              status: claimedStatus,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              verifiedAt: claimedStatus === 'verified' ? firebase.firestore.FieldValue.serverTimestamp() : null
+            });
+            return {ok:true, claimed:true, status: claimedStatus};
           }),
           TIMEOUTS.claimAfter, 'claimAfter'
         );
@@ -932,6 +960,40 @@
         return {ok:false, reason:'registry-unavailable'};
       }
     }
+
+    // Attempt to finalize a pending claim after verification (best effort).
+    async function finalizeClaim(domain, email){
+      if(!db || !domain) return;
+      try{
+        await withTimeout(
+          db.runTransaction(async (tx)=>{
+            const ref = db.collection('domainClaims').doc(domain);
+            const snap = await tx.get(ref);
+            if(!snap.exists){
+              tx.set(ref, {
+                owner: email,
+                uid: auth?.currentUser?.uid || null,
+                status: 'verified',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              return;
+            }
+            const data = snap.data() || {};
+            const owner = (data.owner || data.claimedBy || '').toLowerCase();
+            if(owner && owner !== (email||'').toLowerCase()) return;
+            tx.set(ref, {
+              owner: email,
+              uid: auth?.currentUser?.uid || data.uid || null,
+              status: 'verified',
+              verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge:true });
+          }),
+          TIMEOUTS.finalizeClaim, 'finalizeClaim'
+        );
+      }catch(_){ /* best-effort */ }
+    }
+
     async function rollbackNewlyCreatedUser(){
       try{ await auth.currentUser?.delete(); }catch(_){}
       try{ await auth.signOut(); }catch(_){}
@@ -982,10 +1044,15 @@
         if(exists === 'timeout'){ goLogin(email); setBusy(false); return; }
 
         const d = await checkDomainBeforeSignup(domain, email);
-        if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
-        /* On unavailable registry, do NOT block—proceed like before */
-        if(d.state === 'unavailable'){ hideStatus(); setBusy(false); toPasswordStage(); return; }
-
+        if(d.state === 'claimed-verified-other' || d.state === 'claimed-verified-self'){
+          showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return;
+        }
+        if(d.state === 'pending-self'){
+          // User started signup earlier but didn't verify—help them finish instead of blocking.
+          vEmail.textContent = email; verifyPanel.hidden = false; updateLoginLink(); hideStatus();
+          setBusy(false); return;
+        }
+        // free, unavailable, or pending by someone else → continue to password
         hideStatus(); setBusy(false); toPasswordStage();
       }catch(_){ setBusy(false); } finally { resetHuman(); }
     });
@@ -1026,20 +1093,20 @@
 
         const user = cred.user;
 
-        showStatus("Verifying your company…");
-        const claim = await claimDomainAfterSignup(domain, email, user?.uid);
-        if(!claim.ok){
-          if(claim.reason === 'claimed-other'){
-            await rollbackNewlyCreatedUser();
-            showStatusHTML(`<strong>Company already registered.</strong> `);
-            goLogin(email); setBusy(false); return;
-          }
-          showStatus("Company registry is unavailable right now. You can continue once email is verified.");
+        // Make a PENDING domain claim; we'll upgrade to verified after email confirmation.
+        showStatus("Reserving your company…");
+        const claim = await claimDomainAfterSignup(domain, email, user?.uid, 'pending');
+        if(!claim.ok && claim.reason === 'claimed-other'){
+          await rollbackNewlyCreatedUser();
+          showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return;
         }
 
         try{ await user.reload(); }catch(_){}
         if(user.emailVerified){
-          sessionStorage.setItem(VERIFIED_KEY,'1'); setBusy(false); goToBridge('password'); return;
+          sessionStorage.setItem(VERIFIED_KEY,'1');
+          // Upgrade to verified claim now that email is verified.
+          try{ await finalizeClaim(domain, email); }catch(_){}
+          setBusy(false); goToBridge('password'); return;
         }
 
         showStatus("Sending verification link…");
@@ -1097,7 +1164,8 @@
         }
 
         showStatus("Verifying your company…");
-        const claim = await claimDomainAfterSignup(domain, email, user?.uid);
+        // Google identity is considered verified; write a VERIFIED claim.
+        const claim = await claimDomainAfterSignup(domain, email, user?.uid, 'verified');
         if(!claim.ok){
           try{ await auth.currentUser?.delete(); }catch(_){}
           try{ await auth.signOut(); }catch(_){}
@@ -1129,6 +1197,8 @@
           sessionStorage.setItem(VERIFIED_KEY, '1');
           const em = localStorage.getItem(EMAIL_KEY) || auth.currentUser?.email || "";
           if (em && emailInput) { emailInput.value = em; updateEmailCTA?.(); }
+          const domain = extractHostFromEmail(em);
+          try{ await finalizeClaim(domain, em); }catch(_){}
           goToBridge('email');
         }catch(e){ showStatus("That verification link is invalid or expired. Resend and try again."); }
       }
@@ -1235,6 +1305,12 @@
     if (!em) return;
     const inp = document.getElementById('email');
     if (inp) { inp.value = em; try { inp.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){ } }
+    // Clean the URL so the param doesn't keep re-prefilling during navigation
+    try {
+      p.delete('email');
+      const newUrl = location.pathname + (p.toString() ? '?' + p.toString() : '') + location.hash;
+      history.replaceState({}, '', newUrl);
+    } catch(_){}
   })();
 
   (function canonicalize(){
