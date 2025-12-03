@@ -1231,7 +1231,7 @@
 
   (function prefillEmail(){
     const p = new URLSearchParams(location.search);
-    const em = (p.get('email') || localStorage.getItem('gg_pending_email') || '').trim();
+    const em = (p.get('email') || '').trim();
     if (!em) return;
     const inp = document.getElementById('email');
     if (inp) { inp.value = em; try { inp.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){ } }
