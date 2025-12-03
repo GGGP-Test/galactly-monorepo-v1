@@ -228,6 +228,8 @@
       padding: 10px 12px; border-radius: 10px; border:1px solid rgba(255,107,107,.35);
       background: rgba(255,107,107,.12); color: #ffd7d7;
     }
+    .inline-error a,.inline-error a:visited{ color: currentColor; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+    .inline-error a:hover,.inline-error a:focus-visible{ text-decoration-thickness: 2px; outline: none; }
     .inline-note{
       width:min(560px, 86vw); margin: 8px auto 0; font-size: 13px; line-height: 1.35;
       padding: 10px 12px; border-radius: 10px; border:1px solid rgba(255,255,255,.18);
@@ -288,7 +290,8 @@
     #step2 .field-wrap      { margin: 0 auto var(--s2-gap-field-arrow) auto; }
     #step2 .single-action   { margin: 0 0 var(--s2-gap-bottom-edge) 0; }
 
-    :root{ --ease-hero: cubic-bezier(.22,1,.36,1);
+    :root{
+      --ease-hero: cubic-bezier(.22,1,.36,1);
       --ease-soft: cubic-bezier(.25,.95,.35,1);
       --ease-snap: cubic-bezier(.16,.84,.44,1);
       --anim-title-d: 1.25s; --anim-sub-d: 1.40s; --anim-div-d: 1.00s;
@@ -339,6 +342,20 @@
 
     /* Make the inline verify box link white (only in that box) */
     #verifyPanel a, #verifyPanel a:visited{ color:#fff !important; }
+
+    /* === PATCH: keep the Step-1 NEXT button visible on mobile === */
+    @media (max-width: 720px){
+      #step1 .row-actions{
+        position: sticky;
+        bottom: calc(12px + var(--safe-bottom));
+        padding-bottom: calc(8px + var(--safe-bottom));
+        justify-content: center;
+        z-index: 5;
+      }
+      #s1-next{
+        width:56px; height:56px; /* bigger tap target */
+      }
+    }
   </style>
 
   <!-- Google Identity Services -->
@@ -764,7 +781,7 @@
 
     let memRisk = { events:[], humanPassUntil:0, lastAt:0 };
     function loadRisk(){ try{ return JSON.parse(localStorage.getItem(RISK_KEY)) || {...memRisk}; }catch(_){ return {...memRisk}; } }
-    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } }
+    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } }  <!-- FIXED ) HERE -->
     function riskNow(){ return Date.now(); }
     function riskPrune(s){
       const cutoff = riskNow() - POLICY.windowMs;
@@ -876,51 +893,45 @@
 
     window.addEventListener('load', ()=>{ try{ initHuman(); }catch(_){} });
 
-    /* ===== NEW helpers for domain activation model ===== */
-    function baseDomain(host){
-      host = String(host||'').toLowerCase();
-      const parts = host.split('.').filter(Boolean);
-      if(parts.length<=2) return parts.join('.');
-      const tlds2 = new Set(['co.uk','com.au','com.br','co.jp','co.in','com.mx','com.tr','com.cn','co.za','com.sg']);
-      const last2 = parts.slice(-2).join('.');
-      const last3 = parts.slice(-3).join('.');
-      return tlds2.has(last2) ? last3 : last2;
-    }
     function domainFromEmail(email){ return extractHostFromEmail(email) || ''; }
-
-    async function isDomainActive(domain){
-      if(!db || !domain) return false;
+    async function checkDomainBeforeSignup(domain, email){
+      if(!db || !domain) return {state:'unknown'};
       try{
-        const bd = baseDomain(domain);
-        const snap = await withTimeout(db.collection('domains').doc(bd).get(), TIMEOUTS.domainCheck, 'domainCheck');
-        return !!(snap.exists && snap.data() && snap.data().status === 'active');
-      }catch(_){ return false; }
+        const snap = await withTimeout(db.collection('domainClaims').doc(domain).get(), TIMEOUTS.domainCheck, 'domainCheck');
+        if(!snap.exists) return {state:'free'};
+        const data = snap.data() || {};
+        const owner = (data.owner || data.claimedBy || '').toLowerCase();
+        if(owner && owner === (email||'').toLowerCase()){ return {state:'claimed-self', data}; }
+        return {state:'claimed-other', data};
+      }catch(e){
+        if(String(e?.message||'').startsWith('timeout')) return {state:'unavailable'};
+        return {state:'unavailable'};
+      }
     }
-
-    async function writePendingClaim(domain, user){
-      if(!db || !domain || !user) return {ok:false, skip:true};
+    async function claimDomainAfterSignup(domain, email, uid){
+      if(!db || !domain) return {ok:true, skip:true};
       try{
-        const bd = baseDomain(domain);
-        const ref = db.collection('domains').doc(bd).collection('claims').doc(user.uid);
-        const expiresAt = firebase.firestore.Timestamp.fromMillis(Date.now() + 7*24*60*60*1000);
-        await withTimeout(ref.set({
-          uid: user.uid,
-          email: user.email || '',
-          status: 'pending',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          expiresAt
-        }, { merge:true }), TIMEOUTS.claimAfter, 'claimAfter');
-        return {ok:true};
-      }catch(e){ return {ok:false, error:String(e?.message||e)||'write_failed'}; }
+        const res = await withTimeout(
+          db.runTransaction(async (tx)=>{
+            const ref = db.collection('domainClaims').doc(domain);
+            const snap = await tx.get(ref);
+            if(snap.exists){
+              const data = snap.data() || {};
+              const owner = (data.owner || data.claimedBy || '').toLowerCase();
+              if(owner && owner === (email||'').toLowerCase()) return {ok:true, already:true};
+              return {ok:false, reason:'claimed-other'};
+            }
+            tx.set(ref, { owner: email, uid: uid || null, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            return {ok:true, claimed:true};
+          }),
+          TIMEOUTS.claimAfter, 'claimAfter'
+        );
+        return res;
+      }catch(e){
+        if(String(e?.message||'').startsWith('timeout')) return {ok:false, reason:'registry-timeout'};
+        return {ok:false, reason:'registry-unavailable'};
+      }
     }
-    /* ===== end helpers ===== */
-
-    async function checkDomainBeforeSignup(/* old signature kept for backward compat */){
-      // legacy no-op (we now check only active in /domains)
-      return {state:'free'};
-    }
-    async function claimDomainAfterSignup(){ return {ok:true, skip:true}; }
-
     async function rollbackNewlyCreatedUser(){
       try{ await auth.currentUser?.delete(); }catch(_){}
       try{ await auth.signOut(); }catch(_){}
@@ -934,6 +945,7 @@
     }
     async function sendVerifyLink(){
       if(!auth?.currentUser) throw new Error('no_user');
+      try{ auth.useDeviceLanguage(); }catch(_){}
       const url = new URL('/auth/bridge/', location.origin);
       await withTimeout(auth.currentUser.sendEmailVerification({ url: url.href, handleCodeInApp: false }), TIMEOUTS.sendVerify, 'sendVerify');
       try { localStorage.setItem(EMAIL_KEY, auth.currentUser.email || ''); } catch(_){}
@@ -951,7 +963,6 @@
       window.onboarding?.emailContinue?.(emailInput.value.trim());
     }
 
-    /* === Step 2: email precheck === */
     emailNext.addEventListener('click', async ()=>{
       if(globalBusy) return;
       hideStatus();
@@ -970,9 +981,9 @@
         if(exists === true){ showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); setBusy(false); return; }
         if(exists === 'timeout'){ goLogin(email); setBusy(false); return; }
 
-        // NEW: only block if domain is already ACTIVE (claimed by a verified owner)
-        const active = await isDomainActive(domain);
-        if (active){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
+        const d = await checkDomainBeforeSignup(domain, email);
+        if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
+        if(d.state === 'unavailable'){ showStatus("We couldn’t verify your company right now. Please try again later."); setBusy(false); return; }
 
         hideStatus(); setBusy(false); toPasswordStage();
       }catch(_){ setBusy(false); } finally { resetHuman(); }
@@ -1014,16 +1025,16 @@
 
         const user = cred.user;
 
-        // Re-check in case someone else verified/claimed just now
-        const active = await isDomainActive(domain);
-        if (active){
-          await rollbackNewlyCreatedUser();
-          showStatusHTML(`<strong>Company already registered.</strong> `);
-          goLogin(email); setBusy(false); return;
+        showStatus("Verifying your company…");
+        const claim = await claimDomainAfterSignup(domain, email, user?.uid);
+        if(!claim.ok){
+          if(claim.reason === 'claimed-other'){
+            await rollbackNewlyCreatedUser();
+            showStatusHTML(`<strong>Company already registered.</strong> `);
+            goLogin(email); setBusy(false); return;
+          }
+          showStatus("Company registry is unavailable right now. You can continue once email is verified.");
         }
-
-        // NEW: write a PENDING claim; finalization happens in Bridge after verification
-        await writePendingClaim(domain, user);
 
         try{ await user.reload(); }catch(_){}
         if(user.emailVerified){
@@ -1061,8 +1072,8 @@
       e.preventDefault(); if(globalBusy) return; hideStatus();
       if (!auth) { showStatus("Google sign-in isn’t configured. Add Firebase keys."); return; }
 
-      const emailHostGuess = extractHostFromEmail(emailInput.value||'') || '';
-      const human = await performHumanCheck('google_signin', { email: (emailInput.value||''), domain: emailHostGuess });
+      const emailHost = extractHostFromEmail(emailInput.value||'') || '';
+      const human = await performHumanCheck('google_signin', { email: (emailInput.value||''), domain: emailHost });
       if(!human.ok){ showStatus(humanFailMessage(human)); resetHuman(); return; }
 
       setBusy(true); showStatus("Opening Google…");
@@ -1073,7 +1084,7 @@
         const cred = await auth.signInWithPopup(provider);
         const user = cred.user;
         const email = user?.email || "";
-        const domain = (email.split("@")[1] || "").toLowerCase();
+               const domain = (email.split("@")[1] || "").toLowerCase();
         const isNew = cred?.additionalUserInfo?.isNewUser === true;
 
         if (!email || PERSONAL.has(domain)) {
@@ -1085,16 +1096,14 @@
           setBusy(false); showStatusHTML(`<strong>Account exists.</strong> `); goLogin(email); return;
         }
 
-        // Block if already ACTIVE
-        const active = await isDomainActive(domain);
-        if (active){
+        showStatus("Verifying your company…");
+        const claim = await claimDomainAfterSignup(domain, email, user?.uid);
+        if(!claim.ok){
           try{ await auth.currentUser?.delete(); }catch(_){}
           try{ await auth.signOut(); }catch(_){}
-          setBusy(false); showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); return;
+          if(claim.reason === 'claimed-other'){ setBusy(false); showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); return; }
+          setBusy(false); showStatus("We couldn’t verify your company right now. Try again later."); return;
         }
-
-        // NEW: write pending claim (Google users often have emailVerified already; finalization still happens in Bridge)
-        await writePendingClaim(domain, user);
 
         emailInput.value = email; updateEmailCTA?.(); setBusy(false); goToBridge('google');
 
@@ -1272,7 +1281,7 @@
     window.sendVerifyLink = wrapSendVerify;
   }
 
-  try { if (typeof firebase === 'undefined') window.firebase = undefined; } catch(_){}
+  try { if (typeof window.firebase === 'undefined') window.firebase = undefined; } catch(_){}
 })();
 </script>
 
