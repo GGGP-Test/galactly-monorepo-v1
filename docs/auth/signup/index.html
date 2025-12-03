@@ -228,8 +228,10 @@
       padding: 10px 12px; border-radius: 10px; border:1px solid rgba(255,107,107,.35);
       background: rgba(255,107,107,.12); color: #ffd7d7;
     }
-    .inline-error a,.inline-error a:visited{ color: currentColor; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+    /* Login link in red box should be WHITE */
+    .inline-error a,.inline-error a:visited{ color:#fff; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
     .inline-error a:hover,.inline-error a:focus-visible{ text-decoration-thickness: 2px; outline: none; }
+
     .inline-note{
       width:min(560px, 86vw); margin: 8px auto 0; font-size: 13px; line-height: 1.35;
       padding: 10px 12px; border-radius: 10px; border:1px solid rgba(255,255,255,.18);
@@ -340,8 +342,20 @@
     .error{ display:none !important; }
     [hidden]{ display:none !important; }
 
-    /* Make the inline verify box link white (only in that box) */
+    /* Verify panel link stays white (only in that box) */
     #verifyPanel a, #verifyPanel a:visited{ color:#fff !important; }
+
+    /* === MOBILE PATCH: keep Step-1 NEXT visible and RIGHT-ALIGNED === */
+    @media (max-width: 720px){
+      #step1 .row-actions{
+        position: sticky;
+        bottom: calc(12px + var(--safe-bottom));
+        padding-bottom: calc(8px + var(--safe-bottom));
+        justify-content: flex-end; /* right side, not centered */
+        z-index: 5;
+      }
+      #s1-next{ width:56px; height:56px; }
+    }
   </style>
 
   <!-- Google Identity Services -->
@@ -462,7 +476,7 @@
 
         <div class="hr" id="s2-divider" aria-hidden="true"></div>
 
-        <!-- verification box moved here (replaces the red box position) -->
+        <!-- verification box -->
         <div id="verifyPanel" class="inline-note" hidden>
           <div id="verifyMsg">
             We sent a verification link to <strong id="vEmail">—</strong>. Open it on this device to verify, then return to <a id="loginLinkInline" href="/auth/login/">log in</a>.
@@ -767,7 +781,7 @@
 
     let memRisk = { events:[], humanPassUntil:0, lastAt:0 };
     function loadRisk(){ try{ return JSON.parse(localStorage.getItem(RISK_KEY)) || {...memRisk}; }catch(_){ return {...memRisk}; } }
-    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } }  <!-- FIXED ) HERE -->
+    function saveRisk(s){ memRisk = s; try{ localStorage.setItem(RISK_KEY, JSON.stringify(s)); }catch(_){ } } /* removed stray HTML comment */
     function riskNow(){ return Date.now(); }
     function riskPrune(s){
       const cutoff = riskNow() - POLICY.windowMs;
@@ -931,6 +945,7 @@
     }
     async function sendVerifyLink(){
       if(!auth?.currentUser) throw new Error('no_user');
+      try{ auth.useDeviceLanguage(); }catch(_){}
       const url = new URL('/auth/bridge/', location.origin);
       await withTimeout(auth.currentUser.sendEmailVerification({ url: url.href, handleCodeInApp: false }), TIMEOUTS.sendVerify, 'sendVerify');
       try { localStorage.setItem(EMAIL_KEY, auth.currentUser.email || ''); } catch(_){}
@@ -968,13 +983,14 @@
 
         const d = await checkDomainBeforeSignup(domain, email);
         if(d.state === 'claimed-other' || d.state === 'claimed-self'){ showStatusHTML(`<strong>Company already registered.</strong> `); goLogin(email); setBusy(false); return; }
-        if(d.state === 'unavailable'){ showStatus("We couldn’t verify your company right now. Please try again later."); setBusy(false); return; }
+        /* On unavailable registry, do NOT block—proceed like before */
+        if(d.state === 'unavailable'){ hideStatus(); setBusy(false); toPasswordStage(); return; }
 
         hideStatus(); setBusy(false); toPasswordStage();
       }catch(_){ setBusy(false); } finally { resetHuman(); }
     });
 
-    // IMPORTANT: password signup requires email verification before access
+    // password signup requires email verification before access
     pwdNext?.addEventListener('click', async ()=>{
       if(globalBusy) return;
       hideStatus();
@@ -1026,14 +1042,13 @@
           sessionStorage.setItem(VERIFIED_KEY,'1'); setBusy(false); goToBridge('password'); return;
         }
 
-        // Send verify link and show ONLY the moved verify panel
         showStatus("Sending verification link…");
         try{
           await sendVerifyLink();
           verifyPanel.hidden = false; vEmail.textContent = user.email || email;
           localStorage.setItem(EMAIL_KEY, user.email || email);
           updateLoginLink();
-          hideStatus(); // remove the red status box message
+          hideStatus();
         }catch(_){ showStatus("We couldn’t send the verification email. Try resending."); }
         finally{ setBusy(false); }
 
@@ -1266,7 +1281,7 @@
     window.sendVerifyLink = wrapSendVerify;
   }
 
-  try { if (typeof firebase === 'undefined') window.firebase = undefined; } catch(_){}
+  try { if (typeof window.firebase === 'undefined') window.firebase = undefined; } catch(_){}
 })();
 </script>
 
